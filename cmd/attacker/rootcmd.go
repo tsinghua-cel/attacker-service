@@ -18,8 +18,8 @@ var logPath string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "nebula",
-	Short: "The MetaNebula command-line interface",
+	Use:   "attacker",
+	Short: "The attacker command-line interface",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
 		runNode()
@@ -40,7 +40,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	RootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "info", "log level")
-	RootCmd.PersistentFlags().StringVar(&logPath, "logpath", "./log", "log path")
+	RootCmd.PersistentFlags().StringVar(&logPath, "logpath", "", "log path")
 }
 
 // initConfig reads in config file and ENV variables if set.
