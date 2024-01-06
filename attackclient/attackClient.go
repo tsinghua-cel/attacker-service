@@ -50,3 +50,22 @@ func (ec *Client) Delay(ctx context.Context) (*big.Int, error) {
 	}
 	return (*big.Int)(&result), err
 }
+
+// implement shortDelay and echo functions
+func (ec *Client) ShortDelay(ctx context.Context) (*big.Int, error) {
+	var result hexutil.Big
+	err := ec.c.CallContext(ctx, &result, "time_shortDelay")
+	if err != nil {
+		return nil, err
+	}
+	return (*big.Int)(&result), err
+}
+
+func (ec *Client) Echo(ctx context.Context, data string) (string, error) {
+	var result string
+	err := ec.c.CallContext(ctx, &result, "time_echo", data)
+	if err != nil {
+		return "", err
+	}
+	return result, err
+}
