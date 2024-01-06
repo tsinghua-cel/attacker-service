@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tsinghua-cel/attacker-service/config"
+	"github.com/tsinghua-cel/attacker-service/server"
 	"time"
 
 	"os"
@@ -55,7 +56,7 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		//log.Info("Using config file:", viper.ConfigFileUsed())
 	} else {
-		log.Error("Read config failed", "error", err)
+		log.WithField("error", err).Fatal("Read config failed")
 		return
 	}
 
@@ -67,15 +68,13 @@ func initConfig() {
 
 func runNode() {
 
+	rpcServer := server.NewServer()
+	rpcServer.Start()
+
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
 	wg.Wait()
-}
-
-type LogConfig struct {
-	Path  string `json:"path"`  // local logs file store path
-	Level string `json:"level"` // log level
 }
 
 func getLogLevel(level string) log.Level {

@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Port        int `json:"port" toml:"port"`
-	MetricsPort int `json:"metrics_port" toml:"metrics_port"`
+	HttpPort    int    `json:"http_port" toml:"http_port"`
+	HttpHost    string `json:"http_host" toml:"http_host"`
+	MetricsPort int    `json:"metrics_port" toml:"metrics_port"`
 }
 
 var _cfg *Config = nil
@@ -35,3 +36,16 @@ func ParseConfig(path string) (*Config, error) {
 func GetConfig() *Config {
 	return _cfg
 }
+
+var (
+	DefaultCors    = []string{"localhost"} // Default cors domain for the apis
+	DefaultVhosts  = []string{"localhost"} // Default virtual hosts for the apis
+	DefaultOrigins = []string{"localhost"} // Default origins for the apis
+	DefaultPrefix  = ""                    // Default prefix for the apis
+	DefaultModules = []string{"time"}
+)
+
+const (
+	APIBatchItemLimit         = 2000
+	APIBatchResponseSizeLimit = 250 * 1000 * 1000
+)

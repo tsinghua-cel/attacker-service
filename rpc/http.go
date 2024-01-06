@@ -114,10 +114,10 @@ type HTTPTimeouts struct {
 // DefaultHTTPTimeouts represents the default timeout values used if further
 // configuration is not provided.
 var DefaultHTTPTimeouts = HTTPTimeouts{
-	ReadTimeout:       30 * time.Second,
-	ReadHeaderTimeout: 30 * time.Second,
-	WriteTimeout:      30 * time.Second,
-	IdleTimeout:       120 * time.Second,
+	ReadTimeout:       200 * time.Second,
+	ReadHeaderTimeout: 200 * time.Second,
+	WriteTimeout:      300 * time.Second,
+	IdleTimeout:       300 * time.Second,
 }
 
 // DialHTTP creates a new RPC client that connects to an RPC server over HTTP.
@@ -382,7 +382,7 @@ func ContextRequestTimeout(ctx context.Context) (time.Duration, bool) {
 	if ok && httpSrv.WriteTimeout > 0 {
 		wt := httpSrv.WriteTimeout
 		// When a write timeout is configured, we need to send the response message before
-		// the HTTP server cuts connection. So our internal timeout must be earlier than
+		// the HTTP server cuts connection. So our apis timeout must be earlier than
 		// the server's true timeout.
 		//
 		// Note: Timeouts are sanitized to be a minimum of 1 second.
