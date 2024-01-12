@@ -42,19 +42,19 @@ func (ec *Client) Client() *rpc.Client {
 }
 
 // Delay will delay random seconds time.
-func (ec *Client) Delay(ctx context.Context) (*big.Int, error) {
+func (ec *Client) Delay(ctx context.Context, ts uint) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "time_delay")
+	err := ec.c.CallContext(ctx, &result, "time_delay", ts)
 	if err != nil {
 		return nil, err
 	}
 	return (*big.Int)(&result), err
 }
 
-// implement shortDelay and echo functions
-func (ec *Client) ShortDelay(ctx context.Context) (*big.Int, error) {
+// Delay will delay random seconds time.
+func (ec *Client) DelayRandom(ctx context.Context, min, max uint) (*big.Int, error) {
 	var result hexutil.Big
-	err := ec.c.CallContext(ctx, &result, "time_shortDelay")
+	err := ec.c.CallContext(ctx, &result, "time_delayRandom", min, max)
 	if err != nil {
 		return nil, err
 	}

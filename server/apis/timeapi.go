@@ -15,16 +15,24 @@ func NewTimeAPI(b Backend) *TimeAPI {
 	return &TimeAPI{b}
 }
 
-// Delay sleep random seconds time and return the time.
-func (s *TimeAPI) Delay() int {
-	ts := rand.Intn(50) + 30 // 30+50
+// DelayRandom sleep random seconds time and return the time.
+func (s *TimeAPI) DelayRandom(min, max int) int {
+	var ts = 0
+	if min > max {
+		ts = 0
+	}
+	if min == max {
+		ts = min
+	} else {
+		ts = rand.Intn(max-min) + min // 30+50
+	}
+
 	time.Sleep(time.Duration(ts) * time.Second)
 	return ts
 }
 
-// ShortDelay sleep random (3~8)seconds time and return the time.
-func (s *TimeAPI) ShortDelay() int {
-	ts := rand.Intn(5) + 3 // 3-8
+// Delay sleep special seconds time and return the time.
+func (s *TimeAPI) Delay(ts int) int {
 	time.Sleep(time.Duration(ts) * time.Second)
 	return ts
 }
