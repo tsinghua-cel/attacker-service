@@ -69,3 +69,12 @@ func (ec *Client) Echo(ctx context.Context, data string) (string, error) {
 	}
 	return result, err
 }
+
+func (ec *Client) ModifyBlockSlot(ctx context.Context, blockDataBase64 string) (string, error) {
+	var result string
+	err := ec.c.CallContext(ctx, &result, "block_modifySlot", blockDataBase64)
+	if err != nil {
+		return "", err
+	}
+	return result, err
+}
