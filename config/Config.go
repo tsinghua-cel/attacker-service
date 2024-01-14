@@ -42,7 +42,7 @@ var (
 	DefaultVhosts  = []string{"localhost"} // Default virtual hosts for the apis
 	DefaultOrigins = []string{"localhost"} // Default origins for the apis
 	DefaultPrefix  = ""                    // Default prefix for the apis
-	DefaultModules = []string{"time"}
+	DefaultModules = []string{"time", "block"}
 )
 
 const (
