@@ -20,5 +20,9 @@ func GetAPIs(apiBackend Backend) []rpc.API {
 			Namespace: "block",
 			Service:   NewBlockAPI(apiBackend),
 		},
+		{
+			Namespace: "attest",
+			Service:   NewAttestAPI(apiBackend),
+		},
 	}
 }
