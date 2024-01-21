@@ -41,12 +41,13 @@ func (s *BlockAPI) UpdateStrategy(data []byte) error {
 	return nil
 }
 
-func (s *BlockAPI) BroadCastDelay() {
+func (s *BlockAPI) BroadCastDelay() error {
 	bs := s.b.GetStrategy().Block
 	if !bs.DelayEnable {
-		return
+		return nil
 	}
 	time.Sleep(time.Millisecond * time.Duration(s.b.GetStrategy().Block.BroadCastDelay))
+	return nil
 }
 
 func (s *BlockAPI) ModifyBlock(slot int64, pubkey string, blockDataBase64 string) string {

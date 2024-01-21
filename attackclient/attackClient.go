@@ -41,6 +41,42 @@ func (ec *Client) Client() *rpc.Client {
 	return ec.c
 }
 
+func (ec *Client) BlockBroadCastDelay(ctx context.Context) error {
+	var result error
+	err := ec.c.CallContext(ctx, &result, "block_broadCastDelay")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ec *Client) BlockModify(ctx context.Context, slot int64, pubkey string, blockDataBase64 string) (string, error) {
+	var result string
+	err := ec.c.CallContext(ctx, &result, "block_modifyBlock", slot, pubkey, blockDataBase64)
+	if err != nil {
+		return blockDataBase64, err
+	}
+	return result, err
+}
+
+func (ec *Client) AttestBroadCastDelay(ctx context.Context) error {
+	var result error
+	err := ec.c.CallContext(ctx, &result, "attest_broadCastDelay")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (ec *Client) AttestModify(ctx context.Context, slot int64, pubkey string, attestDataBase64 string) (string, error) {
+	var result string
+	err := ec.c.CallContext(ctx, &result, "attest_modifyAttest", slot, pubkey, attestDataBase64)
+	if err != nil {
+		return attestDataBase64, err
+	}
+	return result, err
+}
+
 // Delay will delay random seconds time.
 func (ec *Client) Delay(ctx context.Context, ts uint) (*big.Int, error) {
 	var result hexutil.Big
@@ -64,24 +100,6 @@ func (ec *Client) DelayRandom(ctx context.Context, min, max uint) (*big.Int, err
 func (ec *Client) Echo(ctx context.Context, data string) (string, error) {
 	var result string
 	err := ec.c.CallContext(ctx, &result, "time_echo", data)
-	if err != nil {
-		return "", err
-	}
-	return result, err
-}
-
-func (ec *Client) ModifyBlockSlot(ctx context.Context, blockDataBase64 string) (string, error) {
-	var result string
-	err := ec.c.CallContext(ctx, &result, "block_modifySlot", blockDataBase64)
-	if err != nil {
-		return "", err
-	}
-	return result, err
-}
-
-func (ec *Client) ModifyAttestSlot(ctx context.Context, blockDataBase64 string) (string, error) {
-	var result string
-	err := ec.c.CallContext(ctx, &result, "attest_modifySlot", blockDataBase64)
 	if err != nil {
 		return "", err
 	}
