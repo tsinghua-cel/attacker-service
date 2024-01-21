@@ -17,6 +17,7 @@ import (
 
 var logLevel string
 var logPath string
+var configPath string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -43,11 +44,21 @@ func init() {
 
 	RootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "info", "log level")
 	RootCmd.PersistentFlags().StringVar(&logPath, "logpath", "", "log path")
+	RootCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file path")
 }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	InitLog()
+
+	if configPath != "" {
+		_, err := config.ParseConfig(configPath)
+		if err != nil {
+			log.WithField("error", err).Fatal("parse config failed")
+		} else {
+			return
+		}
+	}
 
 	viper.SetConfigName("config") // name of config file (without extension)
 	viper.AddConfigPath(".")
