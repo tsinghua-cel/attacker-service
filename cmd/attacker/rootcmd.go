@@ -129,6 +129,10 @@ func getRewardBackgroud() {
 	for {
 		select {
 		case <-ticker.C:
+			log.WithFields(log.Fields{
+				"execute": config.GetConfig().ExecuteRpc,
+				"file":    config.GetConfig().RewardFile,
+			}).Debug("goto get reward")
 			err := reward.GetRewards(config.GetConfig().ExecuteRpc, config.GetConfig().RewardFile)
 			if err != nil {
 				log.WithError(err).Error("collect reward failed")
