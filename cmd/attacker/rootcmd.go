@@ -130,10 +130,10 @@ func getRewardBackgroud() {
 		select {
 		case <-ticker.C:
 			log.WithFields(log.Fields{
-				"execute": config.GetConfig().ExecuteRpc,
-				"file":    config.GetConfig().RewardFile,
+				"beacon": config.GetConfig().BeaconRpc,
+				"file":   config.GetConfig().RewardFile,
 			}).Debug("goto get reward")
-			err := reward.GetRewards(config.GetConfig().ExecuteRpc, config.GetConfig().RewardFile)
+			err := reward.GetRewards(config.GetConfig().BeaconRpc, config.GetConfig().RewardFile)
 			if err != nil {
 				log.WithError(err).Error("collect reward failed")
 			}
