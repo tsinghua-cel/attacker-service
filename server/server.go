@@ -1,24 +1,37 @@
 package server
 
 import (
+	"context"
+	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
+	"github.com/tsinghua-cel/attacker-service/strategy"
+	"math/big"
 )
 
 type Server struct {
-	config  *config.Config
-	rpcAPIs []rpc.API   // List of APIs currently provided by the node
-	http    *httpServer //
-	//inprocHandler *rpc.Server // In-process RPC request handler to process the API requests
+	config   *config.Config
+	rpcAPIs  []rpc.API   // List of APIs currently provided by the node
+	http     *httpServer //
+	strategy *strategy.Strategy
+	client   *ethclient.Client
 }
 
 func NewServer() *Server {
 	s := &Server{}
 	s.config = config.GetConfig()
 	s.rpcAPIs = apis.GetAPIs(s)
+	client, err := ethclient.Dial(s.config.ExecuteRpc)
+	if err != nil {
+		panic(fmt.Sprintf("dial execute failed with err:%v", err))
+	}
+	s.client = client
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
+	s.strategy = strategy.ParseStrategy(config.GetConfig().Strategy)
 	return s
 }
 
@@ -83,4 +96,30 @@ func (s *Server) stopRPC() {
 // implement backend
 func (s *Server) SomeNeedBackend() bool {
 	return true
+}
+
+func (s *Server) GetBlockHeight() (uint64, error) {
+	return s.client.BlockNumber(context.Background())
+}
+
+func (s *Server) GetBlockByNumber(number *big.Int) (*types.Block, error) {
+	return s.client.BlockByNumber(context.Background(), number)
+}
+
+func (s *Server) GetHeightByNumber(number *big.Int) (*types.Header, error) {
+	return s.client.HeaderByNumber(context.Background(), number)
+}
+
+func (s *Server) GetStrategy() *strategy.Strategy {
+	return s.strategy
+}
+
+func (s *Server) UpdateBlockBroadDelay(milliSecond int64) error {
+	s.strategy.Block.BroadCastDelay = milliSecond
+	return nil
+}
+
+func (s *Server) UpdateAttestBroadDelay(milliSecond int64) error {
+	s.strategy.Attest.BroadCastDelay = milliSecond
+	return nil
 }

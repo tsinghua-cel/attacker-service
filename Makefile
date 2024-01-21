@@ -1,4 +1,4 @@
-.PHONY: default attacker all clean docker
+.PHONY: default attacker reward all clean docker
 
 GOBIN = $(shell pwd)/build/bin
 TAG ?= latest
@@ -10,7 +10,7 @@ AppName := attacker
 
 default: attacker
 
-all: attacker
+all: attacker reward
 
 BUILD_FLAGS = -tags netgo -ldflags "\
 	-X github.com/tsinghua-cel/attacker-service/versions.AppName=${AppName} \
@@ -25,6 +25,9 @@ attacker:
 	go build $(BUILD_FLAGS) -o=${GOBIN}/$@ -gcflags "all=-N -l" ./cmd/attacker
 	@echo "Done building."
 
+reward:
+	go build $(BUILD_FLAGS) -o=${GOBIN}/$@ -gcflags "all=-N -l" ./cmd/rewards
+	@echo "Done building."
 
 clean:
 	rm -fr build/*

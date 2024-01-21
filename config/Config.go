@@ -9,7 +9,10 @@ import (
 type Config struct {
 	HttpPort    int    `json:"http_port" toml:"http_port"`
 	HttpHost    string `json:"http_host" toml:"http_host"`
+	ExecuteRpc  string `json:"execute_rpc" toml:"execute_rpc"`
 	MetricsPort int    `json:"metrics_port" toml:"metrics_port"`
+	Strategy    string `json:"strategy" toml:"strategy"`
+	RewardFile  string `json:"reward_file" toml:"reward_file"`
 }
 
 var _cfg *Config = nil

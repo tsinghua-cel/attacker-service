@@ -7,6 +7,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/tsinghua-cel/attacker-service/config"
+	"github.com/tsinghua-cel/attacker-service/reward"
 	"github.com/tsinghua-cel/attacker-service/server"
 	"time"
 
@@ -71,6 +72,8 @@ func runNode() {
 	rpcServer := server.NewServer()
 	rpcServer.Start()
 
+	go getRewardBackgroud()
+
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
@@ -118,4 +121,18 @@ func logWriter(logPath string) *rotatelogs.RotateLogs {
 func localFilesystemLogger(logPath string) {
 	lfHook := lfshook.NewHook(logWriter(logPath), &log.TextFormatter{FullTimestamp: true, TimestampFormat: "2006-01-02 15:04:05.000"})
 	log.AddHook(lfHook)
+}
+
+func getRewardBackgroud() {
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			err := reward.GetRewards(config.GetConfig().ExecuteRpc, config.GetConfig().RewardFile)
+			if err != nil {
+				log.WithError(err).Error("collect reward failed")
+			}
+		}
+	}
 }

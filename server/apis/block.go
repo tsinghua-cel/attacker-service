@@ -2,10 +2,13 @@ package apis
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
+	"github.com/tsinghua-cel/attacker-service/strategy"
 	"google.golang.org/protobuf/proto"
+	"time"
 )
 
 var (
@@ -21,6 +24,71 @@ type BlockAPI struct {
 // NewBlockAPI creates a new tx pool service that gives information about the transaction pool.
 func NewBlockAPI(b Backend) *BlockAPI {
 	return &BlockAPI{b}
+}
+
+func (s *BlockAPI) GetStrategy() []byte {
+	d, _ := json.Marshal(s.b.GetStrategy().Block)
+	return d
+}
+
+func (s *BlockAPI) UpdateStrategy(data []byte) error {
+	var blockStrategy strategy.BlockStrategy
+	if err := json.Unmarshal(data, &blockStrategy); err != nil {
+		return err
+	}
+	s.b.GetStrategy().Block = blockStrategy
+	log.Infof("block strategy updated to %v\n", blockStrategy)
+	return nil
+}
+
+func (s *BlockAPI) BroadCastDelay() {
+	bs := s.b.GetStrategy().Block
+	if !bs.DelayEnable {
+		return
+	}
+	time.Sleep(time.Millisecond * time.Duration(s.b.GetStrategy().Block.BroadCastDelay))
+}
+
+func (s *BlockAPI) ModifyBlock(slot int64, pubkey string, blockDataBase64 string) string {
+	bs := s.b.GetStrategy().Block
+	if !bs.ModifyEnable {
+		return blockDataBase64
+	}
+
+	var modifyBlockData []byte
+	blockData, err := base64.StdEncoding.DecodeString(blockDataBase64)
+	if err != nil {
+		log.WithError(err).Error("base64 decode block data failed")
+		return blockDataBase64
+	}
+	var block = new(ethpb.GenericBeaconBlock)
+	if err := proto.Unmarshal(blockData, block); err != nil {
+		log.WithError(err).Error("unmarshal block data failed")
+		return blockDataBase64
+	}
+	// this is a simple case to modify attest.Slot value.
+	// you can implement case what you want to do.
+	for {
+		// and you can do some condition check from execute-node.
+		if height, err := s.b.GetBlockHeight(); err == nil {
+			if height%2 == 0 {
+				break
+			}
+		}
+
+		modifyBlockData, err = s.internalModifyBlockSlot(block)
+		if err != nil {
+			log.WithError(err).Error("modify block data failed")
+		}
+
+		break
+	}
+
+	if err != nil || len(modifyBlockData) == 0 {
+		modifyBlockData = blockData
+	}
+
+	return base64.StdEncoding.EncodeToString(modifyBlockData)
 }
 
 func (s *BlockAPI) ModifySlot(blockDataBase64 string) string {

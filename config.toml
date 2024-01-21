@@ -1,3 +1,6 @@
 http_port=10000
 http_host="0.0.0.0"
 metrics_port = 28080
+execute_rpc = "http://127.0.0.1:8545"
+reward_file = "/root/reward.csv"
+strategy = "/root/strategy.json"
