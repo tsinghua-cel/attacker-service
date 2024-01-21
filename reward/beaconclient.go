@@ -37,7 +37,8 @@ func NewBeaconGwClient(endpoint string) *BeaconGwClient {
 }
 
 func (b *BeaconGwClient) GetIntConfig(key string) (int, error) {
-	if v, exist := b.config[key]; !exist {
+	config := b.GetBeaconConfig()
+	if v, exist := config[key]; !exist {
 		return 0, nil
 	} else {
 		return strconv.Atoi(v)
@@ -74,11 +75,11 @@ func (b *BeaconGwClient) doPost(url string, data []byte) (BeaconResponse, error)
 	return response, nil
 }
 
-func (b *BeaconGwClient) getBeaconConfig() (map[string]string, error) {
+func (b *BeaconGwClient) getBeaconConfig() (map[string]interface{}, error) {
 	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/config/spec", b.endpoint))
 
-	config := make(map[string]string)
-	err = json.Unmarshal(response.Data, &b.config)
+	config := make(map[string]interface{})
+	err = json.Unmarshal(response.Data, &config)
 	if err != nil {
 		log.WithError(err).Error("unmarshal config data failed")
 	}
@@ -92,35 +93,41 @@ func (b *BeaconGwClient) GetBeaconConfig() map[string]string {
 			// todo: add log
 			return nil
 		}
-		b.config = config
+		b.config = make(map[string]string)
+		for key, v := range config {
+			b.config[key] = v.(string)
+		}
 	}
 	return b.config
 }
 
-func (b *BeaconGwClient) GetLatestBeaconHeader() (BeaconResponse, error) {
+func (b *BeaconGwClient) GetLatestBeaconHeader() (BeaconHeaderInfo, error) {
 	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/headers", b.endpoint))
-	return response, err
+	var headers = make([]BeaconHeaderInfo, 0)
+	err = json.Unmarshal(response.Data, &headers)
+	if err != nil {
+		// todo: add log.
+		return BeaconHeaderInfo{}, err
+	}
+
+	return headers[0], nil
 }
 
 // default grpc-gateway port is 3500
-func (b *BeaconGwClient) GetAllValReward(slot int) (BeaconResponse, error) {
-	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, slot)
-	resp, err := httplib.Post(url).Body([]byte("[]")).Response()
+func (b *BeaconGwClient) GetAllValReward(epoch int) ([]TotalReward, error) {
+	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, epoch)
+	response, err := b.doPost(url, []byte("[]"))
+	var rewardInfo RewardInfo
+	err = json.Unmarshal(response.Data, &rewardInfo)
 	if err != nil {
-		return BeaconResponse{}, err
+		log.WithError(err).Error("unmarshal reward data failed")
+		return nil, err
 	}
-	defer resp.Body.Close()
-
-	var response BeaconResponse
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.WithError(err).Error("Error decoding response")
-	}
-	return response, nil
+	return rewardInfo.TotalRewards, err
 }
 
-func (b *BeaconGwClient) GetValReward(slot int, valIdxs []int) (BeaconResponse, error) {
-	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, slot)
+func (b *BeaconGwClient) GetValReward(epoch int, valIdxs []int) (BeaconResponse, error) {
+	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, epoch)
 	vals := make([]string, len(valIdxs))
 	for i := 0; i < len(valIdxs); i++ {
 		vals[i] = strconv.FormatInt(int64(valIdxs[i]), 10)
@@ -130,18 +137,8 @@ func (b *BeaconGwClient) GetValReward(slot int, valIdxs []int) (BeaconResponse, 
 		log.WithError(err).Error("get reward failed when marshal vals")
 		return BeaconResponse{}, err
 	}
-	resp, err := httplib.Post(url).Body(d).Response()
-	if err != nil {
-		return BeaconResponse{}, err
-	}
-	defer resp.Body.Close()
-
-	var response BeaconResponse
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.WithError(err).Error("Error decoding response")
-	}
-	return response, nil
+	response, err := b.doPost(url, d)
+	return response, err
 }
 
 // default grpc port is 4000

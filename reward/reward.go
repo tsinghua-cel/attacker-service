@@ -1,12 +1,8 @@
 package reward
 
 import (
-	"context"
 	"encoding/csv"
 	"encoding/json"
-	"fmt"
-	"log"
-	"net/http"
 	"os"
 	"strconv"
 )
@@ -24,6 +20,21 @@ type RewardInfo struct {
 	TotalRewards []TotalReward `json:"total_rewards"`
 }
 
+type BeaconHeaderInfo struct {
+	Header struct {
+		Message struct {
+			Slot          string `json:"slot"`
+			ProposerIndex string `json:"proposer_index"`
+			ParentRoot    string `json:"parent_root"`
+			StateRoot     string `json:"state_root"`
+			BodyRoot      string `json:"body_root"`
+		} `json:"message"`
+		Signature string `json:"signature"`
+	} `json:"header"`
+	Root      string `json:"root"`
+	Canonical bool   `json:"canonical"`
+}
+
 type BeaconResponse struct {
 	Data json.RawMessage `json:"data"`
 }
@@ -34,42 +45,39 @@ func GetRewards(gwEndpoint string, output string) error {
 		return err
 	}
 	defer file.Close()
-	client :=
+	client := NewBeaconGwClient(gwEndpoint)
 
-	latestSlot, err := client.BlockNumber(context.Background())
+	slots_per_epoch, err := client.GetIntConfig(SLOTS_PER_EPOCH)
+	if err != nil {
+		// todo: add log
+		return err
+	}
+	latestHeader, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		return err
 	}
+
+	latestSlot, _ := strconv.ParseInt(latestHeader.Header.Message.Slot, 10, 64)
+	latestEpoch := latestSlot / int64(slots_per_epoch)
 
 	writer := csv.NewWriter(file)
 	defer writer.Flush()
 
 	writer.Write([]string{"Epoch", "Validator Index", "Head", "Target", "Source", "Inclusion Delay", "Inactivity"})
 
-	baseURL := fmt.Sprintf("%s/eth/v1/beacon/rewards/attestations/", addr)
-	epochNumber := uint64(1)
+	epochNumber := int64(0)
 
-	for epochNumber <= latestSlot {
-		url := baseURL + strconv.FormatUint(epochNumber, 10)
+	for epochNumber <= (latestEpoch - 2) {
+		totalRewards, err := client.GetAllValReward(int(epochNumber))
+		if err != nil {
+			return err
+		}
+		for _, totalReward := range totalRewards {
+			writer.Write([]string{strconv.FormatInt(epochNumber, 10), totalReward.ValidatorIndex, totalReward.Head, totalReward.Target, totalReward.Source, totalReward.InclusionDelay, totalReward.Inactivity})
+		}
+
 		epochNumber++
 
-		resp, err := http.Get(url)
-		if err != nil {
-			log.Printf("Error fetching data for Epoch %d: %v\n", epochNumber, err)
-			continue
-		}
-		defer resp.Body.Close()
-
-		var response Response
-		err = json.NewDecoder(resp.Body).Decode(&response)
-		if err != nil {
-			log.Printf("Error decoding response for Epoch %d: %v\n", epochNumber, err)
-			continue
-		}
-
-		for _, totalReward := range response.Data.TotalRewards {
-			writer.Write([]string{strconv.FormatUint(epochNumber, 10), totalReward.ValidatorIndex, totalReward.Head, totalReward.Target, totalReward.Source, totalReward.InclusionDelay, totalReward.Inactivity})
-		}
 	}
 	return err
 }

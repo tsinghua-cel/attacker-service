@@ -35,3 +35,24 @@ func TestGetAllReward(t *testing.T) {
 	}
 	fmt.Printf("get all reward res:%s\n", res)
 }
+
+func TestGetConfig(t *testing.T) {
+	endpoint := "52.221.177.10:33500" // grpc gateway endpoint
+	client := NewBeaconGwClient(endpoint)
+	epoch, err := client.GetIntConfig(SLOTS_PER_EPOCH)
+	if err != nil {
+		t.Fatalf("get epoch config failed err:%s", err)
+	}
+	fmt.Printf("get epoch :%d\n", epoch)
+}
+
+func TestGetLatestBeaconHeader(t *testing.T) {
+	endpoint := "52.221.177.10:33500" // grpc gateway endpoint
+	client := NewBeaconGwClient(endpoint)
+	header, err := client.GetLatestBeaconHeader()
+	if err != nil {
+		t.Fatalf("get latest header failed err:%s", err)
+	}
+	fmt.Printf("get latest header.slot :%s\n", header.Header.Message.Slot)
+
+}
