@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"log"
 	"net/http"
 	"os"
@@ -21,25 +20,22 @@ type TotalReward struct {
 	Inactivity     string `json:"inactivity"`
 }
 
-type Data struct {
+type RewardInfo struct {
 	TotalRewards []TotalReward `json:"total_rewards"`
 }
 
-type Response struct {
-	Data Data `json:"data"`
+type BeaconResponse struct {
+	Data json.RawMessage `json:"data"`
 }
 
-func GetRewards(addr string, output string) error {
+func GetRewards(gwEndpoint string, output string) error {
 	file, err := os.Create(output)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
+	client :=
 
-	client, err := ethclient.Dial(addr)
-	if err != nil {
-		return err
-	}
 	latestSlot, err := client.BlockNumber(context.Background())
 	if err != nil {
 		return err
