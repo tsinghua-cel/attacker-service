@@ -40,11 +40,18 @@ type BeaconResponse struct {
 }
 
 func GetRewards(gwEndpoint string, output string) error {
-	file, err := os.Create(output)
+	bakfile := output + ".bak"
+	file, err := os.Create(bakfile)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	succeed := false
+	defer func() {
+		file.Close()
+		if succeed {
+			os.Rename(bakfile, output)
+		}
+	}()
 	client := NewBeaconGwClient(gwEndpoint)
 
 	slots_per_epoch, err := client.GetIntConfig(SLOTS_PER_EPOCH)
@@ -79,5 +86,6 @@ func GetRewards(gwEndpoint string, output string) error {
 		epochNumber++
 
 	}
+	succeed = true
 	return err
 }
