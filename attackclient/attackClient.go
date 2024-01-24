@@ -2,9 +2,8 @@ package attackclient
 
 import (
 	"context"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/tsinghua-cel/attacker-service/rpc"
-	"math/big"
+	"github.com/tsinghua-cel/attacker-service/types"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.
@@ -41,67 +40,67 @@ func (ec *Client) Client() *rpc.Client {
 	return ec.c
 }
 
-func (ec *Client) BlockBroadCastDelay(ctx context.Context) error {
-	var result error
+func (ec *Client) BlockBroadCastDelay(ctx context.Context) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, "block_broadCastDelay")
 	if err != nil {
-		return err
+		return result, err
 	}
-	return nil
+	return result, nil
 }
 
-func (ec *Client) BlockModify(ctx context.Context, slot int64, pubkey string, blockDataBase64 string) (string, error) {
-	var result string
+func (ec *Client) BlockModify(ctx context.Context, slot int64, pubkey string, blockDataBase64 string) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, "block_modifyBlock", slot, pubkey, blockDataBase64)
 	if err != nil {
-		return blockDataBase64, err
+		return result, err
 	}
 	return result, err
 }
 
-func (ec *Client) AttestBroadCastDelay(ctx context.Context) error {
-	var result error
+func (ec *Client) AttestBroadCastDelay(ctx context.Context) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, "attest_broadCastDelay")
 	if err != nil {
-		return err
+		return result, err
 	}
-	return nil
+	return result, nil
 }
 
-func (ec *Client) AttestModify(ctx context.Context, slot int64, pubkey string, attestDataBase64 string) (string, error) {
-	var result string
+func (ec *Client) AttestModify(ctx context.Context, slot int64, pubkey string, attestDataBase64 string) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, "attest_modifyAttest", slot, pubkey, attestDataBase64)
 	if err != nil {
-		return attestDataBase64, err
+		return result, err
 	}
 	return result, err
 }
 
 // Delay will delay random seconds time.
-func (ec *Client) Delay(ctx context.Context, ts uint) (*big.Int, error) {
-	var result hexutil.Big
+func (ec *Client) Delay(ctx context.Context, ts uint) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, "time_delay", ts)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
-	return (*big.Int)(&result), err
+	return result, err
 }
 
 // Delay will delay random seconds time.
-func (ec *Client) DelayRandom(ctx context.Context, min, max uint) (*big.Int, error) {
-	var result hexutil.Big
+func (ec *Client) DelayRandom(ctx context.Context, min, max uint) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, "time_delayRandom", min, max)
 	if err != nil {
-		return nil, err
+		return result, err
 	}
-	return (*big.Int)(&result), err
+	return result, err
 }
 
-func (ec *Client) Echo(ctx context.Context, data string) (string, error) {
-	var result string
+func (ec *Client) Echo(ctx context.Context, data string) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, "time_echo", data)
 	if err != nil {
-		return "", err
+		return result, err
 	}
 	return result, err
 }

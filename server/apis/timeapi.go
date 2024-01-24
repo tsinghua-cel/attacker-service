@@ -46,15 +46,9 @@ func (s *TimeAPI) Delay(ts int) types.AttackerResponse {
 }
 
 // Echo will return msg what input.
-func (s *TimeAPI) Echo(msg string) string {
-	return msg
+func (s *TimeAPI) Echo(msg string) types.AttackerResponse {
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: msg,
+	}
 }
-
-//
-//// Echo will return msg what input.
-//func (s *TimeAPI) Echo(msg string) types.AttackerResponse {
-//	return types.AttackerResponse{
-//		Cmd:    types.CMD_NULL,
-//		Result: msg,
-//	}
-//}
