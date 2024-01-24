@@ -6,6 +6,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/strategy"
+	"github.com/tsinghua-cel/attacker-service/types"
 	"google.golang.org/protobuf/proto"
 	"time"
 )
@@ -35,29 +36,43 @@ func (s *AttestAPI) UpdateStrategy(data []byte) error {
 	return nil
 }
 
-func (s *AttestAPI) BroadCastDelay() {
+func (s *AttestAPI) BroadCastDelay() types.AttackerResponse {
 	as := s.b.GetStrategy().Attest
 	if !as.DelayEnable {
-		return
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(s.b.GetStrategy().Attest.BroadCastDelay))
+	return types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
 }
 
-func (s *AttestAPI) ModifyAttest(slot int64, pubkey string, attestDataBase64 string) string {
+func (s *AttestAPI) ModifyAttest(slot int64, pubkey string, attestDataBase64 string) types.AttackerResponse {
 	as := s.b.GetStrategy().Attest
 	if !as.ModifyEnable {
-		return attestDataBase64
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: attestDataBase64,
+		}
 	}
 
 	attestData, err := base64.StdEncoding.DecodeString(attestDataBase64)
 	if err != nil {
 		log.WithError(err).Error("base64 decode attest data failed")
-		return attestDataBase64
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: attestDataBase64,
+		}
 	}
 	var attest = new(ethpb.AttestationData)
 	if err := proto.Unmarshal(attestData, attest); err != nil {
 		log.WithError(err).Error("unmarshal attest data failed")
-		return attestDataBase64
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: attestDataBase64,
+		}
 	}
 
 	var (
@@ -89,7 +104,11 @@ func (s *AttestAPI) ModifyAttest(slot int64, pubkey string, attestDataBase64 str
 		modifyAttestData = attestData
 	}
 
-	return base64.StdEncoding.EncodeToString(modifyAttestData)
+	ndata := base64.StdEncoding.EncodeToString(modifyAttestData)
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: ndata,
+	}
 }
 
 func (s *AttestAPI) internalModifyAttestSlot(attest *ethpb.AttestationData) ([]byte, error) {

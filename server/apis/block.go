@@ -7,6 +7,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/strategy"
+	"github.com/tsinghua-cel/attacker-service/types"
 	"google.golang.org/protobuf/proto"
 	"time"
 )
@@ -41,31 +42,44 @@ func (s *BlockAPI) UpdateStrategy(data []byte) error {
 	return nil
 }
 
-func (s *BlockAPI) BroadCastDelay() error {
+func (s *BlockAPI) BroadCastDelay() types.AttackerResponse {
 	bs := s.b.GetStrategy().Block
 	if !bs.DelayEnable {
-		return nil
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
 	}
 	time.Sleep(time.Millisecond * time.Duration(s.b.GetStrategy().Block.BroadCastDelay))
-	return nil
+	return types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
 }
 
-func (s *BlockAPI) ModifyBlock(slot int64, pubkey string, blockDataBase64 string) string {
+func (s *BlockAPI) ModifyBlock(slot int64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 	bs := s.b.GetStrategy().Block
 	if !bs.ModifyEnable {
-		return blockDataBase64
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: blockDataBase64,
+		}
 	}
 
 	var modifyBlockData []byte
 	blockData, err := base64.StdEncoding.DecodeString(blockDataBase64)
 	if err != nil {
 		log.WithError(err).Error("base64 decode block data failed")
-		return blockDataBase64
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: blockDataBase64,
+		}
 	}
 	var block = new(ethpb.GenericBeaconBlock)
 	if err := proto.Unmarshal(blockData, block); err != nil {
 		log.WithError(err).Error("unmarshal block data failed")
-		return blockDataBase64
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: blockDataBase64,
+		}
 	}
 	// this is a simple case to modify attest.Slot value.
 	// you can implement case what you want to do.
@@ -89,26 +103,43 @@ func (s *BlockAPI) ModifyBlock(slot int64, pubkey string, blockDataBase64 string
 		modifyBlockData = blockData
 	}
 
-	return base64.StdEncoding.EncodeToString(modifyBlockData)
+	ndata := base64.StdEncoding.EncodeToString(modifyBlockData)
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: ndata,
+	}
 }
 
-func (s *BlockAPI) ModifySlot(blockDataBase64 string) string {
+func (s *BlockAPI) ModifySlot(blockDataBase64 string) types.AttackerResponse {
 	blockData, err := base64.StdEncoding.DecodeString(blockDataBase64)
 	if err != nil {
 		log.WithError(err).Error("base64 decode block data failed")
-		return ""
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: blockDataBase64,
+		}
 	}
 	var block = new(ethpb.GenericBeaconBlock)
 	if err := proto.Unmarshal(blockData, block); err != nil {
 		log.WithError(err).Error("unmarshal block data failed")
-		return ""
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: blockDataBase64,
+		}
 	}
 	modifyBlockData, err := s.internalModifyBlockSlot(block)
 	if err != nil {
 		log.WithError(err).Error("modify block data failed")
-		return ""
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: blockDataBase64,
+		}
 	}
-	return base64.StdEncoding.EncodeToString(modifyBlockData)
+	ndata := base64.StdEncoding.EncodeToString(modifyBlockData)
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: ndata,
+	}
 }
 
 // implement every modify function

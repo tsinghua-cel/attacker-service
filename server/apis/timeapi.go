@@ -1,7 +1,9 @@
 package apis
 
 import (
+	"github.com/tsinghua-cel/attacker-service/types"
 	"math/rand"
+	"strconv"
 	"time"
 )
 
@@ -16,7 +18,7 @@ func NewTimeAPI(b Backend) *TimeAPI {
 }
 
 // DelayRandom sleep random seconds time and return the time.
-func (s *TimeAPI) DelayRandom(min, max int) int {
+func (s *TimeAPI) DelayRandom(min, max int) types.AttackerResponse {
 	var ts = 0
 	if min > max {
 		ts = 0
@@ -28,16 +30,31 @@ func (s *TimeAPI) DelayRandom(min, max int) int {
 	}
 
 	time.Sleep(time.Duration(ts) * time.Second)
-	return ts
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: strconv.Itoa(ts),
+	}
 }
 
 // Delay sleep special seconds time and return the time.
-func (s *TimeAPI) Delay(ts int) int {
+func (s *TimeAPI) Delay(ts int) types.AttackerResponse {
 	time.Sleep(time.Duration(ts) * time.Second)
-	return ts
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: strconv.Itoa(ts),
+	}
 }
 
 // Echo will return msg what input.
 func (s *TimeAPI) Echo(msg string) string {
 	return msg
 }
+
+//
+//// Echo will return msg what input.
+//func (s *TimeAPI) Echo(msg string) types.AttackerResponse {
+//	return types.AttackerResponse{
+//		Cmd:    types.CMD_NULL,
+//		Result: msg,
+//	}
+//}
