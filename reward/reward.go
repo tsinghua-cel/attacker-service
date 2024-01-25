@@ -2,42 +2,10 @@ package reward
 
 import (
 	"encoding/csv"
-	"encoding/json"
+	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"os"
 	"strconv"
 )
-
-type TotalReward struct {
-	ValidatorIndex string `json:"validator_index"`
-	Head           string `json:"head"`
-	Target         string `json:"target"`
-	Source         string `json:"source"`
-	InclusionDelay string `json:"inclusion_delay"`
-	Inactivity     string `json:"inactivity"`
-}
-
-type RewardInfo struct {
-	TotalRewards []TotalReward `json:"total_rewards"`
-}
-
-type BeaconHeaderInfo struct {
-	Header struct {
-		Message struct {
-			Slot          string `json:"slot"`
-			ProposerIndex string `json:"proposer_index"`
-			ParentRoot    string `json:"parent_root"`
-			StateRoot     string `json:"state_root"`
-			BodyRoot      string `json:"body_root"`
-		} `json:"message"`
-		Signature string `json:"signature"`
-	} `json:"header"`
-	Root      string `json:"root"`
-	Canonical bool   `json:"canonical"`
-}
-
-type BeaconResponse struct {
-	Data json.RawMessage `json:"data"`
-}
 
 func GetRewards(gwEndpoint string, output string) error {
 	bakfile := output + ".bak"
@@ -52,9 +20,9 @@ func GetRewards(gwEndpoint string, output string) error {
 			os.Rename(bakfile, output)
 		}
 	}()
-	client := NewBeaconGwClient(gwEndpoint)
+	client := beaconapi.NewBeaconGwClient(gwEndpoint)
 
-	slots_per_epoch, err := client.GetIntConfig(SLOTS_PER_EPOCH)
+	slots_per_epoch, err := client.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
 	if err != nil {
 		// todo: add log
 		return err

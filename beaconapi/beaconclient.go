@@ -1,4 +1,4 @@
-package reward
+package beaconapi
 
 import (
 	"context"
@@ -139,6 +139,39 @@ func (b *BeaconGwClient) GetValReward(epoch int, valIdxs []int) (BeaconResponse,
 	}
 	response, err := b.doPost(url, d)
 	return response, err
+}
+
+// /eth/v1/validator/duties/proposer/:epoch
+func (b *BeaconGwClient) GetProposerDuties(epoch int) ([]ProposerDuty, error) {
+	url := fmt.Sprintf("http://%s/eth/v1/validator/duties/proposer/%d", b.endpoint, epoch)
+	var duties = make([]ProposerDuty, 0)
+
+	response, err := b.doGet(url)
+	err = json.Unmarshal(response.Data, &duties)
+	if err != nil {
+		// todo: add log.
+		return []ProposerDuty{}, err
+	}
+
+	return duties, err
+}
+
+// POST /eth/v1/validator/duties/attester/:epoch
+func (b *BeaconGwClient) GetAttesterDuties(epoch int, vals []int) ([]AttestDuty, error) {
+	url := fmt.Sprintf("http://%s/eth/v1/validator/duties/attester/%d", b.endpoint, epoch)
+	param := make([]string, len(vals))
+	for i := 0; i < len(vals); i++ {
+		param[i] = strconv.FormatInt(int64(vals[i]), 10)
+	}
+	paramData, _ := json.Marshal(param)
+	var duties = make([]AttestDuty, 0)
+
+	response, err := b.doPost(url, paramData)
+	err = json.Unmarshal(response.Data, &duties)
+	if err != nil {
+		return []AttestDuty{}, err
+	}
+	return duties, err
 }
 
 // default grpc port is 4000

@@ -1,4 +1,4 @@
-package reward
+package beaconapi
 
 import (
 	log "github.com/sirupsen/logrus"
