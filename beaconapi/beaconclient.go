@@ -138,7 +138,6 @@ func (b *BeaconGwClient) GetProposerDuties(epoch int) ([]ProposerDuty, error) {
 	response, err := b.doGet(url)
 	err = json.Unmarshal(response.Data, &duties)
 	if err != nil {
-		// todo: add log.
 		return []ProposerDuty{}, err
 	}
 

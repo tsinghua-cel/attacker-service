@@ -95,8 +95,27 @@ func (n *Server) startRPC() error {
 func (s *Server) monitorDuties() {
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
+
+	validatorUpdateTicker := time.NewTicker(time.Second)
+	defer validatorUpdateTicker.Stop()
+
 	for {
 		select {
+		case <-validatorUpdateTicker.C:
+			latest, err := s.beaconClient.GetLatestBeaconHeader()
+			if err != nil {
+				continue
+			}
+			slot, _ := strconv.Atoi(latest.Header.Message.Slot)
+			for _, val := range s.strategy.Validators {
+				valRole := s.GetValidatorRole(val.ValidatorIndex)
+				if slot >= val.AttackerStartSlot && slot <= val.AttackerEndSlot && valRole != types2.AttackerRole {
+					s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.AttackerRole)
+				} else if slot > val.AttackerEndSlot && valRole == types2.AttackerRole {
+					s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.NormalRole)
+				}
+			}
+
 		case <-ticker.C:
 			duties, err := s.beaconClient.GetCurrentEpochAttestDuties()
 			if err != nil {
@@ -166,6 +185,14 @@ func (s *Server) GetValidatorRole(idx int) types2.RoleType {
 	}
 }
 
+func (s *Server) GetValidatorRoleByPubkey(pubkey string) types2.RoleType {
+	if val := s.validatorSetInfo.GetValidatorByPubkey(pubkey); val != nil {
+		return val.Role
+	} else {
+		return types2.NormalRole
+	}
+}
+
 func (s *Server) GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error) {
 	return s.beaconClient.GetCurrentEpochProposerDuties()
 }
@@ -190,14 +217,12 @@ func (s *Server) GetIntervalPerSlot() int {
 	return interval
 }
 
-func (s *Server) AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation) error {
+func (s *Server) AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation) {
 	s.validatorSetInfo.AddSignedAttestation(slot, pubkey, attestation)
-	return nil
 }
 
-func (s *Server) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) error {
+func (s *Server) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) {
 	s.validatorSetInfo.AddSignedBlock(slot, pubkey, block)
-	return nil
 }
 
 func (s *Server) GetAttestSet(slot uint64) *validatorSet.SlotAttestSet {
@@ -206,4 +231,8 @@ func (s *Server) GetAttestSet(slot uint64) *validatorSet.SlotAttestSet {
 
 func (s *Server) GetBlockSet(slot uint64) *validatorSet.SlotBlockSet {
 	return s.validatorSetInfo.GetBlockSet(slot)
+}
+
+func (s *Server) GetValidatorDataSet() *validatorSet.ValidatorDataSet {
+	return s.validatorSetInfo
 }

@@ -2,10 +2,12 @@ package apis
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/strategy"
 	types2 "github.com/tsinghua-cel/attacker-service/types"
+	"github.com/tsinghua-cel/attacker-service/validatorSet"
 	"math/big"
 )
 
@@ -24,13 +26,23 @@ type Backend interface {
 	GetHeightByNumber(number *big.Int) (*types.Header, error)
 
 	GetValidatorRole(idx int) types2.RoleType
+	GetValidatorRoleByPubkey(pubkey string) types2.RoleType
 	GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error)
 	GetSlotsPerEpoch() int
 	GetIntervalPerSlot() int
+	AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation)
+	AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock)
+	GetAttestSet(slot uint64) *validatorSet.SlotAttestSet
+	GetBlockSet(slot uint64) *validatorSet.SlotBlockSet
+	GetValidatorDataSet() *validatorSet.ValidatorDataSet
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
 	return []rpc.API{
+		{
+			Namespace: "admin",
+			Service:   NewAdminAPI(apiBackend),
+		},
 		{
 			Namespace: "block",
 			Service:   NewBlockAPI(apiBackend),

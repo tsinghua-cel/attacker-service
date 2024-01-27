@@ -3,6 +3,7 @@ package validatorSet
 import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"github.com/tsinghua-cel/attacker-service/types"
+	"strings"
 	"sync"
 )
 
@@ -29,7 +30,15 @@ func NewValidatorSet() *ValidatorDataSet {
 	}
 }
 
+func padPubkey(p string) string {
+	if strings.HasPrefix(p, "0x") {
+		return p
+	}
+	return "0x" + p
+}
+
 func (vs *ValidatorDataSet) AddValidator(index int, pubkey string, role types.RoleType) {
+	pubkey = padPubkey(pubkey)
 	vs.lock.Lock()
 	defer vs.lock.Unlock()
 	v := &ValidatorInfo{
@@ -39,6 +48,14 @@ func (vs *ValidatorDataSet) AddValidator(index int, pubkey string, role types.Ro
 	}
 	vs.ValidatorByIndex.Store(index, v)
 	vs.ValidatorByPubkey.Store(pubkey, v)
+}
+
+func (vs *ValidatorDataSet) SetValidatorRole(index int, role types.RoleType) {
+	vs.lock.Lock()
+	defer vs.lock.Unlock()
+	if v, exist := vs.ValidatorByIndex.Load(index); exist {
+		v.(*ValidatorInfo).Role = role
+	}
 }
 
 func (vs *ValidatorDataSet) GetValidatorByIndex(index int) *ValidatorInfo {
@@ -52,6 +69,7 @@ func (vs *ValidatorDataSet) GetValidatorByIndex(index int) *ValidatorInfo {
 }
 
 func (vs *ValidatorDataSet) GetValidatorByPubkey(pubkey string) *ValidatorInfo {
+	pubkey = padPubkey(pubkey)
 	vs.lock.RLock()
 	defer vs.lock.RUnlock()
 	if v, exist := vs.ValidatorByPubkey.Load(pubkey); !exist {
@@ -82,6 +100,7 @@ func (vs *ValidatorDataSet) GetBlockSet(slot uint64) *SlotBlockSet {
 }
 
 func (vs *ValidatorDataSet) AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation) {
+	pubkey = padPubkey(pubkey)
 	vs.lock.Lock()
 	defer vs.lock.Unlock()
 
@@ -94,6 +113,7 @@ func (vs *ValidatorDataSet) AddSignedAttestation(slot uint64, pubkey string, att
 }
 
 func (vs *ValidatorDataSet) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) {
+	pubkey = padPubkey(pubkey)
 	vs.lock.Lock()
 	defer vs.lock.Unlock()
 
