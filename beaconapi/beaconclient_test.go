@@ -1,6 +1,7 @@
 package beaconapi
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 )
@@ -55,4 +56,17 @@ func TestGetLatestBeaconHeader(t *testing.T) {
 	}
 	fmt.Printf("get latest header.slot :%s\n", header.Header.Message.Slot)
 
+}
+
+func TestGetAllAttestDuties(t *testing.T) {
+	endpoint := "52.221.177.10:14000" // grpc gateway endpoint
+	client := NewBeaconGwClient(endpoint)
+	duties, err := client.GetNextEpochAttestDuties()
+	if err != nil {
+		t.Fatalf("get latest header failed err:%s", err)
+	}
+	for _, duty := range duties {
+		d, _ := json.Marshal(duty)
+		fmt.Printf("get attest duty :%s\n", string(d))
+	}
 }

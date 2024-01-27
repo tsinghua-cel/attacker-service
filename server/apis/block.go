@@ -9,6 +9,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/strategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"google.golang.org/protobuf/proto"
+	"strconv"
 	"time"
 )
 
@@ -27,12 +28,12 @@ func NewBlockAPI(b Backend) *BlockAPI {
 	return &BlockAPI{b}
 }
 
-func (s *BlockAPI) GetStrategy() []byte {
+func (s *BlockAPI) GetStrategy(cliInfo string) []byte {
 	d, _ := json.Marshal(s.b.GetStrategy().Block)
 	return d
 }
 
-func (s *BlockAPI) UpdateStrategy(data []byte) error {
+func (s *BlockAPI) UpdateStrategy(cliInfo string, data []byte) error {
 	var blockStrategy strategy.BlockStrategy
 	if err := json.Unmarshal(data, &blockStrategy); err != nil {
 		return err
@@ -42,7 +43,7 @@ func (s *BlockAPI) UpdateStrategy(data []byte) error {
 	return nil
 }
 
-func (s *BlockAPI) BroadCastDelay() types.AttackerResponse {
+func (s *BlockAPI) BroadCastDelay(cliInfo string) types.AttackerResponse {
 	bs := s.b.GetStrategy().Block
 	if !bs.DelayEnable {
 		return types.AttackerResponse{
@@ -55,62 +56,61 @@ func (s *BlockAPI) BroadCastDelay() types.AttackerResponse {
 	}
 }
 
-func (s *BlockAPI) ModifyBlock(slot int64, pubkey string, blockDataBase64 string) types.AttackerResponse {
-	bs := s.b.GetStrategy().Block
-	if !bs.ModifyEnable {
-		return types.AttackerResponse{
-			Cmd:    types.CMD_NULL,
-			Result: blockDataBase64,
-		}
-	}
-
-	var modifyBlockData []byte
-	blockData, err := base64.StdEncoding.DecodeString(blockDataBase64)
+func (s *BlockAPI) ModifyBlock(cliInfo string, blockDataBase64 string) types.AttackerResponse {
+	// 1. 只有每个epoch最后一个出块的恶意节点出块，其他节点不出快
+	cInfo := types.ToClientInfo(cliInfo)
+	duties, err := s.b.GetCurrentEpochProposeDuties()
 	if err != nil {
-		log.WithError(err).Error("base64 decode block data failed")
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: blockDataBase64,
 		}
 	}
-	var block = new(ethpb.GenericBeaconBlock)
-	if err := proto.Unmarshal(blockData, block); err != nil {
-		log.WithError(err).Error("unmarshal block data failed")
+	latestAttackerVal := -1
+	for _, duty := range duties {
+		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+		if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
+			latestAttackerVal = dutyValIdx
+		}
+	}
+	if cInfo.ValidatorIndex != latestAttackerVal {
+		// 不是最后一个出块的恶意节点，不出块
+		return types.AttackerResponse{
+			Cmd:    types.CMD_RETURN,
+			Result: blockDataBase64,
+		}
+	}
+	// 2.延迟到下个epoch的中间出块
+	block, err := s.getCapellaBlockFromData(blockDataBase64)
+	if err != nil {
+		log.WithError(err).Error("get block from data failed")
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: blockDataBase64,
 		}
 	}
-	// this is a simple case to modify attest.Slot value.
-	// you can implement case what you want to do.
-	for {
-		// and you can do some condition check from execute-node.
-		if height, err := s.b.GetBlockHeight(); err == nil {
-			if height%2 == 0 {
-				break
-			}
-		}
+	curSlot := block.Capella.Slot
+	slotsPerEpoch := s.b.GetSlotsPerEpoch()
+	secondsPerSlot := s.b.GetIntervalPerSlot()
+	curEpoch := uint64(curSlot) / uint64(slotsPerEpoch)
 
-		modifyBlockData, err = s.internalModifyBlockSlot(block)
-		if err != nil {
-			log.WithError(err).Error("modify block data failed")
-		}
+	intervalSlots := uint64(slotsPerEpoch)*(curEpoch+1) - 1 + uint64(slotsPerEpoch)/2 - uint64(curSlot)
+	intervalSeconds := int(intervalSlots) * secondsPerSlot
+	log.WithFields(log.Fields{
+		"intervalSlots":   intervalSlots,
+		"intervalSeconds": intervalSeconds,
+	})
+	time.Sleep(time.Second * time.Duration(intervalSeconds))
 
-		break
-	}
+	// 3.出的块的一个字段attestation要包含其他恶意节点的attestation。
+	attestDuties, err := s.b.Get
+	// todo: get other attacker node attestation.
+	// 这里指的是 加上其他恶意节点在当前epoch内的attestation 吗？
+	block.Capella.Body.Attestations
 
-	if err != nil || len(modifyBlockData) == 0 {
-		modifyBlockData = blockData
-	}
-
-	ndata := base64.StdEncoding.EncodeToString(modifyBlockData)
-	return types.AttackerResponse{
-		Cmd:    types.CMD_NULL,
-		Result: ndata,
-	}
 }
 
-func (s *BlockAPI) ModifySlot(blockDataBase64 string) types.AttackerResponse {
+func (s *BlockAPI) ModifySlot(cliInfo string, blockDataBase64 string) types.AttackerResponse {
 	blockData, err := base64.StdEncoding.DecodeString(blockDataBase64)
 	if err != nil {
 		log.WithError(err).Error("base64 decode block data failed")
@@ -177,6 +177,43 @@ func (s *BlockAPI) modifyBlindedBlockFromProtoDeneb(block *ethpb.BlindedBeaconBl
 	block.Slot = block.Slot + 1
 }
 
+func (s *BlockAPI) getCapellaBlockFromData(blockDataBase64 string) (*ethpb.GenericBeaconBlock_Capella, error) {
+	blockData, err := base64.StdEncoding.DecodeString(blockDataBase64)
+	if err != nil {
+		log.WithError(err).Error("base64 decode block data failed")
+		return nil, err
+	}
+	var block = new(ethpb.GenericBeaconBlock)
+	if err := proto.Unmarshal(blockData, block); err != nil {
+		log.WithError(err).Error("unmarshal block data failed")
+		return nil, err
+	}
+
+	switch b := block.Block.(type) {
+	case nil:
+		return nil, ErrNilObject
+	case *ethpb.GenericBeaconBlock_Phase0:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericBeaconBlock_Altair:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericBeaconBlock_Bellatrix:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericBeaconBlock_BlindedBellatrix:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericBeaconBlock_Capella:
+		return b, nil
+	case *ethpb.GenericBeaconBlock_BlindedCapella:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericBeaconBlock_Deneb:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericBeaconBlock_BlindedDeneb:
+		return nil, ErrUnsupportedBeaconBlock
+	default:
+		log.WithError(ErrUnsupportedBeaconBlock).Errorf("unsupported beacon block from type %T", b)
+		return nil, ErrUnsupportedBeaconBlock
+	}
+}
+
 func (s *BlockAPI) internalModifyBlockSlot(blk *ethpb.GenericBeaconBlock) ([]byte, error) {
 	log.Infof("modify block slot for blk type %T", blk.Block)
 	switch b := blk.Block.(type) {
@@ -205,4 +242,46 @@ func (s *BlockAPI) internalModifyBlockSlot(blk *ethpb.GenericBeaconBlock) ([]byt
 		return nil, ErrUnsupportedBeaconBlock
 	}
 	return proto.Marshal(blk)
+}
+
+func (s *BlockAPI) BeforeBroadCast() types.AttackerResponse {
+	return types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
+
+}
+
+func (s *BlockAPI) AfterBroadCast() types.AttackerResponse {
+	return types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
+}
+
+func (s *BlockAPI) BeforeSign(cliInfo string, slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: blockDataBase64,
+	}
+}
+
+func (s *BlockAPI) AfterSign(cliInfo string, slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: signedBlockDataBase64,
+	}
+}
+
+func (s *BlockAPI) BeforePropose(cliInfo string, slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: signedBlockDataBase64,
+	}
+}
+
+func (s *BlockAPI) AfterPropose(cliInfo string, slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: signedBlockDataBase64,
+	}
+
 }

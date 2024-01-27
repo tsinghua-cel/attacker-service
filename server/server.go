@@ -6,19 +6,27 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	log "github.com/sirupsen/logrus"
+	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
 	"github.com/tsinghua-cel/attacker-service/strategy"
+	types2 "github.com/tsinghua-cel/attacker-service/types"
+	"github.com/tsinghua-cel/attacker-service/validatorSet"
 	"math/big"
+	"strconv"
+	"time"
 )
 
 type Server struct {
-	config   *config.Config
-	rpcAPIs  []rpc.API   // List of APIs currently provided by the node
-	http     *httpServer //
-	strategy *strategy.Strategy
-	client   *ethclient.Client
+	config       *config.Config
+	rpcAPIs      []rpc.API   // List of APIs currently provided by the node
+	http         *httpServer //
+	strategy     *strategy.Strategy
+	execClient   *ethclient.Client
+	beaconClient *beaconapi.BeaconGwClient
+
+	validatorSetInfo *validatorSet.ValidatorSet
 }
 
 func NewServer() *Server {
@@ -29,9 +37,11 @@ func NewServer() *Server {
 	if err != nil {
 		panic(fmt.Sprintf("dial execute failed with err:%v", err))
 	}
-	s.client = client
+	s.execClient = client
+	s.beaconClient = beaconapi.NewBeaconGwClient(s.config.BeaconRpc)
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
 	s.strategy = strategy.ParseStrategy(config.GetConfig().Strategy)
+	s.validatorSetInfo = validatorSet.NewValidatorSet()
 	return s
 }
 
@@ -81,12 +91,35 @@ func (n *Server) startRPC() error {
 	return nil
 }
 
+func (s *Server) monitorDuties() {
+	ticker := time.NewTicker(time.Millisecond * 100)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			duties, err := s.beaconClient.GetCurrentEpochAttestDuties()
+			if err != nil {
+				continue
+			}
+			for _, duty := range duties {
+				idx, _ := strconv.Atoi(duty.ValidatorIndex)
+				s.validatorSetInfo.AddValidator(idx, duty.Pubkey, types2.NormalRole)
+			}
+
+			ticker.Reset(time.Second * 2)
+
+		}
+	}
+}
+
 func (s *Server) Start() {
 	// start RPC endpoints
 	err := s.startRPC()
 	if err != nil {
 		s.stopRPC()
 	}
+	// start collect duties info.
+	go s.monitorDuties()
 }
 
 func (s *Server) stopRPC() {
@@ -99,15 +132,15 @@ func (s *Server) SomeNeedBackend() bool {
 }
 
 func (s *Server) GetBlockHeight() (uint64, error) {
-	return s.client.BlockNumber(context.Background())
+	return s.execClient.BlockNumber(context.Background())
 }
 
 func (s *Server) GetBlockByNumber(number *big.Int) (*types.Block, error) {
-	return s.client.BlockByNumber(context.Background(), number)
+	return s.execClient.BlockByNumber(context.Background(), number)
 }
 
 func (s *Server) GetHeightByNumber(number *big.Int) (*types.Header, error) {
-	return s.client.HeaderByNumber(context.Background(), number)
+	return s.execClient.HeaderByNumber(context.Background(), number)
 }
 
 func (s *Server) GetStrategy() *strategy.Strategy {
@@ -122,4 +155,36 @@ func (s *Server) UpdateBlockBroadDelay(milliSecond int64) error {
 func (s *Server) UpdateAttestBroadDelay(milliSecond int64) error {
 	s.strategy.Attest.BroadCastDelay = milliSecond
 	return nil
+}
+
+func (s *Server) GetValidatorRole(idx int) types2.RoleType {
+	if val := s.validatorSetInfo.GetValidatorByIndex(idx); val != nil {
+		return val.Role
+	} else {
+		return types2.NormalRole
+	}
+}
+
+func (s *Server) GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error) {
+	return s.beaconClient.GetCurrentEpochProposerDuties()
+}
+
+func (s *Server) GetCurrentEpochAttestDuties() ([]beaconapi.AttestDuty, error) {
+	return s.beaconClient.GetCurrentEpochAttestDuties()
+}
+
+func (s *Server) GetSlotsPerEpoch() int {
+	count, err := s.beaconClient.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
+	if err != nil {
+		return 6
+	}
+	return count
+}
+
+func (s *Server) GetIntervalPerSlot() int {
+	interval, err := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
+	if err != nil {
+		return 12
+	}
+	return interval
 }

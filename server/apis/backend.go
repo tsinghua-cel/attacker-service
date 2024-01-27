@@ -2,8 +2,10 @@ package apis
 
 import (
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/strategy"
+	types2 "github.com/tsinghua-cel/attacker-service/types"
 	"math/big"
 )
 
@@ -20,14 +22,15 @@ type Backend interface {
 	GetBlockHeight() (uint64, error)
 	GetBlockByNumber(number *big.Int) (*types.Block, error)
 	GetHeightByNumber(number *big.Int) (*types.Header, error)
+
+	GetValidatorRole(idx int) types2.RoleType
+	GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error)
+	GetSlotsPerEpoch() int
+	GetIntervalPerSlot() int
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
 	return []rpc.API{
-		{
-			Namespace: "time",
-			Service:   NewTimeAPI(apiBackend),
-		},
 		{
 			Namespace: "block",
 			Service:   NewBlockAPI(apiBackend),

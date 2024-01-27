@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	SLOTS_PER_EPOCH = "SLOTS_PER_EPOCH"
+	SLOTS_PER_EPOCH  = "SLOTS_PER_EPOCH"
+	SECONDS_PER_SLOT = "SECONDS_PER_SLOT"
 )
 
 type BeaconGwClient struct {
@@ -172,6 +173,67 @@ func (b *BeaconGwClient) GetAttesterDuties(epoch int, vals []int) ([]AttestDuty,
 		return []AttestDuty{}, err
 	}
 	return duties, err
+}
+
+func (b *BeaconGwClient) GetNextEpochProposerDuties() ([]ProposerDuty, error) {
+	latestHeader, err := b.GetLatestBeaconHeader()
+	if err != nil {
+		return nil, err
+	}
+	slotPerEpoch, _ := b.GetIntConfig(SLOTS_PER_EPOCH)
+	curSlot, _ := strconv.Atoi(latestHeader.Header.Message.Slot)
+	epoch := curSlot / slotPerEpoch
+	return b.GetProposerDuties(epoch + 1)
+}
+
+func (b *BeaconGwClient) GetCurrentEpochProposerDuties() ([]ProposerDuty, error) {
+	latestHeader, err := b.GetLatestBeaconHeader()
+	if err != nil {
+		return nil, err
+	}
+	slotPerEpoch, _ := b.GetIntConfig(SLOTS_PER_EPOCH)
+	curSlot, _ := strconv.Atoi(latestHeader.Header.Message.Slot)
+	epoch := curSlot / slotPerEpoch
+	return b.GetProposerDuties(epoch)
+}
+
+func (b *BeaconGwClient) GetCurrentEpochAttestDuties() ([]AttestDuty, error) {
+	latestHeader, err := b.GetLatestBeaconHeader()
+	if err != nil {
+		return nil, err
+	}
+	slotPerEpoch, _ := b.GetIntConfig(SLOTS_PER_EPOCH)
+	curSlot, _ := strconv.Atoi(latestHeader.Header.Message.Slot)
+	epoch := curSlot / slotPerEpoch
+	vals := make([]int, 64)
+	for i := 0; i < len(vals); i++ {
+		vals[i] = i
+	}
+	return b.GetAttesterDuties(epoch, vals)
+}
+
+func (b *BeaconGwClient) GetNextEpochAttestDuties() ([]AttestDuty, error) {
+	latestHeader, err := b.GetLatestBeaconHeader()
+	if err != nil {
+		return nil, err
+	}
+	slotPerEpoch, _ := b.GetIntConfig(SLOTS_PER_EPOCH)
+	curSlot, _ := strconv.Atoi(latestHeader.Header.Message.Slot)
+	epoch := curSlot / slotPerEpoch
+	vals := make([]int, 64)
+	for i := 0; i < len(vals); i++ {
+		vals[i] = i
+	}
+	return b.GetAttesterDuties(epoch+1, vals)
+}
+
+func (b *BeaconGwClient) GetAllValidators() {
+	//vals := make([]int, 64)
+	//for i := 0; i < len(vals); i++ {
+	//	vals[i] = i
+	//}
+	//duties :=
+
 }
 
 // default grpc port is 4000
