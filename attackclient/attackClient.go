@@ -66,39 +66,3 @@ func (ec *Client) clientInfo() string {
 	return string(d)
 
 }
-
-func (ec *Client) BlockBroadCastDelay(ctx context.Context) (types.AttackerResponse, error) {
-	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, "block_broadCastDelay", ec.clientInfo())
-	if err != nil {
-		return result, err
-	}
-	return result, nil
-}
-
-func (ec *Client) BlockModify(ctx context.Context, blockDataBase64 string) (types.AttackerResponse, error) {
-	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, "block_modifyBlock", ec.clientInfo(), blockDataBase64)
-	if err != nil {
-		return result, err
-	}
-	return result, err
-}
-
-func (ec *Client) AttestBroadCastDelay(ctx context.Context) (types.AttackerResponse, error) {
-	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, "attest_broadCastDelay", ec.clientInfo())
-	if err != nil {
-		return result, err
-	}
-	return result, nil
-}
-
-func (ec *Client) AttestModify(ctx context.Context, attestDataBase64 string) (types.AttackerResponse, error) {
-	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, "attest_modifyAttest", ec.clientInfo(), attestDataBase64)
-	if err != nil {
-		return result, err
-	}
-	return result, err
-}

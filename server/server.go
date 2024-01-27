@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/config"
@@ -26,7 +27,7 @@ type Server struct {
 	execClient   *ethclient.Client
 	beaconClient *beaconapi.BeaconGwClient
 
-	validatorSetInfo *validatorSet.ValidatorSet
+	validatorSetInfo *validatorSet.ValidatorDataSet
 }
 
 func NewServer() *Server {
@@ -187,4 +188,22 @@ func (s *Server) GetIntervalPerSlot() int {
 		return 12
 	}
 	return interval
+}
+
+func (s *Server) AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation) error {
+	s.validatorSetInfo.AddSignedAttestation(slot, pubkey, attestation)
+	return nil
+}
+
+func (s *Server) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) error {
+	s.validatorSetInfo.AddSignedBlock(slot, pubkey, block)
+	return nil
+}
+
+func (s *Server) GetAttestSet(slot uint64) *validatorSet.SlotAttestSet {
+	return s.validatorSetInfo.GetAttestSet(slot)
+}
+
+func (s *Server) GetBlockSet(slot uint64) *validatorSet.SlotBlockSet {
+	return s.validatorSetInfo.GetBlockSet(slot)
 }

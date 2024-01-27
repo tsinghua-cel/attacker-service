@@ -7,23 +7,31 @@ import (
 )
 
 type ValidatorInfo struct {
-	Index   int64              `json:"index"`
-	Pubkey  string             `json:"pubkey"`
-	Role    types.RoleType     `json:"role"`
-	Attests ValidatorAttestSet `json:"attests"`
-	Blocks  ValidatorBlockSet  `json:"blocks"`
+	Index  int64          `json:"index"`
+	Pubkey string         `json:"pubkey"`
+	Role   types.RoleType `json:"role"`
+	//Attests ValidatorAttestSet `json:"attests"`
+	//Blocks  ValidatorBlockSet  `json:"blocks"`
 }
 
-type ValidatorSet struct {
+type ValidatorDataSet struct {
 	ValidatorByIndex  sync.Map //map[int]*ValidatorInfo
 	ValidatorByPubkey sync.Map //map[string]*ValidatorInfo
+	AttestSet         map[uint64]*SlotAttestSet
+	BlockSet          map[uint64]*SlotBlockSet
+	lock              sync.RWMutex
 }
 
-func NewValidatorSet() *ValidatorSet {
-	return &ValidatorSet{}
+func NewValidatorSet() *ValidatorDataSet {
+	return &ValidatorDataSet{
+		AttestSet: make(map[uint64]*SlotAttestSet),
+		BlockSet:  make(map[uint64]*SlotBlockSet),
+	}
 }
 
-func (vs *ValidatorSet) AddValidator(index int, pubkey string, role types.RoleType) {
+func (vs *ValidatorDataSet) AddValidator(index int, pubkey string, role types.RoleType) {
+	vs.lock.Lock()
+	defer vs.lock.Unlock()
 	v := &ValidatorInfo{
 		Index:  int64(index),
 		Pubkey: pubkey,
@@ -33,7 +41,9 @@ func (vs *ValidatorSet) AddValidator(index int, pubkey string, role types.RoleTy
 	vs.ValidatorByPubkey.Store(pubkey, v)
 }
 
-func (vs *ValidatorSet) GetValidatorByIndex(index int) *ValidatorInfo {
+func (vs *ValidatorDataSet) GetValidatorByIndex(index int) *ValidatorInfo {
+	vs.lock.RLock()
+	defer vs.lock.RUnlock()
 	if v, exist := vs.ValidatorByIndex.Load(index); !exist {
 		return nil
 	} else {
@@ -41,7 +51,9 @@ func (vs *ValidatorSet) GetValidatorByIndex(index int) *ValidatorInfo {
 	}
 }
 
-func (vs *ValidatorSet) GetValidatorByPubkey(pubkey string) *ValidatorInfo {
+func (vs *ValidatorDataSet) GetValidatorByPubkey(pubkey string) *ValidatorInfo {
+	vs.lock.RLock()
+	defer vs.lock.RUnlock()
 	if v, exist := vs.ValidatorByPubkey.Load(pubkey); !exist {
 		return nil
 	} else {
@@ -49,10 +61,62 @@ func (vs *ValidatorSet) GetValidatorByPubkey(pubkey string) *ValidatorInfo {
 	}
 }
 
+func (vs *ValidatorDataSet) GetAttestSet(slot uint64) *SlotAttestSet {
+	vs.lock.RLock()
+	defer vs.lock.RUnlock()
+	if v, exist := vs.AttestSet[slot]; !exist {
+		return nil
+	} else {
+		return v
+	}
+}
+
+func (vs *ValidatorDataSet) GetBlockSet(slot uint64) *SlotBlockSet {
+	vs.lock.RLock()
+	defer vs.lock.RUnlock()
+	if v, exist := vs.BlockSet[slot]; !exist {
+		return nil
+	} else {
+		return v
+	}
+}
+
+func (vs *ValidatorDataSet) AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation) {
+	vs.lock.Lock()
+	defer vs.lock.Unlock()
+
+	if _, exist := vs.AttestSet[slot]; !exist {
+		vs.AttestSet[slot] = &SlotAttestSet{
+			Attestations: make(map[string]*ethpb.Attestation),
+		}
+	}
+	vs.AttestSet[slot].Attestations[pubkey] = attestation
+}
+
+func (vs *ValidatorDataSet) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) {
+	vs.lock.Lock()
+	defer vs.lock.Unlock()
+
+	if _, exist := vs.BlockSet[slot]; !exist {
+		vs.BlockSet[slot] = &SlotBlockSet{
+			Blocks: make(map[string]*ethpb.GenericSignedBeaconBlock),
+		}
+	}
+	vs.BlockSet[slot].Blocks[pubkey] = block
+}
+
+type SlotAttestSet struct {
+	Attestations map[string]*ethpb.Attestation
+}
+
+type SlotBlockSet struct {
+	Blocks map[string]*ethpb.GenericSignedBeaconBlock
+}
+
 type ValidatorAttestSet struct {
-	Attestations map[int]*ethpb.Attestation
+	Attestations map[uint64]*ethpb.Attestation
 }
 
 type ValidatorBlockSet struct {
-	Blocks map[int]ethpb.GenericBeaconBlock
+	Blocks map[uint64]ethpb.GenericBeaconBlock
 }

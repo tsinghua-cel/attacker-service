@@ -35,14 +35,14 @@ func (s *AttestAPI) UpdateStrategy(cliInfo string, data []byte) error {
 	return nil
 }
 
-func (s *AttestAPI) BeforeBroadCast() types.AttackerResponse {
+func (s *AttestAPI) BeforeBroadCast(cliInfo string) types.AttackerResponse {
 
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
 }
 
-func (s *AttestAPI) AfterBroadCast() types.AttackerResponse {
+func (s *AttestAPI) AfterBroadCast(cliInfo string) types.AttackerResponse {
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
@@ -56,6 +56,25 @@ func (s *AttestAPI) BeforeSign(cliInfo string, slot uint64, pubkey string, attes
 }
 
 func (s *AttestAPI) AfterSign(cliInfo string, slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
+	// todo: save signed attest.
+	signedAttestData, err := base64.StdEncoding.DecodeString(signedAttestDataBase64)
+	if err != nil {
+		log.WithError(err).Error("base64 decode attest data failed")
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedAttestDataBase64,
+		}
+	}
+	var attest = new(ethpb.Attestation)
+	if err := proto.Unmarshal(signedAttestData, attest); err != nil {
+		log.WithError(err).Error("unmarshal attest data failed")
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedAttestDataBase64,
+		}
+	}
+	s.b.AddAttest(slot uint64, pubkey string, attest)
+
 	return types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedAttestDataBase64,

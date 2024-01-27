@@ -244,14 +244,13 @@ func (s *BlockAPI) internalModifyBlockSlot(blk *ethpb.GenericBeaconBlock) ([]byt
 	return proto.Marshal(blk)
 }
 
-func (s *BlockAPI) BeforeBroadCast() types.AttackerResponse {
+func (s *BlockAPI) BeforeBroadCast(cliInfo string) types.AttackerResponse {
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
-
 }
 
-func (s *BlockAPI) AfterBroadCast() types.AttackerResponse {
+func (s *BlockAPI) AfterBroadCast(cliInfo string) types.AttackerResponse {
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
