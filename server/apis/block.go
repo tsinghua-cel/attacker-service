@@ -122,13 +122,15 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	// 3.出的块的一个字段attestation要包含其他恶意节点的attestation。
 	allSlotAttest := s.b.GetAttestSet(uint64(curSlot))
 	validatorSet := s.b.GetValidatorDataSet()
+	attackerAttestations := make([]*ethpb.Attestation, 0)
 	for publicKey, att := range allSlotAttest.Attestations {
 		val := validatorSet.GetValidatorByPubkey(publicKey)
 		if val != nil && val.Role == types.AttackerRole {
 			log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
-			block.Capella.Body.Attestations = append(block.Capella.Body.Attestations, att)
+			attackerAttestations = append(attackerAttestations, att)
 		}
 	}
+	block.Capella.Body.Attestations = attackerAttestations
 
 	// 4. encode to base64.
 	genericBlock.Block = block
