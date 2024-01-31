@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -235,4 +236,21 @@ func (s *Server) GetBlockSet(slot uint64) *validatorSet.SlotBlockSet {
 
 func (s *Server) GetValidatorDataSet() *validatorSet.ValidatorDataSet {
 	return s.validatorSetInfo
+}
+
+func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
+	epochPerSlot := uint64(s.GetSlotsPerEpoch())
+	epoch := slot / epochPerSlot
+	duties, err := s.beaconClient.GetProposerDuties(int(epoch))
+	if err != nil {
+		return 0, err
+	}
+	for _, duty := range duties {
+		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
+		if uint64(dutySlot) == slot {
+			idx, _ := strconv.Atoi(duty.ValidatorIndex)
+			return idx, nil
+		}
+	}
+	return 0, errors.New("not found")
 }

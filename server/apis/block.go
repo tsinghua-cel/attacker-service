@@ -4,7 +4,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/prysmaticlabs/prysm/v4/cache/lru"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/strategy"
 	"github.com/tsinghua-cel/attacker-service/types"
@@ -16,6 +19,7 @@ import (
 var (
 	ErrNilObject              = errors.New("nil object")
 	ErrUnsupportedBeaconBlock = errors.New("unsupported beacon block")
+	blockCacheContent         = lru.New(1000)
 )
 
 // BlockAPI offers and API for block operations.
@@ -106,21 +110,9 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			Result: blockDataBase64,
 		}
 	}
-	curSlot := slot
-	slotsPerEpoch := s.b.GetSlotsPerEpoch()
-	secondsPerSlot := s.b.GetIntervalPerSlot()
-	curEpoch := uint64(curSlot) / uint64(slotsPerEpoch)
-
-	intervalSlots := uint64(slotsPerEpoch)*(curEpoch+1) - 1 + uint64(slotsPerEpoch)/2 - uint64(curSlot)
-	intervalSeconds := int(intervalSlots) * secondsPerSlot
-	log.WithFields(log.Fields{
-		"intervalSlots":   intervalSlots,
-		"intervalSeconds": intervalSeconds,
-	})
-	time.Sleep(time.Second * time.Duration(intervalSeconds))
 
 	// 3.出的块的一个字段attestation要包含其他恶意节点的attestation。
-	allSlotAttest := s.b.GetAttestSet(uint64(curSlot))
+	allSlotAttest := s.b.GetAttestSet(uint64(slot))
 	validatorSet := s.b.GetValidatorDataSet()
 	attackerAttestations := make([]*ethpb.Attestation, 0)
 	for publicKey, att := range allSlotAttest.Attestations {
@@ -130,7 +122,39 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			attackerAttestations = append(attackerAttestations, att)
 		}
 	}
-	block.Capella.Body.Attestations = attackerAttestations
+
+	allAtt := append(block.Capella.Body.Attestations, attackerAttestations...)
+	{
+		// Remove duplicates from both aggregated/unaggregated attestations. This
+		// prevents inefficient aggregates being created.
+		atts, _ := types.ProposerAtts(allAtt).Dedup()
+		attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+		for _, att := range atts {
+			attDataRoot, err := att.Data.HashTreeRoot()
+			if err != nil {
+			}
+			attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+		}
+
+		attsForInclusion := types.ProposerAtts(make([]*ethpb.Attestation, 0))
+		for _, as := range attsByDataRoot {
+			as, err := attaggregation.Aggregate(as)
+			if err != nil {
+				continue
+			}
+			attsForInclusion = append(attsForInclusion, as...)
+		}
+		deduped, _ := attsForInclusion.Dedup()
+		sorted, err := deduped.SortByProfitability()
+		if err != nil {
+			log.WithError(err).Error("sort attestation failed")
+		} else {
+			atts = sorted.LimitToMaxAttestations()
+		}
+		allAtt = atts
+	}
+
+	block.Capella.Body.Attestations = allAtt
 
 	// 4. encode to base64.
 	genericBlock.Block = block
@@ -246,13 +270,109 @@ func (s *BlockAPI) genericSignedBlockToBase64(block *ethpb.GenericSignedBeaconBl
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
-func (s *BlockAPI) BeforeBroadCast(cliInfo string) types.AttackerResponse {
+func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
+	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	if err != nil {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+	{
+		val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
+		if val.Role != types.AttackerRole {
+			return types.AttackerResponse{
+				Cmd: types.CMD_NULL,
+			}
+		}
+
+		duties, err := s.b.GetCurrentEpochProposeDuties()
+		if err != nil {
+			return types.AttackerResponse{
+				Cmd: types.CMD_NULL,
+			}
+		}
+
+		latestAttackerVal := int64(-1)
+		for _, duty := range duties {
+			dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+			if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
+				latestAttackerVal = int64(dutyValIdx)
+			}
+		}
+		if val.Index != latestAttackerVal {
+			// 不是最后一个出块的恶意节点，不出块
+			return types.AttackerResponse{
+				Cmd: types.CMD_RETURN,
+			}
+		}
+	}
+	// 当前是最后一个出块的恶意节点，进行延时
+
+	epochSlots := s.b.GetSlotsPerEpoch()
+	seconds := s.b.GetIntervalPerSlot()
+	delay := (epochSlots - int(slot%uint64(epochSlots))) * seconds
+	time.Sleep(time.Second * time.Duration(delay))
+	key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
+	blockCacheContent.Add(key, delay)
+
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
 }
 
-func (s *BlockAPI) AfterBroadCast(cliInfo string) types.AttackerResponse {
+func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
+	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	if err != nil {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+	{
+		val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
+		if val.Role != types.AttackerRole {
+			return types.AttackerResponse{
+				Cmd: types.CMD_NULL,
+			}
+		}
+
+		duties, err := s.b.GetCurrentEpochProposeDuties()
+		if err != nil {
+			return types.AttackerResponse{
+				Cmd: types.CMD_NULL,
+			}
+		}
+
+		latestAttackerVal := int64(-1)
+		for _, duty := range duties {
+			dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+			if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
+				latestAttackerVal = int64(dutyValIdx)
+			}
+		}
+		if val.Index != latestAttackerVal {
+			// 不是最后一个出块的恶意节点，不出块
+			return types.AttackerResponse{
+				Cmd: types.CMD_RETURN,
+			}
+		}
+	}
+	// 当前是最后一个出块的恶意节点，进行延时
+	key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
+	lastDelay := 0
+	if t, exist := blockCacheContent.Get(key); exist {
+		lastDelay = t.(int)
+	}
+	seconds := s.b.GetIntervalPerSlot()
+	n2delay := 12 * seconds
+	total := n2delay + lastDelay
+	time.Sleep(time.Second * time.Duration(total))
+
+	return types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
+}
+
+func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}

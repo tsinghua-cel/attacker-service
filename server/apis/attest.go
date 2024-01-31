@@ -35,13 +35,13 @@ func (s *AttestAPI) UpdateStrategy(data []byte) error {
 	return nil
 }
 
-func (s *AttestAPI) BeforeBroadCast() types.AttackerResponse {
+func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
 }
 
-func (s *AttestAPI) AfterBroadCast() types.AttackerResponse {
+func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}

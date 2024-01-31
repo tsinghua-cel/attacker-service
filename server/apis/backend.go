@@ -35,6 +35,7 @@ type Backend interface {
 	GetAttestSet(slot uint64) *validatorSet.SlotAttestSet
 	GetBlockSet(slot uint64) *validatorSet.SlotBlockSet
 	GetValidatorDataSet() *validatorSet.ValidatorDataSet
+	GetValidatorByProposeSlot(slot uint64) (int, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

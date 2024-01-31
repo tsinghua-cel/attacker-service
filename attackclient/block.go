@@ -7,20 +7,31 @@ import (
 
 var blockModule = "block"
 
-func (ec *Client) BlockBeforeBroadCast(ctx context.Context) (types.AttackerResponse, error) {
+func (ec *Client) DelayForReceiveBlock(ctx context.Context, slot uint64) (types.AttackerResponse, error) {
 	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, blockModule+"_beforeBroadCast")
-	//err := ec.c.CallContext(ctx, &result, blockModule+"_beforeBroadCast", ec.clientInfo())
+	err := ec.c.CallContext(ctx, &result, blockModule+"_delayForReceiveBlock", slot)
+	//err := ec.c.CallContext(ctx, &result, blockModule+"_delayForReceiveBlock", ec.clientInfo(), slot)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+
+}
+
+func (ec *Client) BlockBeforeBroadCast(ctx context.Context, slot uint64) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
+	err := ec.c.CallContext(ctx, &result, blockModule+"_beforeBroadCast", slot)
+	//err := ec.c.CallContext(ctx, &result, blockModule+"_beforeBroadCast", ec.clientInfo(), slot)
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (ec *Client) BlockAfterBroadCast(ctx context.Context) (types.AttackerResponse, error) {
+func (ec *Client) BlockAfterBroadCast(ctx context.Context, slot uint64) (types.AttackerResponse, error) {
 	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, blockModule+"_afterBroadCast")
-	//err := ec.c.CallContext(ctx, &result, blockModule+"_afterBroadCast", ec.clientInfo())
+	err := ec.c.CallContext(ctx, &result, blockModule+"_afterBroadCast", slot)
+	//err := ec.c.CallContext(ctx, &result, blockModule+"_afterBroadCast", ec.clientInfo(), slot)
 	if err != nil {
 		return result, err
 	}
