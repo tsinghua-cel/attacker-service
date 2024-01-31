@@ -314,6 +314,11 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 	time.Sleep(time.Second * time.Duration(delay))
 	key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
 	blockCacheContent.Add(key, delay)
+	log.WithFields(log.Fields{
+		"slot":     slot,
+		"validx":   valIdx,
+		"duration": delay,
+	}).Info("delay for receive block")
 
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
@@ -366,6 +371,11 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 	n2delay := 12 * seconds
 	total := n2delay + lastDelay
 	time.Sleep(time.Second * time.Duration(total))
+	log.WithFields(log.Fields{
+		"slot":     slot,
+		"validx":   valIdx,
+		"duration": total,
+	}).Info("delay for beforeBroadcastBlock")
 
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
