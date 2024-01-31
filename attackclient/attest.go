@@ -7,20 +7,20 @@ import (
 
 var attestModule = "attest"
 
-func (ec *Client) AttestBeforeBroadCast(ctx context.Context) (types.AttackerResponse, error) {
+func (ec *Client) AttestBeforeBroadCast(ctx context.Context, slot uint64) (types.AttackerResponse, error) {
 	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, attestModule+"_beforeBroadCast")
-	//err := ec.c.CallContext(ctx, &result, attestModule+"_beforeBroadCast", ec.clientInfo())
+	err := ec.c.CallContext(ctx, &result, attestModule+"_beforeBroadCast", slot)
+	//err := ec.c.CallContext(ctx, &result, attestModule+"_beforeBroadCast", ec.clientInfo(), slot)
 	if err != nil {
 		return result, err
 	}
 	return result, nil
 }
 
-func (ec *Client) AttestAfterBroadCast(ctx context.Context) (types.AttackerResponse, error) {
+func (ec *Client) AttestAfterBroadCast(ctx context.Context, slot uint64) (types.AttackerResponse, error) {
 	var result types.AttackerResponse
-	err := ec.c.CallContext(ctx, &result, attestModule+"_afterBroadCast")
-	//err := ec.c.CallContext(ctx, &result, attestModule+"_afterBroadCast", ec.clientInfo())
+	err := ec.c.CallContext(ctx, &result, attestModule+"_afterBroadCast", slot)
+	//err := ec.c.CallContext(ctx, &result, attestModule+"_afterBroadCast", ec.clientInfo(), slot)
 	if err != nil {
 		return result, err
 	}

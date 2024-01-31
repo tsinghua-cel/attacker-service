@@ -114,10 +114,10 @@ type HTTPTimeouts struct {
 // DefaultHTTPTimeouts represents the default timeout values used if further
 // configuration is not provided.
 var DefaultHTTPTimeouts = HTTPTimeouts{
-	ReadTimeout:       200 * time.Second,
-	ReadHeaderTimeout: 200 * time.Second,
-	WriteTimeout:      300 * time.Second,
-	IdleTimeout:       300 * time.Second,
+	ReadTimeout:       600 * time.Second,
+	ReadHeaderTimeout: 600 * time.Second,
+	WriteTimeout:      600 * time.Second,
+	IdleTimeout:       600 * time.Second,
 }
 
 // DialHTTP creates a new RPC client that connects to an RPC server over HTTP.
