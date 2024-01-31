@@ -42,7 +42,7 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "info", "log level")
+	RootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "debug", "log level")
 	RootCmd.PersistentFlags().StringVar(&logPath, "logpath", "", "log path")
 	RootCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file path")
 }
