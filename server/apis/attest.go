@@ -63,6 +63,12 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 			Result: signedAttestDataBase64,
 		}
 	}
+	if role := s.b.GetValidatorRoleByPubkey(pubkey); role == types.NormalRole {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedAttestDataBase64,
+		}
+	}
 	var attest = new(ethpb.Attestation)
 	if err := proto.Unmarshal(signedAttestData, attest); err != nil {
 		log.WithError(err).Error("unmarshal attest data failed")

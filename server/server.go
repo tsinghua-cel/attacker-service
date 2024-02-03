@@ -258,3 +258,7 @@ func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
 func (s *Server) GetProposeDuties(epoch int) ([]beaconapi.ProposerDuty, error) {
 	return s.beaconClient.GetProposerDuties(epoch)
 }
+
+func (s *Server) SlotsPerEpoch() int {
+	return s.GetSlotsPerEpoch()
+}

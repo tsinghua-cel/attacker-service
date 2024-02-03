@@ -29,6 +29,7 @@ type Backend interface {
 	GetValidatorRoleByPubkey(pubkey string) types2.RoleType
 	GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error)
 	GetSlotsPerEpoch() int
+	SlotsPerEpoch() int
 	GetIntervalPerSlot() int
 	AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation)
 	AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock)

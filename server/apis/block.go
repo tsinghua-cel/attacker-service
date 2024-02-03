@@ -64,7 +64,6 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	// 1. 只有每个epoch最后一个出块的恶意节点出块，其他节点不出快
 	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
 	if err != nil {
-
 		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
 		valIdx = int(val.Index)
 	}
@@ -81,8 +80,7 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			Result: blockDataBase64,
 		}
 	}
-	slotsPerEpoch := s.b.GetSlotsPerEpoch()
-	epoch := int64(slot) / int64(slotsPerEpoch)
+	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
 
 	duties, err := s.b.GetProposeDuties(int(epoch))
 	if err != nil {
@@ -144,14 +142,22 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	}
 
 	// 3.出的块的一个字段attestation要包含其他恶意节点的attestation。
-	allSlotAttest := s.b.GetAttestSet(uint64(slot))
-	validatorSet := s.b.GetValidatorDataSet()
+	startEpoch := SlotTool{s.b}.EpochStart(epoch)
+	endEpoch := SlotTool{s.b}.EpochEnd(epoch)
 	attackerAttestations := make([]*ethpb.Attestation, 0)
-	for publicKey, att := range allSlotAttest.Attestations {
-		val := validatorSet.GetValidatorByPubkey(publicKey)
-		if val != nil && val.Role == types.AttackerRole {
-			log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
-			attackerAttestations = append(attackerAttestations, att)
+	validatorSet := s.b.GetValidatorDataSet()
+	for i := startEpoch; i <= endEpoch; i++ {
+		allSlotAttest := s.b.GetAttestSet(uint64(i))
+		if allSlotAttest == nil {
+			continue
+		}
+
+		for publicKey, att := range allSlotAttest.Attestations {
+			val := validatorSet.GetValidatorByPubkey(publicKey)
+			if val != nil && val.Role == types.AttackerRole {
+				log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
+				attackerAttestations = append(attackerAttestations, att)
+			}
 		}
 	}
 
