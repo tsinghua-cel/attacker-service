@@ -3,6 +3,7 @@ package beaconapi
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -66,6 +67,18 @@ func TestGetAllAttestDuties(t *testing.T) {
 	//duties, err := client.GetCurrentEpochProposerDuties()
 	if err != nil {
 		t.Fatalf("get proposer duties failed err:%s", err)
+	}
+
+	latestSlotWithAttacker := int64(-1)
+	for _, duty := range duties {
+		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
+		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+		fmt.Printf("slot=%d, validx =%d\n", dutySlot, dutyValIdx)
+
+		if dutyValIdx <= 31 && dutySlot > latestSlotWithAttacker {
+			latestSlotWithAttacker = dutySlot
+			fmt.Printf("update latestSlotWithAttacker=%d,\n", dutySlot)
+		}
 	}
 
 	for _, duty := range duties {

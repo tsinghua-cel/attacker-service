@@ -254,3 +254,7 @@ func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
 	}
 	return 0, errors.New("not found")
 }
+
+func (s *Server) GetProposeDuties(epoch int) ([]beaconapi.ProposerDuty, error) {
+	return s.beaconClient.GetProposerDuties(epoch)
+}

@@ -69,8 +69,10 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			Result: blockDataBase64,
 		}
 	}
+	slotsPerEpoch := s.b.GetSlotsPerEpoch()
+	epoch := int64(slot) / int64(slotsPerEpoch)
 
-	duties, err := s.b.GetCurrentEpochProposeDuties()
+	duties, err := s.b.GetProposeDuties(int(epoch))
 	if err != nil {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
@@ -82,10 +84,19 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	for _, duty := range duties {
 		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
 		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+		log.WithFields(log.Fields{
+			"slot":   dutySlot,
+			"valIdx": dutyValIdx,
+		}).Debug("duty slot")
 		if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
 			latestSlotWithAttacker = dutySlot
+			log.WithField("latestSlotWithAttacker", latestSlotWithAttacker).Debug("update latestSlotWithAttacker")
 		}
 	}
+	log.WithFields(log.Fields{
+		"slot":               slot,
+		"latestAttackerSlot": latestSlotWithAttacker,
+	}).Info("modify block")
 
 	if slot != uint64(latestSlotWithAttacker) {
 		// 不是最后一个出块的恶意节点，不出块
