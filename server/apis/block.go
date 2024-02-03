@@ -82,10 +82,11 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	for _, duty := range duties {
 		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
 		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-		if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
+		if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
 			latestSlotWithAttacker = dutySlot
 		}
 	}
+
 	if slot != uint64(latestSlotWithAttacker) {
 		// 不是最后一个出块的恶意节点，不出块
 		return types.AttackerResponse{
