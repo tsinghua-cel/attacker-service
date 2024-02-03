@@ -62,7 +62,18 @@ func (s *BlockAPI) BroadCastDelay() types.AttackerResponse {
 
 func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 	// 1. 只有每个epoch最后一个出块的恶意节点出块，其他节点不出快
-	val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
+	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	if err != nil {
+
+		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
+		valIdx = int(val.Index)
+	}
+	val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
+	log.WithFields(log.Fields{
+		"slot":       slot,
+		"valIdxRole": val.Role,
+	}).Info("in modify block, get validator by propose slot")
+
 	if val.Role != types.AttackerRole {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,

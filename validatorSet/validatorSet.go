@@ -16,10 +16,10 @@ type ValidatorInfo struct {
 }
 
 type ValidatorDataSet struct {
-	ValidatorByIndex  sync.Map //map[int]*ValidatorInfo
-	ValidatorByPubkey sync.Map //map[string]*ValidatorInfo
-	AttestSet         map[uint64]*SlotAttestSet
-	BlockSet          map[uint64]*SlotBlockSet
+	ValidatorByIndex  sync.Map                  //map[int]*ValidatorInfo
+	ValidatorByPubkey sync.Map                  //map[string]*ValidatorInfo
+	AttestSet         map[uint64]*SlotAttestSet // epoch -> attestation
+	BlockSet          map[uint64]*SlotBlockSet  // epoch -> block
 	lock              sync.RWMutex
 }
 
