@@ -50,6 +50,7 @@ func TestGetConfig(t *testing.T) {
 func TestGetLatestBeaconHeader(t *testing.T) {
 	endpoint := "52.221.177.10:33500" // grpc gateway endpoint
 	client := NewBeaconGwClient(endpoint)
+
 	header, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		t.Fatalf("get latest header failed err:%s", err)
@@ -61,10 +62,12 @@ func TestGetLatestBeaconHeader(t *testing.T) {
 func TestGetAllAttestDuties(t *testing.T) {
 	endpoint := "52.221.177.10:14000" // grpc gateway endpoint
 	client := NewBeaconGwClient(endpoint)
-	duties, err := client.GetNextEpochAttestDuties()
+	duties, err := client.GetProposerDuties(0)
+	//duties, err := client.GetCurrentEpochProposerDuties()
 	if err != nil {
-		t.Fatalf("get latest header failed err:%s", err)
+		t.Fatalf("get proposer duties failed err:%s", err)
 	}
+
 	for _, duty := range duties {
 		d, _ := json.Marshal(duty)
 		fmt.Printf("get attest duty :%s\n", string(d))

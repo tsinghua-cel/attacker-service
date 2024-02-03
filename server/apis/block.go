@@ -78,20 +78,28 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 		}
 	}
 
-	latestAttackerVal := int64(-1)
+	latestSlotWithAttacker := int64(-1)
 	for _, duty := range duties {
+		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
 		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
 		if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
-			latestAttackerVal = int64(dutyValIdx)
+			latestSlotWithAttacker = dutySlot
 		}
 	}
-	if val.Index != latestAttackerVal {
+	if slot != uint64(latestSlotWithAttacker) {
 		// 不是最后一个出块的恶意节点，不出块
 		return types.AttackerResponse{
 			Cmd:    types.CMD_RETURN,
 			Result: blockDataBase64,
 		}
 	}
+	//if val.Index != latestAttackerVal {
+	//	// 不是最后一个出块的恶意节点，不出块
+	//	return types.AttackerResponse{
+	//		Cmd:    types.CMD_RETURN,
+	//		Result: blockDataBase64,
+	//	}
+	//}
 
 	genericBlock, err := s.getGenericBlockFromData(blockDataBase64)
 	if err != nil {
