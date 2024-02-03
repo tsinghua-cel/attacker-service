@@ -25,8 +25,8 @@ type Backend interface {
 	GetBlockByNumber(number *big.Int) (*types.Block, error)
 	GetHeightByNumber(number *big.Int) (*types.Header, error)
 
-	GetValidatorRole(idx int) types2.RoleType
-	GetValidatorRoleByPubkey(pubkey string) types2.RoleType
+	GetValidatorRole(slot int, valIdx int) types2.RoleType
+	GetValidatorRoleByPubkey(slot int, pubkey string) types2.RoleType
 	GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error)
 	GetSlotsPerEpoch() int
 	SlotsPerEpoch() int
