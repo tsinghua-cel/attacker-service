@@ -71,6 +71,7 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
 	log.WithFields(log.Fields{
 		"slot":       slot,
+		"valIdx":     valIdx,
 		"valIdxRole": val.Role,
 	}).Info("in modify block, get validator by propose slot")
 
