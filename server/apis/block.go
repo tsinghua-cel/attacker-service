@@ -100,13 +100,8 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	for _, duty := range duties {
 		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
 		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-		log.WithFields(log.Fields{
-			"slot":   dutySlot,
-			"valIdx": dutyValIdx,
-		}).Debug("duty slot")
 		if s.b.GetValidatorRole(int(slot), dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
 			latestSlotWithAttacker = dutySlot
-			log.WithField("latestSlotWithAttacker", latestSlotWithAttacker).Debug("update latestSlotWithAttacker")
 		}
 	}
 	log.WithFields(log.Fields{
@@ -121,15 +116,8 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			Result: blockDataBase64,
 		}
 	}
-	//if val.Index != latestAttackerVal {
-	//	// 不是最后一个出块的恶意节点，不出块
-	//	return types.AttackerResponse{
-	//		Cmd:    types.CMD_RETURN,
-	//		Result: blockDataBase64,
-	//	}
-	//}
 
-	genericBlock, err := s.getGenericBlockFromData(blockDataBase64)
+	genericBlock, err := s.getGenericSignedBlockFromData(blockDataBase64)
 	if err != nil {
 		log.WithError(err).Error("get block from data failed")
 		return types.AttackerResponse{
@@ -137,8 +125,7 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			Result: blockDataBase64,
 		}
 	}
-	// 2.延迟到下个epoch的中间出块
-	block, err := s.getCapellaBlockFromGeneric(genericBlock)
+	block, err := s.getCapellaBlockFromGenericSigned(genericBlock)
 	if err != nil {
 		log.WithError(err).Error("get block from data failed")
 		return types.AttackerResponse{
@@ -168,7 +155,7 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 		}
 	}
 
-	allAtt := append(block.Capella.Body.Attestations, attackerAttestations...)
+	allAtt := append(block.Capella.Block.Body.Attestations, attackerAttestations...)
 	{
 		// Remove duplicates from both aggregated/unaggregated attestations. This
 		// prevents inefficient aggregates being created.
@@ -199,12 +186,12 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 		allAtt = atts
 	}
 
-	block.Capella.Body.Attestations = allAtt
+	block.Capella.Block.Body.Attestations = allAtt
 
 	// 4. encode to base64.
 	genericBlock.Block = block
 
-	resBlockBase64, err := s.genericBlockToBase64(genericBlock)
+	resBlockBase64, err := s.genericSignedBlockToBase64(genericBlock)
 	if err != nil {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
@@ -437,12 +424,127 @@ func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 	}
 }
 
+func (s *BlockAPI) BeforeMakeBlock(slot uint64, pubkey string) types.AttackerResponse {
+	// 1. 只有每个epoch最后一个出块的恶意节点出块，其他节点不出快
+	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	if err != nil {
+		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
+		if val == nil {
+			return types.AttackerResponse{
+				Cmd: types.CMD_NULL,
+			}
+		}
+		valIdx = int(val.Index)
+	}
+	role := s.b.GetValidatorRole(int(slot), valIdx)
+	log.WithFields(log.Fields{
+		"slot":   slot,
+		"valIdx": valIdx,
+		"role":   role,
+	}).Info("in BeforeMakeBlock, get validator by propose slot")
+
+	if role != types.AttackerRole {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
+
+	duties, err := s.b.GetProposeDuties(int(epoch))
+	if err != nil {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+
+	latestSlotWithAttacker := int64(-1)
+	for _, duty := range duties {
+		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
+		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+		log.WithFields(log.Fields{
+			"slot":   dutySlot,
+			"valIdx": dutyValIdx,
+		}).Debug("duty slot")
+		if s.b.GetValidatorRole(int(slot), dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
+			latestSlotWithAttacker = dutySlot
+			log.WithField("latestSlotWithAttacker", latestSlotWithAttacker).Debug("update latestSlotWithAttacker")
+		}
+	}
+	log.WithFields(log.Fields{
+		"slot":               slot,
+		"latestAttackerSlot": latestSlotWithAttacker,
+	}).Info("modify block")
+
+	if slot != uint64(latestSlotWithAttacker) {
+		// 不是最后一个恶意的出块，不出块
+		return types.AttackerResponse{
+			Cmd: types.CMD_RETURN,
+		}
+	}
+
+	return types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
+}
+
 func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 	modifyBlockRes := s.modifyBlock(slot, pubkey, blockDataBase64)
 	return modifyBlockRes
 }
 
 func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	if err != nil {
+		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
+		if val == nil {
+			return types.AttackerResponse{
+				Cmd: types.CMD_NULL,
+			}
+		}
+		valIdx = int(val.Index)
+	}
+	role := s.b.GetValidatorRole(int(slot), valIdx)
+	log.WithFields(log.Fields{
+		"slot":   slot,
+		"valIdx": valIdx,
+		"role":   role,
+	}).Info("in AfterSign, get validator by propose slot")
+
+	if role != types.AttackerRole {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
+
+	duties, err := s.b.GetProposeDuties(int(epoch))
+	if err != nil {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+
+	latestSlotWithAttacker := int64(-1)
+	for _, duty := range duties {
+		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
+		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+		log.WithFields(log.Fields{
+			"slot":   dutySlot,
+			"valIdx": dutyValIdx,
+		}).Debug("duty slot")
+		if s.b.GetValidatorRole(int(slot), dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
+			latestSlotWithAttacker = dutySlot
+			log.WithField("latestSlotWithAttacker", latestSlotWithAttacker).Debug("update latestSlotWithAttacker")
+		}
+	}
+
+	if slot != uint64(latestSlotWithAttacker) {
+		// 不是最后一个恶意的出块，不出块
+		return types.AttackerResponse{
+			Cmd: types.CMD_RETURN,
+		}
+	}
+
 	return types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,
