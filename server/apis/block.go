@@ -362,7 +362,7 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 	}).Info("delay for receive block")
 
 	return types.AttackerResponse{
-		Cmd: types.CMD_NULL,
+		Cmd: types.CMD_UPDATE_STATE,
 	}
 }
 
