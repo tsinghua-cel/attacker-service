@@ -66,6 +66,11 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
 	if err != nil {
 		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
+		if val == nil {
+			return types.AttackerResponse{
+				Cmd: types.CMD_NULL,
+			}
+		}
 		valIdx = int(val.Index)
 	}
 	role := s.b.GetValidatorRole(int(slot), valIdx)
