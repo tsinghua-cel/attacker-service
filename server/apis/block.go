@@ -63,15 +63,27 @@ func (s *BlockAPI) BroadCastDelay() types.AttackerResponse {
 
 func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 	// 1. 只有每个epoch最后一个出块的恶意节点出块，其他节点不出快
-	val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
-	if val.Role != types.AttackerRole {
+	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	if err != nil {
+		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
+		valIdx = int(val.Index)
+	}
+	role := s.b.GetValidatorRole(int(slot), valIdx)
+	log.WithFields(log.Fields{
+		"slot":   slot,
+		"valIdx": valIdx,
+		"role":   role,
+	}).Info("in modify block, get validator by propose slot")
+
+	if role != types.AttackerRole {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: blockDataBase64,
 		}
 	}
+	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
 
-	duties, err := s.b.GetCurrentEpochProposeDuties()
+	duties, err := s.b.GetProposeDuties(int(epoch))
 	if err != nil {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
@@ -79,20 +91,38 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 		}
 	}
 
-	latestAttackerVal := int64(-1)
+	latestSlotWithAttacker := int64(-1)
 	for _, duty := range duties {
+		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
 		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-		if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
-			latestAttackerVal = int64(dutyValIdx)
+		log.WithFields(log.Fields{
+			"slot":   dutySlot,
+			"valIdx": dutyValIdx,
+		}).Debug("duty slot")
+		if s.b.GetValidatorRole(int(slot), dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
+			latestSlotWithAttacker = dutySlot
+			log.WithField("latestSlotWithAttacker", latestSlotWithAttacker).Debug("update latestSlotWithAttacker")
 		}
 	}
-	if val.Index != latestAttackerVal {
+	log.WithFields(log.Fields{
+		"slot":               slot,
+		"latestAttackerSlot": latestSlotWithAttacker,
+	}).Info("modify block")
+
+	if slot != uint64(latestSlotWithAttacker) {
 		// 不是最后一个出块的恶意节点，不出块
 		return types.AttackerResponse{
 			Cmd:    types.CMD_RETURN,
 			Result: blockDataBase64,
 		}
 	}
+	//if val.Index != latestAttackerVal {
+	//	// 不是最后一个出块的恶意节点，不出块
+	//	return types.AttackerResponse{
+	//		Cmd:    types.CMD_RETURN,
+	//		Result: blockDataBase64,
+	//	}
+	//}
 
 	genericBlock, err := s.getGenericBlockFromData(blockDataBase64)
 	if err != nil {
@@ -113,14 +143,23 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 	}
 
 	// 3.出的块的一个字段attestation要包含其他恶意节点的attestation。
-	allSlotAttest := s.b.GetAttestSet(uint64(slot))
-	validatorSet := s.b.GetValidatorDataSet()
+	startEpoch := SlotTool{s.b}.EpochStart(epoch)
+	endEpoch := SlotTool{s.b}.EpochEnd(epoch)
 	attackerAttestations := make([]*ethpb.Attestation, 0)
-	for publicKey, att := range allSlotAttest.Attestations {
-		val := validatorSet.GetValidatorByPubkey(publicKey)
-		if val != nil && val.Role == types.AttackerRole {
-			log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
-			attackerAttestations = append(attackerAttestations, att)
+	validatorSet := s.b.GetValidatorDataSet()
+	for i := startEpoch; i <= endEpoch; i++ {
+		allSlotAttest := s.b.GetAttestSet(uint64(i))
+		if allSlotAttest == nil {
+			continue
+		}
+
+		for publicKey, att := range allSlotAttest.Attestations {
+			val := validatorSet.GetValidatorByPubkey(publicKey)
+			valRole := s.b.GetValidatorRole(int(i), int(val.Index))
+			if val != nil && valRole == types.AttackerRole {
+				log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
+				attackerAttestations = append(attackerAttestations, att)
+			}
 		}
 	}
 
@@ -279,8 +318,9 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 		}
 	}
 	{
-		val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
-		if val.Role != types.AttackerRole {
+		valRole := s.b.GetValidatorRole(int(slot), valIdx)
+		//val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
+		if valRole != types.AttackerRole {
 			return types.AttackerResponse{
 				Cmd: types.CMD_NULL,
 			}
@@ -295,12 +335,13 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 
 		latestAttackerVal := int64(-1)
 		for _, duty := range duties {
+			dutySlot, _ := strconv.Atoi(duty.Slot)
 			dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-			if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
+			if s.b.GetValidatorRole(dutySlot, dutyValIdx) == types.AttackerRole {
 				latestAttackerVal = int64(dutyValIdx)
 			}
 		}
-		if val.Index != latestAttackerVal {
+		if valIdx != int(latestAttackerVal) {
 			// 不是最后一个出块的恶意节点，不出块
 			return types.AttackerResponse{
 				Cmd: types.CMD_RETURN,
@@ -334,8 +375,9 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 		}
 	}
 	{
-		val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
-		if val.Role != types.AttackerRole {
+		valRole := s.b.GetValidatorRole(int(slot), valIdx)
+		//val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
+		if valRole != types.AttackerRole {
 			return types.AttackerResponse{
 				Cmd: types.CMD_NULL,
 			}
@@ -350,12 +392,13 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 
 		latestAttackerVal := int64(-1)
 		for _, duty := range duties {
+			dutySlot, _ := strconv.Atoi(duty.Slot)
 			dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-			if s.b.GetValidatorRole(dutyValIdx) == types.AttackerRole {
+			if s.b.GetValidatorRole(dutySlot, dutyValIdx) == types.AttackerRole {
 				latestAttackerVal = int64(dutyValIdx)
 			}
 		}
-		if val.Index != latestAttackerVal {
+		if valIdx != int(latestAttackerVal) {
 			// 不是最后一个出块的恶意节点，不出块
 			return types.AttackerResponse{
 				Cmd: types.CMD_RETURN,

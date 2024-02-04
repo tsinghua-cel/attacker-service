@@ -2,24 +2,23 @@ package validatorSet
 
 import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/tsinghua-cel/attacker-service/types"
 	"strings"
 	"sync"
 )
 
 type ValidatorInfo struct {
-	Index  int64          `json:"index"`
-	Pubkey string         `json:"pubkey"`
-	Role   types.RoleType `json:"role"`
+	Index  int64  `json:"index"`
+	Pubkey string `json:"pubkey"`
+	//Role   types.RoleType `json:"role"`
 	//Attests ValidatorAttestSet `json:"attests"`
 	//Blocks  ValidatorBlockSet  `json:"blocks"`
 }
 
 type ValidatorDataSet struct {
-	ValidatorByIndex  sync.Map //map[int]*ValidatorInfo
-	ValidatorByPubkey sync.Map //map[string]*ValidatorInfo
-	AttestSet         map[uint64]*SlotAttestSet
-	BlockSet          map[uint64]*SlotBlockSet
+	ValidatorByIndex  sync.Map                  //map[int]*ValidatorInfo
+	ValidatorByPubkey sync.Map                  //map[string]*ValidatorInfo
+	AttestSet         map[uint64]*SlotAttestSet // epoch -> attestation
+	BlockSet          map[uint64]*SlotBlockSet  // epoch -> block
 	lock              sync.RWMutex
 }
 
@@ -37,25 +36,16 @@ func padPubkey(p string) string {
 	return "0x" + p
 }
 
-func (vs *ValidatorDataSet) AddValidator(index int, pubkey string, role types.RoleType) {
+func (vs *ValidatorDataSet) AddValidator(index int, pubkey string) {
 	pubkey = padPubkey(pubkey)
 	vs.lock.Lock()
 	defer vs.lock.Unlock()
 	v := &ValidatorInfo{
 		Index:  int64(index),
 		Pubkey: pubkey,
-		Role:   role,
 	}
 	vs.ValidatorByIndex.Store(index, v)
 	vs.ValidatorByPubkey.Store(pubkey, v)
-}
-
-func (vs *ValidatorDataSet) SetValidatorRole(index int, role types.RoleType) {
-	vs.lock.Lock()
-	defer vs.lock.Unlock()
-	if v, exist := vs.ValidatorByIndex.Load(index); exist {
-		v.(*ValidatorInfo).Role = role
-	}
 }
 
 func (vs *ValidatorDataSet) GetValidatorByIndex(index int) *ValidatorInfo {

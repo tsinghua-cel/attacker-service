@@ -1,7 +1,5 @@
 package apis
 
-import "github.com/tsinghua-cel/attacker-service/types"
-
 // RoleAPI offers and API for role operations.
 type AdminAPI struct {
 	b Backend
@@ -13,11 +11,11 @@ func NewAdminAPI(b Backend) *AdminAPI {
 }
 
 func (s *AdminAPI) SetRoleAttacker(valIndex int) {
-	valSet := s.b.GetValidatorDataSet()
-	valSet.SetValidatorRole(valIndex, types.AttackerRole)
+	//valSet := s.b.GetValidatorDataSet()
+	//valSet.SetValidatorRole(valIndex, types.AttackerRole)
 }
 
 func (s *AdminAPI) SetRoleNormal(valIndex int) {
-	valSet := s.b.GetValidatorDataSet()
-	valSet.SetValidatorRole(valIndex, types.NormalRole)
+	//valSet := s.b.GetValidatorDataSet()
+	//valSet.SetValidatorRole(valIndex, types.NormalRole)
 }

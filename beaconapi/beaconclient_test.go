@@ -3,6 +3,7 @@ package beaconapi
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -50,6 +51,7 @@ func TestGetConfig(t *testing.T) {
 func TestGetLatestBeaconHeader(t *testing.T) {
 	endpoint := "52.221.177.10:33500" // grpc gateway endpoint
 	client := NewBeaconGwClient(endpoint)
+
 	header, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		t.Fatalf("get latest header failed err:%s", err)
@@ -61,10 +63,24 @@ func TestGetLatestBeaconHeader(t *testing.T) {
 func TestGetAllAttestDuties(t *testing.T) {
 	endpoint := "52.221.177.10:14000" // grpc gateway endpoint
 	client := NewBeaconGwClient(endpoint)
-	duties, err := client.GetNextEpochAttestDuties()
+	duties, err := client.GetProposerDuties(1)
+	//duties, err := client.GetCurrentEpochProposerDuties()
 	if err != nil {
-		t.Fatalf("get latest header failed err:%s", err)
+		t.Fatalf("get proposer duties failed err:%s", err)
 	}
+
+	latestSlotWithAttacker := int64(-1)
+	for _, duty := range duties {
+		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
+		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+		fmt.Printf("slot=%d, validx =%d\n", dutySlot, dutyValIdx)
+
+		if dutyValIdx <= 31 && dutySlot > latestSlotWithAttacker {
+			latestSlotWithAttacker = dutySlot
+			fmt.Printf("update latestSlotWithAttacker=%d,\n", dutySlot)
+		}
+	}
+
 	for _, duty := range duties {
 		d, _ := json.Marshal(duty)
 		fmt.Printf("get attest duty :%s\n", string(d))

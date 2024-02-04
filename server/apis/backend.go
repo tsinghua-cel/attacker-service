@@ -25,10 +25,11 @@ type Backend interface {
 	GetBlockByNumber(number *big.Int) (*types.Block, error)
 	GetHeightByNumber(number *big.Int) (*types.Header, error)
 
-	GetValidatorRole(idx int) types2.RoleType
-	GetValidatorRoleByPubkey(pubkey string) types2.RoleType
+	GetValidatorRole(slot int, valIdx int) types2.RoleType
+	GetValidatorRoleByPubkey(slot int, pubkey string) types2.RoleType
 	GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error)
 	GetSlotsPerEpoch() int
+	SlotsPerEpoch() int
 	GetIntervalPerSlot() int
 	AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation)
 	AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock)
@@ -36,6 +37,7 @@ type Backend interface {
 	GetBlockSet(slot uint64) *validatorSet.SlotBlockSet
 	GetValidatorDataSet() *validatorSet.ValidatorDataSet
 	GetValidatorByProposeSlot(slot uint64) (int, error)
+	GetProposeDuties(epoch int) ([]beaconapi.ProposerDuty, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

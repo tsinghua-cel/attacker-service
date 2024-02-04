@@ -103,19 +103,19 @@ func (s *Server) monitorDuties() {
 	for {
 		select {
 		case <-validatorUpdateTicker.C:
-			latest, err := s.beaconClient.GetLatestBeaconHeader()
-			if err != nil {
-				continue
-			}
-			slot, _ := strconv.Atoi(latest.Header.Message.Slot)
-			for _, val := range s.strategy.Validators {
-				valRole := s.GetValidatorRole(val.ValidatorIndex)
-				if slot >= val.AttackerStartSlot && slot <= val.AttackerEndSlot && valRole != types2.AttackerRole {
-					s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.AttackerRole)
-				} else if slot > val.AttackerEndSlot && valRole == types2.AttackerRole {
-					s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.NormalRole)
-				}
-			}
+			//latest, err := s.beaconClient.GetLatestBeaconHeader()
+			//if err != nil {
+			//	continue
+			//}
+			//slot, _ := strconv.Atoi(latest.Header.Message.Slot)
+			//for _, val := range s.strategy.Validators {
+			//	valRole := s.GetValidatorRole(slot, val.ValidatorIndex)
+			//	if slot >= val.AttackerStartSlot && slot <= val.AttackerEndSlot && valRole != types2.AttackerRole {
+			//		s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.AttackerRole)
+			//	} else if slot > val.AttackerEndSlot && valRole == types2.AttackerRole {
+			//		s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.NormalRole)
+			//	}
+			//}
 
 		case <-ticker.C:
 			duties, err := s.beaconClient.GetCurrentEpochAttestDuties()
@@ -124,7 +124,7 @@ func (s *Server) monitorDuties() {
 			}
 			for _, duty := range duties {
 				idx, _ := strconv.Atoi(duty.ValidatorIndex)
-				s.validatorSetInfo.AddValidator(idx, duty.Pubkey, types2.NormalRole)
+				s.validatorSetInfo.AddValidator(idx, duty.Pubkey)
 			}
 
 			ticker.Reset(time.Second * 2)
@@ -178,17 +178,9 @@ func (s *Server) UpdateAttestBroadDelay(milliSecond int64) error {
 	return nil
 }
 
-func (s *Server) GetValidatorRole(idx int) types2.RoleType {
-	if val := s.validatorSetInfo.GetValidatorByIndex(idx); val != nil {
-		return val.Role
-	} else {
-		return types2.NormalRole
-	}
-}
-
-func (s *Server) GetValidatorRoleByPubkey(pubkey string) types2.RoleType {
+func (s *Server) GetValidatorRoleByPubkey(slot int, pubkey string) types2.RoleType {
 	if val := s.validatorSetInfo.GetValidatorByPubkey(pubkey); val != nil {
-		return val.Role
+		return s.GetValidatorRole(slot, int(val.Index))
 	} else {
 		return types2.NormalRole
 	}
@@ -253,4 +245,23 @@ func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
 		}
 	}
 	return 0, errors.New("not found")
+}
+
+func (s *Server) GetProposeDuties(epoch int) ([]beaconapi.ProposerDuty, error) {
+	return s.beaconClient.GetProposerDuties(epoch)
+}
+
+func (s *Server) SlotsPerEpoch() int {
+	return s.GetSlotsPerEpoch()
+}
+
+func (s *Server) GetValidatorRole(slot int, valIdx int) types2.RoleType {
+	if slot < 0 {
+		header, err := s.beaconClient.GetLatestBeaconHeader()
+		if err != nil {
+			return types2.NormalRole
+		}
+		slot, _ = strconv.Atoi(header.Header.Message.Slot)
+	}
+	return s.strategy.GetValidatorRole(valIdx, int64(slot))
 }
