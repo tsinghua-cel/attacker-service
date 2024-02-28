@@ -399,14 +399,14 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 		}
 	}
 	// 当前是最后一个出块的恶意节点，进行延时
-	key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
-	lastDelay := 0
-	if t, exist := blockCacheContent.Get(key); exist {
-		lastDelay = t.(int)
-	}
+	//key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
+	//lastDelay := 0
+	//if t, exist := blockCacheContent.Get(key); exist {
+	//	lastDelay = t.(int)
+	//}
 	seconds := s.b.GetIntervalPerSlot()
-	n2delay := 12 * seconds
-	total := n2delay + lastDelay
+	n2delay := 8 * seconds
+	total := n2delay
 	time.Sleep(time.Second * time.Duration(total))
 	log.WithFields(log.Fields{
 		"slot":     slot,
