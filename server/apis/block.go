@@ -77,7 +77,13 @@ const (
 	ATTACKER_SLOT_NOT_LATEST = 2
 )
 
+type delayInfo struct {
+	endSlot   int64
+	delayType int
+}
+
 var slotToDelay sync.Map // slot => blockType 1: the latest attacker slot in the epoch 2: the attacker slot not the latest.
+var latestAttackerDelayEndSlot int64
 
 func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 
@@ -198,7 +204,14 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 					Result: blockDataBase64,
 				}
 			}
-			slotToDelay.Store(slot, ATTACKER_SLOT_LATEST)
+
+			delayEnd := s.delayEndSlot(int(slot))
+			latestAttackerDelayEndSlot = int64(delayEnd)
+
+			slotToDelay.Store(slot, delayInfo{
+				endSlot:   latestAttackerDelayEndSlot,
+				delayType: ATTACKER_SLOT_LATEST,
+			})
 			return types.AttackerResponse{
 				Cmd:    types.CMD_NULL,
 				Result: resBlockBase64,
@@ -207,12 +220,24 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 		}
 	} else {
 		// make block normally.
-		slotToDelay.Store(slot, ATTACKER_SLOT_NOT_LATEST)
+		slotToDelay.Store(slot, delayInfo{
+			endSlot:   latestAttackerDelayEndSlot,
+			delayType: ATTACKER_SLOT_NOT_LATEST,
+		})
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: blockDataBase64,
 		}
 	}
+}
+
+func (s *BlockAPI) delayEndSlot(slot int) int {
+	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
+	slotsPerEpoch := s.b.GetSlotsPerEpoch()
+	nextEpochLatestAttackerSlot := s.latestAttackerSlot(epoch + 1)
+	nextEpochEndSlot := SlotTool{s.b}.EpochEnd(epoch + 1)
+	delay := int64(slotsPerEpoch)/2 - (int64(nextEpochEndSlot) + 1 - nextEpochLatestAttackerSlot)
+	return int(delay) + slot
 }
 
 func (s *BlockAPI) latestAttackerSlot(epoch int) int64 {
@@ -336,7 +361,8 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 			Cmd: types.CMD_NULL,
 		}
 	} else {
-		if v.(int) == ATTACKER_SLOT_NOT_LATEST {
+		dinfo := v.(delayInfo)
+		if dinfo.delayType == ATTACKER_SLOT_NOT_LATEST {
 			// not latest attacker slot don't need delay.
 			return types.AttackerResponse{
 				Cmd: types.CMD_NULL,
@@ -375,16 +401,16 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 				Cmd: types.CMD_NULL,
 			}
 		}
-		epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
-		slotsPerEpoch := s.b.GetSlotsPerEpoch()
+		dinfo := v.(delayInfo)
+		curSlot, err := s.b.GetCurrentSlot()
+		if err != nil {
+			curSlot = int64(slot)
+		}
 		secondsPerSlot := s.b.GetIntervalPerSlot()
-		nextEpochLatestAttackerSlot := s.latestAttackerSlot(epoch + 1)
-		nextEpochEndSlot := SlotTool{s.b}.EpochEnd(epoch + 1)
-		delay := int64(slotsPerEpoch)/2 - (int64(nextEpochEndSlot) + 1 - nextEpochLatestAttackerSlot)
-		total := delay * int64(secondsPerSlot)
+		total := (dinfo.endSlot - curSlot) * int64(secondsPerSlot)
 		log.WithFields(log.Fields{
 			"slot":        slot,
-			"delayToSlot": int(delay) + int(slot),
+			"delayToSlot": dinfo.endSlot,
 			"valIdx":      valIdx,
 			"duration":    total,
 		}).Info("goto delay for beforeBroadcastBlock")

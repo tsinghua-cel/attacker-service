@@ -265,3 +265,13 @@ func (s *Server) GetValidatorRole(slot int, valIdx int) types2.RoleType {
 	}
 	return s.strategy.GetValidatorRole(valIdx, int64(slot))
 }
+
+func (s *Server) GetCurrentSlot() (int64, error) {
+	h, err := s.beaconClient.GetLatestBeaconHeader()
+	if err != nil {
+		return 0, err
+	}
+	slotStr := h.Header.Message.Slot
+	slot, _ := strconv.ParseInt(slotStr, 10, 64)
+	return slot, nil
+}

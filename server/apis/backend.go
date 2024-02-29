@@ -38,6 +38,7 @@ type Backend interface {
 	GetValidatorDataSet() *validatorSet.ValidatorDataSet
 	GetValidatorByProposeSlot(slot uint64) (int, error)
 	GetProposeDuties(epoch int) ([]beaconapi.ProposerDuty, error)
+	GetCurrentSlot() (int64, error)
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {
