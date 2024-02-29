@@ -416,7 +416,7 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 		}).Info("goto delay for beforeBroadcastBlock")
 
 		time.Sleep(time.Second * time.Duration(total))
-		if v.(int) == ATTACKER_SLOT_LATEST {
+		if dinfo.delayType == ATTACKER_SLOT_LATEST {
 			attackerState = AttackerStateBefore
 		}
 		log.WithFields(log.Fields{
