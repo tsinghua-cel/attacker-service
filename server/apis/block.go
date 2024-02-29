@@ -408,14 +408,16 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 		}
 		secondsPerSlot := s.b.GetIntervalPerSlot()
 		total := (dinfo.endSlot - curSlot) * int64(secondsPerSlot)
+		delta := 50 * (dinfo.endSlot - int64(slot))
 		log.WithFields(log.Fields{
 			"slot":        slot,
 			"delayToSlot": dinfo.endSlot,
 			"valIdx":      valIdx,
 			"duration":    total,
+			"deltaTime":   delta,
 		}).Info("goto delay for beforeBroadcastBlock")
 
-		time.Sleep(time.Second * time.Duration(total))
+		time.Sleep(time.Second*time.Duration(total) - time.Millisecond*time.Duration(delta))
 		if dinfo.delayType == ATTACKER_SLOT_LATEST {
 			attackerState = AttackerStateBefore
 		}
