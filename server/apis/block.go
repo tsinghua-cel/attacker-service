@@ -380,8 +380,15 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 		secondsPerSlot := s.b.GetIntervalPerSlot()
 		nextEpochLatestAttackerSlot := s.latestAttackerSlot(epoch + 1)
 		nextEpochEndSlot := SlotTool{s.b}.EpochEnd(epoch + 1)
-		delay := int64(slotsPerEpoch)/2 - int64(nextEpochEndSlot) + 1 - nextEpochLatestAttackerSlot
+		delay := int64(slotsPerEpoch)/2 - (int64(nextEpochEndSlot) + 1 - nextEpochLatestAttackerSlot)
 		total := delay * int64(secondsPerSlot)
+		log.WithFields(log.Fields{
+			"slot":        slot,
+			"delayToSlot": int(delay) + int(slot),
+			"valIdx":      valIdx,
+			"duration":    total,
+		}).Info("goto delay for beforeBroadcastBlock")
+
 		time.Sleep(time.Second * time.Duration(total))
 		if v.(int) == ATTACKER_SLOT_LATEST {
 			attackerState = AttackerStateBefore
