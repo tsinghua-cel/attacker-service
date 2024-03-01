@@ -408,7 +408,7 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 		}
 		secondsPerSlot := s.b.GetIntervalPerSlot()
 		total := (dinfo.endSlot - curSlot) * int64(secondsPerSlot)
-		delta := 50 * (dinfo.endSlot - int64(slot))
+		delta := 100 * (dinfo.endSlot - int64(slot))
 		log.WithFields(log.Fields{
 			"slot":        slot,
 			"delayToSlot": dinfo.endSlot,
