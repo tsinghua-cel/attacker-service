@@ -7,33 +7,14 @@ import (
 	"os"
 )
 
-type ValidatorStrategy struct {
-	ValidatorIndex    int `json:"validator_index"`
-	AttackerStartSlot int `json:"attacker_start_slot"`
-	AttackerEndSlot   int `json:"attacker_end_slot"`
-}
-
-type BlockStrategy struct {
-	DelayEnable    bool  `json:"delay_enable"`
-	BroadCastDelay int64 `json:"broad_cast_delay"` // unit millisecond
-	ModifyEnable   bool  `json:"modify_enable"`
-}
-
-type AttestStrategy struct {
-	DelayEnable    bool  `json:"delay_enable"`
-	BroadCastDelay int64 `json:"broad_cast_delay"` // unit millisecond
-	ModifyEnable   bool  `json:"modify_enable"`
-	//lua scripts  => modify attest
-}
-
 var (
-	defaultValidators    = []ValidatorStrategy{}
-	defaultBlockStrategy = BlockStrategy{
+	defaultValidators    = []types.ValidatorStrategy{}
+	defaultBlockStrategy = types.BlockStrategy{
 		DelayEnable:    false,
 		BroadCastDelay: 3000, // 3s
 		ModifyEnable:   false,
 	}
-	defaultAttestStrategy = AttestStrategy{
+	defaultAttestStrategy = types.AttestStrategy{
 		DelayEnable:    false,
 		BroadCastDelay: 3000, // 3s
 		ModifyEnable:   false,
@@ -41,9 +22,9 @@ var (
 )
 
 type Strategy struct {
-	Validators []ValidatorStrategy `json:"validator"`
-	Block      BlockStrategy       `json:"block"`
-	Attest     AttestStrategy      `json:"attest"`
+	Validators []types.ValidatorStrategy `json:"validator"`
+	Block      types.BlockStrategy       `json:"block"`
+	Attest     types.AttestStrategy      `json:"attest"`
 }
 
 func (s *Strategy) GetValidatorRole(valIdx int, slot int64) types.RoleType {
