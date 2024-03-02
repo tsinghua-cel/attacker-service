@@ -5,19 +5,20 @@ import (
 	"encoding/json"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
-	"github.com/tsinghua-cel/attacker-service/strategy"
+	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"google.golang.org/protobuf/proto"
 )
 
 // AttestAPI offers and API for attestation operations.
 type AttestAPI struct {
-	b Backend
+	b      Backend
+	plugin plugins.AttackerPlugin
 }
 
-// NewBlockAPI creates a new tx pool service that gives information about the transaction pool.
-func NewAttestAPI(b Backend) *AttestAPI {
-	return &AttestAPI{b}
+// NewAttestAPI creates a new tx pool service that gives information about the transaction pool.
+func NewAttestAPI(b Backend, plugin plugins.AttackerPlugin) *AttestAPI {
+	return &AttestAPI{b, plugin}
 }
 
 func (s *AttestAPI) GetStrategy() []byte {
@@ -26,7 +27,7 @@ func (s *AttestAPI) GetStrategy() []byte {
 }
 
 func (s *AttestAPI) UpdateStrategy(data []byte) error {
-	var attestStrategy strategy.AttestStrategy
+	var attestStrategy types.AttestStrategy
 	if err := json.Unmarshal(data, &attestStrategy); err != nil {
 		return err
 	}
@@ -36,6 +37,9 @@ func (s *AttestAPI) UpdateStrategy(data []byte) error {
 }
 
 func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
+	if s.plugin != nil {
+		res := s.plugin.AttestBeforeBroadCast(s.b, slot)
+	}
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}

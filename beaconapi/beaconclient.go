@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/astaxie/beego/httplib"
 	log "github.com/sirupsen/logrus"
+	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
 )
 
@@ -34,14 +35,14 @@ func (b *BeaconGwClient) GetIntConfig(key string) (int, error) {
 	}
 }
 
-func (b *BeaconGwClient) doGet(url string) (BeaconResponse, error) {
+func (b *BeaconGwClient) doGet(url string) (types.BeaconResponse, error) {
 	resp, err := httplib.Get(url).Response()
 	if err != nil {
-		return BeaconResponse{}, err
+		return types.BeaconResponse{}, err
 	}
 	defer resp.Body.Close()
 
-	var response BeaconResponse
+	var response types.BeaconResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		log.WithError(err).Error("Error decoding response")
@@ -49,14 +50,14 @@ func (b *BeaconGwClient) doGet(url string) (BeaconResponse, error) {
 	return response, nil
 }
 
-func (b *BeaconGwClient) doPost(url string, data []byte) (BeaconResponse, error) {
+func (b *BeaconGwClient) doPost(url string, data []byte) (types.BeaconResponse, error) {
 	resp, err := httplib.Post(url).Body(data).Response()
 	if err != nil {
-		return BeaconResponse{}, err
+		return types.BeaconResponse{}, err
 	}
 	defer resp.Body.Close()
 
-	var response BeaconResponse
+	var response types.BeaconResponse
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	if err != nil {
 		log.WithError(err).Error("Error decoding response")
@@ -90,23 +91,23 @@ func (b *BeaconGwClient) GetBeaconConfig() map[string]string {
 	return b.config
 }
 
-func (b *BeaconGwClient) GetLatestBeaconHeader() (BeaconHeaderInfo, error) {
+func (b *BeaconGwClient) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
 	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/headers", b.endpoint))
-	var headers = make([]BeaconHeaderInfo, 0)
+	var headers = make([]types.BeaconHeaderInfo, 0)
 	err = json.Unmarshal(response.Data, &headers)
 	if err != nil {
 		// todo: add log.
-		return BeaconHeaderInfo{}, err
+		return types.BeaconHeaderInfo{}, err
 	}
 
 	return headers[0], nil
 }
 
 // default grpc-gateway port is 3500
-func (b *BeaconGwClient) GetAllValReward(epoch int) ([]TotalReward, error) {
+func (b *BeaconGwClient) GetAllValReward(epoch int) ([]types.TotalReward, error) {
 	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, epoch)
 	response, err := b.doPost(url, []byte("[]"))
-	var rewardInfo RewardInfo
+	var rewardInfo types.RewardInfo
 	err = json.Unmarshal(response.Data, &rewardInfo)
 	if err != nil {
 		log.WithError(err).Error("unmarshal reward data failed")
@@ -115,7 +116,7 @@ func (b *BeaconGwClient) GetAllValReward(epoch int) ([]TotalReward, error) {
 	return rewardInfo.TotalRewards, err
 }
 
-func (b *BeaconGwClient) GetValReward(epoch int, valIdxs []int) (BeaconResponse, error) {
+func (b *BeaconGwClient) GetValReward(epoch int, valIdxs []int) (types.BeaconResponse, error) {
 	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, epoch)
 	vals := make([]string, len(valIdxs))
 	for i := 0; i < len(valIdxs); i++ {
@@ -124,45 +125,45 @@ func (b *BeaconGwClient) GetValReward(epoch int, valIdxs []int) (BeaconResponse,
 	d, err := json.Marshal(vals)
 	if err != nil {
 		log.WithError(err).Error("get reward failed when marshal vals")
-		return BeaconResponse{}, err
+		return types.BeaconResponse{}, err
 	}
 	response, err := b.doPost(url, d)
 	return response, err
 }
 
 // /eth/v1/validator/duties/proposer/:epoch
-func (b *BeaconGwClient) GetProposerDuties(epoch int) ([]ProposerDuty, error) {
+func (b *BeaconGwClient) GetProposerDuties(epoch int) ([]types.ProposerDuty, error) {
 	url := fmt.Sprintf("http://%s/eth/v1/validator/duties/proposer/%d", b.endpoint, epoch)
-	var duties = make([]ProposerDuty, 0)
+	var duties = make([]types.ProposerDuty, 0)
 
 	response, err := b.doGet(url)
 	err = json.Unmarshal(response.Data, &duties)
 	if err != nil {
-		return []ProposerDuty{}, err
+		return []types.ProposerDuty{}, err
 	}
 
 	return duties, err
 }
 
 // POST /eth/v1/validator/duties/attester/:epoch
-func (b *BeaconGwClient) GetAttesterDuties(epoch int, vals []int) ([]AttestDuty, error) {
+func (b *BeaconGwClient) GetAttesterDuties(epoch int, vals []int) ([]types.AttestDuty, error) {
 	url := fmt.Sprintf("http://%s/eth/v1/validator/duties/attester/%d", b.endpoint, epoch)
 	param := make([]string, len(vals))
 	for i := 0; i < len(vals); i++ {
 		param[i] = strconv.FormatInt(int64(vals[i]), 10)
 	}
 	paramData, _ := json.Marshal(param)
-	var duties = make([]AttestDuty, 0)
+	var duties = make([]types.AttestDuty, 0)
 
 	response, err := b.doPost(url, paramData)
 	err = json.Unmarshal(response.Data, &duties)
 	if err != nil {
-		return []AttestDuty{}, err
+		return []types.AttestDuty{}, err
 	}
 	return duties, err
 }
 
-func (b *BeaconGwClient) GetNextEpochProposerDuties() ([]ProposerDuty, error) {
+func (b *BeaconGwClient) GetNextEpochProposerDuties() ([]types.ProposerDuty, error) {
 	latestHeader, err := b.GetLatestBeaconHeader()
 	if err != nil {
 		return nil, err
@@ -173,7 +174,7 @@ func (b *BeaconGwClient) GetNextEpochProposerDuties() ([]ProposerDuty, error) {
 	return b.GetProposerDuties(epoch + 1)
 }
 
-func (b *BeaconGwClient) GetCurrentEpochProposerDuties() ([]ProposerDuty, error) {
+func (b *BeaconGwClient) GetCurrentEpochProposerDuties() ([]types.ProposerDuty, error) {
 	latestHeader, err := b.GetLatestBeaconHeader()
 	if err != nil {
 		return nil, err
@@ -184,7 +185,7 @@ func (b *BeaconGwClient) GetCurrentEpochProposerDuties() ([]ProposerDuty, error)
 	return b.GetProposerDuties(epoch)
 }
 
-func (b *BeaconGwClient) GetCurrentEpochAttestDuties() ([]AttestDuty, error) {
+func (b *BeaconGwClient) GetCurrentEpochAttestDuties() ([]types.AttestDuty, error) {
 	latestHeader, err := b.GetLatestBeaconHeader()
 	if err != nil {
 		return nil, err
@@ -199,7 +200,7 @@ func (b *BeaconGwClient) GetCurrentEpochAttestDuties() ([]AttestDuty, error) {
 	return b.GetAttesterDuties(epoch, vals)
 }
 
-func (b *BeaconGwClient) GetNextEpochAttestDuties() ([]AttestDuty, error) {
+func (b *BeaconGwClient) GetNextEpochAttestDuties() ([]types.AttestDuty, error) {
 	latestHeader, err := b.GetLatestBeaconHeader()
 	if err != nil {
 		return nil, err

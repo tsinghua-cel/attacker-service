@@ -1,13 +1,12 @@
 package apis
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
+	ethtype "github.com/ethereum/go-ethereum/core/types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/tsinghua-cel/attacker-service/beaconapi"
+	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/strategy"
-	types2 "github.com/tsinghua-cel/attacker-service/types"
-	"github.com/tsinghua-cel/attacker-service/validatorSet"
+	"github.com/tsinghua-cel/attacker-service/types"
 	"math/big"
 )
 
@@ -22,37 +21,37 @@ type Backend interface {
 
 	// get data from execute node.
 	GetBlockHeight() (uint64, error)
-	GetBlockByNumber(number *big.Int) (*types.Block, error)
-	GetHeightByNumber(number *big.Int) (*types.Header, error)
+	GetBlockByNumber(number *big.Int) (*ethtype.Block, error)
+	GetHeightByNumber(number *big.Int) (*ethtype.Header, error)
 
-	GetValidatorRole(slot int, valIdx int) types2.RoleType
-	GetValidatorRoleByPubkey(slot int, pubkey string) types2.RoleType
-	GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error)
+	GetValidatorRole(slot int, valIdx int) types.RoleType
+	GetValidatorRoleByPubkey(slot int, pubkey string) types.RoleType
+	GetCurrentEpochProposeDuties() ([]types.ProposerDuty, error)
 	GetSlotsPerEpoch() int
 	SlotsPerEpoch() int
 	GetIntervalPerSlot() int
 	AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation)
 	AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock)
-	GetAttestSet(slot uint64) *validatorSet.SlotAttestSet
-	GetBlockSet(slot uint64) *validatorSet.SlotBlockSet
-	GetValidatorDataSet() *validatorSet.ValidatorDataSet
+	GetAttestSet(slot uint64) *types.SlotAttestSet
+	GetBlockSet(slot uint64) *types.SlotBlockSet
+	GetValidatorDataSet() *types.ValidatorDataSet
 	GetValidatorByProposeSlot(slot uint64) (int, error)
-	GetProposeDuties(epoch int) ([]beaconapi.ProposerDuty, error)
+	GetProposeDuties(epoch int) ([]types.ProposerDuty, error)
 }
 
-func GetAPIs(apiBackend Backend) []rpc.API {
+func GetAPIs(apiBackend Backend, plugin plugins.AttackerPlugin) []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "admin",
-			Service:   NewAdminAPI(apiBackend),
+			Service:   NewAdminAPI(apiBackend, plugin),
 		},
 		{
 			Namespace: "block",
-			Service:   NewBlockAPI(apiBackend),
+			Service:   NewBlockAPI(apiBackend, plugin),
 		},
 		{
 			Namespace: "attest",
-			Service:   NewAttestAPI(apiBackend),
+			Service:   NewAttestAPI(apiBackend, plugin),
 		},
 	}
 }

@@ -1,13 +1,16 @@
 package apis
 
+import "github.com/tsinghua-cel/attacker-service/plugins"
+
 // RoleAPI offers and API for role operations.
 type AdminAPI struct {
-	b Backend
+	b      Backend
+	plugin plugins.AttackerPlugin
 }
 
 // NewRoleAPI creates a new tx pool service that gives information about the transaction pool.
-func NewAdminAPI(b Backend) *AdminAPI {
-	return &AdminAPI{b}
+func NewAdminAPI(b Backend, plugin plugins.AttackerPlugin) *AdminAPI {
+	return &AdminAPI{b, plugin}
 }
 
 func (s *AdminAPI) SetRoleAttacker(valIndex int) {

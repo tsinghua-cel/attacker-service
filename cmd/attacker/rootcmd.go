@@ -80,7 +80,7 @@ func initConfig() {
 
 func runNode() {
 
-	rpcServer := server.NewServer()
+	rpcServer := server.NewServer(config.GetConfig(), nil)
 	rpcServer.Start()
 
 	go getRewardBackgroud()

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/tsinghua-cel/attacker-service/plugins"
 	"strconv"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
-	"github.com/tsinghua-cel/attacker-service/strategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"google.golang.org/protobuf/proto"
 )
@@ -25,12 +25,13 @@ var (
 
 // BlockAPI offers and API for block operations.
 type BlockAPI struct {
-	b Backend
+	b      Backend
+	plugin plugins.AttackerPlugin
 }
 
 // NewBlockAPI creates a new tx pool service that gives information about the transaction pool.
-func NewBlockAPI(b Backend) *BlockAPI {
-	return &BlockAPI{b}
+func NewBlockAPI(b Backend, plugin plugins.AttackerPlugin) *BlockAPI {
+	return &BlockAPI{b, plugin}
 }
 
 func (s *BlockAPI) GetStrategy(cliInfo string) []byte {
@@ -39,7 +40,7 @@ func (s *BlockAPI) GetStrategy(cliInfo string) []byte {
 }
 
 func (s *BlockAPI) UpdateStrategy(data []byte) error {
-	var blockStrategy strategy.BlockStrategy
+	var blockStrategy types.BlockStrategy
 	if err := json.Unmarshal(data, &blockStrategy); err != nil {
 		return err
 	}

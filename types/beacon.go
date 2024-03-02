@@ -1,4 +1,4 @@
-package beaconapi
+package types
 
 import "encoding/json"
 

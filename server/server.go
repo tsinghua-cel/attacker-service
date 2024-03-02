@@ -4,17 +4,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
+	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/config"
+	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
 	"github.com/tsinghua-cel/attacker-service/strategy"
-	types2 "github.com/tsinghua-cel/attacker-service/types"
-	"github.com/tsinghua-cel/attacker-service/validatorSet"
+	"github.com/tsinghua-cel/attacker-service/types"
 	"math/big"
 	"strconv"
 	"time"
@@ -28,22 +28,22 @@ type Server struct {
 	execClient   *ethclient.Client
 	beaconClient *beaconapi.BeaconGwClient
 
-	validatorSetInfo *validatorSet.ValidatorDataSet
+	validatorSetInfo *types.ValidatorDataSet
 }
 
-func NewServer() *Server {
+func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s := &Server{}
-	s.config = config.GetConfig()
-	s.rpcAPIs = apis.GetAPIs(s)
-	client, err := ethclient.Dial(s.config.ExecuteRpc)
+	s.config = conf
+	s.rpcAPIs = apis.GetAPIs(s, plugin)
+	client, err := ethclient.Dial(conf.ExecuteRpc)
 	if err != nil {
 		panic(fmt.Sprintf("dial execute failed with err:%v", err))
 	}
 	s.execClient = client
-	s.beaconClient = beaconapi.NewBeaconGwClient(s.config.BeaconRpc)
+	s.beaconClient = beaconapi.NewBeaconGwClient(conf.BeaconRpc)
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
-	s.strategy = strategy.ParseStrategy(config.GetConfig().Strategy)
-	s.validatorSetInfo = validatorSet.NewValidatorSet()
+	s.strategy = strategy.ParseStrategy(conf.Strategy)
+	s.validatorSetInfo = types.NewValidatorSet()
 	return s
 }
 
@@ -97,25 +97,8 @@ func (s *Server) monitorDuties() {
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
 
-	validatorUpdateTicker := time.NewTicker(time.Second)
-	defer validatorUpdateTicker.Stop()
-
 	for {
 		select {
-		case <-validatorUpdateTicker.C:
-			//latest, err := s.beaconClient.GetLatestBeaconHeader()
-			//if err != nil {
-			//	continue
-			//}
-			//slot, _ := strconv.Atoi(latest.Header.Message.Slot)
-			//for _, val := range s.strategy.Validators {
-			//	valRole := s.GetValidatorRole(slot, val.ValidatorIndex)
-			//	if slot >= val.AttackerStartSlot && slot <= val.AttackerEndSlot && valRole != types2.AttackerRole {
-			//		s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.AttackerRole)
-			//	} else if slot > val.AttackerEndSlot && valRole == types2.AttackerRole {
-			//		s.validatorSetInfo.SetValidatorRole(val.ValidatorIndex, types2.NormalRole)
-			//	}
-			//}
 
 		case <-ticker.C:
 			duties, err := s.beaconClient.GetCurrentEpochAttestDuties()
@@ -156,11 +139,11 @@ func (s *Server) GetBlockHeight() (uint64, error) {
 	return s.execClient.BlockNumber(context.Background())
 }
 
-func (s *Server) GetBlockByNumber(number *big.Int) (*types.Block, error) {
+func (s *Server) GetBlockByNumber(number *big.Int) (*ethtype.Block, error) {
 	return s.execClient.BlockByNumber(context.Background(), number)
 }
 
-func (s *Server) GetHeightByNumber(number *big.Int) (*types.Header, error) {
+func (s *Server) GetHeightByNumber(number *big.Int) (*ethtype.Header, error) {
 	return s.execClient.HeaderByNumber(context.Background(), number)
 }
 
@@ -178,19 +161,19 @@ func (s *Server) UpdateAttestBroadDelay(milliSecond int64) error {
 	return nil
 }
 
-func (s *Server) GetValidatorRoleByPubkey(slot int, pubkey string) types2.RoleType {
+func (s *Server) GetValidatorRoleByPubkey(slot int, pubkey string) types.RoleType {
 	if val := s.validatorSetInfo.GetValidatorByPubkey(pubkey); val != nil {
 		return s.GetValidatorRole(slot, int(val.Index))
 	} else {
-		return types2.NormalRole
+		return types.NormalRole
 	}
 }
 
-func (s *Server) GetCurrentEpochProposeDuties() ([]beaconapi.ProposerDuty, error) {
+func (s *Server) GetCurrentEpochProposeDuties() ([]types.ProposerDuty, error) {
 	return s.beaconClient.GetCurrentEpochProposerDuties()
 }
 
-func (s *Server) GetCurrentEpochAttestDuties() ([]beaconapi.AttestDuty, error) {
+func (s *Server) GetCurrentEpochAttestDuties() ([]types.AttestDuty, error) {
 	return s.beaconClient.GetCurrentEpochAttestDuties()
 }
 
@@ -218,15 +201,15 @@ func (s *Server) AddSignedBlock(slot uint64, pubkey string, block *ethpb.Generic
 	s.validatorSetInfo.AddSignedBlock(slot, pubkey, block)
 }
 
-func (s *Server) GetAttestSet(slot uint64) *validatorSet.SlotAttestSet {
+func (s *Server) GetAttestSet(slot uint64) *types.SlotAttestSet {
 	return s.validatorSetInfo.GetAttestSet(slot)
 }
 
-func (s *Server) GetBlockSet(slot uint64) *validatorSet.SlotBlockSet {
+func (s *Server) GetBlockSet(slot uint64) *types.SlotBlockSet {
 	return s.validatorSetInfo.GetBlockSet(slot)
 }
 
-func (s *Server) GetValidatorDataSet() *validatorSet.ValidatorDataSet {
+func (s *Server) GetValidatorDataSet() *types.ValidatorDataSet {
 	return s.validatorSetInfo
 }
 
@@ -247,7 +230,7 @@ func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
 	return 0, errors.New("not found")
 }
 
-func (s *Server) GetProposeDuties(epoch int) ([]beaconapi.ProposerDuty, error) {
+func (s *Server) GetProposeDuties(epoch int) ([]types.ProposerDuty, error) {
 	return s.beaconClient.GetProposerDuties(epoch)
 }
 
@@ -255,11 +238,11 @@ func (s *Server) SlotsPerEpoch() int {
 	return s.GetSlotsPerEpoch()
 }
 
-func (s *Server) GetValidatorRole(slot int, valIdx int) types2.RoleType {
+func (s *Server) GetValidatorRole(slot int, valIdx int) types.RoleType {
 	if slot < 0 {
 		header, err := s.beaconClient.GetLatestBeaconHeader()
 		if err != nil {
-			return types2.NormalRole
+			return types.NormalRole
 		}
 		slot, _ = strconv.Atoi(header.Header.Message.Slot)
 	}
