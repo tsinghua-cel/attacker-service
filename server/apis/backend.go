@@ -1,8 +1,10 @@
 package apis
 
 import (
+	"context"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/strategy"
@@ -53,5 +55,13 @@ func GetAPIs(apiBackend Backend, plugin plugins.AttackerPlugin) []rpc.API {
 			Namespace: "attest",
 			Service:   NewAttestAPI(apiBackend, plugin),
 		},
+	}
+}
+
+func pluginContext(backend types.ServiceBackend) plugins.PluginContext {
+	return plugins.PluginContext{
+		Backend: backend,
+		Context: context.Background(),
+		Logger:  log.WithField("module", "attacker-service"),
 	}
 }

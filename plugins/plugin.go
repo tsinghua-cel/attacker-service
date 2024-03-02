@@ -7,10 +7,10 @@ import (
 	"github.com/tsinghua-cel/attacker-service/types"
 )
 
-type PluginContext interface {
-	Context() context.Context
-	Backend() types.ServiceBackend
-	Logger() logrus.Logger
+type PluginContext struct {
+	Context context.Context
+	Backend types.ServiceBackend
+	Logger  *logrus.Entry
 }
 
 type PluginResponse struct {
