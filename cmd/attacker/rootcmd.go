@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/tsinghua-cel/attacker-service/cmd/attacker/testcases"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/reward"
 	"github.com/tsinghua-cel/attacker-service/server"
@@ -80,7 +81,7 @@ func initConfig() {
 
 func runNode() {
 
-	rpcServer := server.NewServer(config.GetConfig(), nil)
+	rpcServer := server.NewServer(config.GetConfig(), testcases.NewCaseV1())
 	rpcServer.Start()
 
 	go getRewardBackgroud()
