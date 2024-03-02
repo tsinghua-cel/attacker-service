@@ -26,13 +26,13 @@ type AttackerPlugin interface {
 	AttestBeforePropose(ctx PluginContext, slot uint64, pubkey string, attest *ethpb.Attestation) PluginResponse
 	AttestAfterPropose(ctx PluginContext, slot uint64, pubkey string, attest *ethpb.Attestation) PluginResponse
 
-	BlockBroadCastDelay(ctx PluginContext) PluginResponse
+	BlockDelayForBroadCast(ctx PluginContext) PluginResponse
 	BlockDelayForReceiveBlock(ctx PluginContext, slot uint64) PluginResponse
+
 	BlockBeforeBroadCast(ctx PluginContext, slot uint64) PluginResponse
 	BlockAfterBroadCast(ctx PluginContext, slot uint64) PluginResponse
-	BlockBeforeMakeBlock(ctx PluginContext, slot uint64, pubkey string) PluginResponse
-	BlockBeforeSign(ctx PluginContext, slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock_Capella) PluginResponse
-	BlockAfterSign(ctx PluginContext, slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock_Capella) PluginResponse
+	BlockBeforeSign(ctx PluginContext, slot uint64, pubkey string, block *ethpb.SignedBeaconBlockCapella) PluginResponse
+	BlockAfterSign(ctx PluginContext, slot uint64, pubkey string, block *ethpb.SignedBeaconBlockCapella) PluginResponse
 	BlockBeforePropose(ctx PluginContext, slot uint64, pubkey string, block *ethpb.SignedBeaconBlockCapella) PluginResponse
 	BlockAfterPropose(ctx PluginContext, slot uint64, pubkey string, block *ethpb.SignedBeaconBlockCapella) PluginResponse
 }

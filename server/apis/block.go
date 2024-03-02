@@ -4,17 +4,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
-	"github.com/tsinghua-cel/attacker-service/plugins"
-	"strconv"
-	"time"
-
 	"github.com/prysmaticlabs/prysm/v4/cache/lru"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
+	"github.com/tsinghua-cel/attacker-service/common"
+	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"google.golang.org/protobuf/proto"
+	"strconv"
 )
 
 var (
@@ -50,13 +48,12 @@ func (s *BlockAPI) UpdateStrategy(data []byte) error {
 }
 
 func (s *BlockAPI) BroadCastDelay() types.AttackerResponse {
-	bs := s.b.GetStrategy().Block
-	if !bs.DelayEnable {
+	if s.plugin != nil {
+		result := s.plugin.BlockDelayForBroadCast(pluginContext(s.b))
 		return types.AttackerResponse{
-			Cmd: types.CMD_NULL,
+			Cmd: result.Cmd,
 		}
 	}
-	time.Sleep(time.Millisecond * time.Duration(s.b.GetStrategy().Block.BroadCastDelay))
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
@@ -305,115 +302,25 @@ func (s *BlockAPI) genericSignedBlockToBase64(block *ethpb.GenericSignedBeaconBl
 }
 
 func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
-	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
-	if err != nil {
+	if s.plugin != nil {
+		result := s.plugin.BlockDelayForReceiveBlock(pluginContext(s.b), slot)
 		return types.AttackerResponse{
-			Cmd: types.CMD_NULL,
+			Cmd: result.Cmd,
 		}
 	}
-	{
-		valRole := s.b.GetValidatorRole(int(slot), valIdx)
-		//val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
-		if valRole != types.AttackerRole {
-			return types.AttackerResponse{
-				Cmd: types.CMD_NULL,
-			}
-		}
-
-		duties, err := s.b.GetCurrentEpochProposeDuties()
-		if err != nil {
-			return types.AttackerResponse{
-				Cmd: types.CMD_NULL,
-			}
-		}
-
-		latestAttackerVal := int64(-1)
-		for _, duty := range duties {
-			dutySlot, _ := strconv.Atoi(duty.Slot)
-			dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-			if s.b.GetValidatorRole(dutySlot, dutyValIdx) == types.AttackerRole {
-				latestAttackerVal = int64(dutyValIdx)
-			}
-		}
-		if valIdx != int(latestAttackerVal) {
-			// 不是最后一个出块的恶意节点，不出块
-			return types.AttackerResponse{
-				Cmd: types.CMD_RETURN,
-			}
-		}
-	}
-	// 当前是最后一个出块的恶意节点，进行延时
-
-	epochSlots := s.b.GetSlotsPerEpoch()
-	seconds := s.b.GetIntervalPerSlot()
-	delay := (epochSlots - int(slot%uint64(epochSlots))) * seconds
-	time.Sleep(time.Second * time.Duration(delay))
-	key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
-	blockCacheContent.Add(key, delay)
-	log.WithFields(log.Fields{
-		"slot":     slot,
-		"validx":   valIdx,
-		"duration": delay,
-	}).Info("delay for receive block")
 
 	return types.AttackerResponse{
-		Cmd: types.CMD_UPDATE_STATE,
+		Cmd: types.CMD_NULL,
 	}
 }
 
 func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
-	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
-	if err != nil {
+	if s.plugin != nil {
+		result := s.plugin.BlockBeforeBroadCast(pluginContext(s.b), slot)
 		return types.AttackerResponse{
-			Cmd: types.CMD_NULL,
+			Cmd: result.Cmd,
 		}
 	}
-	{
-		valRole := s.b.GetValidatorRole(int(slot), valIdx)
-		//val := s.b.GetValidatorDataSet().GetValidatorByIndex(valIdx)
-		if valRole != types.AttackerRole {
-			return types.AttackerResponse{
-				Cmd: types.CMD_NULL,
-			}
-		}
-
-		duties, err := s.b.GetCurrentEpochProposeDuties()
-		if err != nil {
-			return types.AttackerResponse{
-				Cmd: types.CMD_NULL,
-			}
-		}
-
-		latestAttackerVal := int64(-1)
-		for _, duty := range duties {
-			dutySlot, _ := strconv.Atoi(duty.Slot)
-			dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-			if s.b.GetValidatorRole(dutySlot, dutyValIdx) == types.AttackerRole {
-				latestAttackerVal = int64(dutyValIdx)
-			}
-		}
-		if valIdx != int(latestAttackerVal) {
-			// 不是最后一个出块的恶意节点，不出块
-			return types.AttackerResponse{
-				Cmd: types.CMD_RETURN,
-			}
-		}
-	}
-	// 当前是最后一个出块的恶意节点，进行延时
-	key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
-	lastDelay := 0
-	if t, exist := blockCacheContent.Get(key); exist {
-		lastDelay = t.(int)
-	}
-	seconds := s.b.GetIntervalPerSlot()
-	n2delay := 12 * seconds
-	total := n2delay + lastDelay
-	time.Sleep(time.Second * time.Duration(total))
-	log.WithFields(log.Fields{
-		"slot":     slot,
-		"validx":   valIdx,
-		"duration": total,
-	}).Info("delay for beforeBroadcastBlock")
 
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
@@ -421,132 +328,79 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 }
 
 func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
-	return types.AttackerResponse{
-		Cmd: types.CMD_NULL,
-	}
-}
-
-func (s *BlockAPI) BeforeMakeBlock(slot uint64, pubkey string) types.AttackerResponse {
-	// 1. 只有每个epoch最后一个出块的恶意节点出块，其他节点不出快
-	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
-	if err != nil {
-		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
-		if val == nil {
-			return types.AttackerResponse{
-				Cmd: types.CMD_NULL,
-			}
-		}
-		valIdx = int(val.Index)
-	}
-	role := s.b.GetValidatorRole(int(slot), valIdx)
-	log.WithFields(log.Fields{
-		"slot":   slot,
-		"valIdx": valIdx,
-		"role":   role,
-	}).Info("in BeforeMakeBlock, get validator by propose slot")
-
-	if role != types.AttackerRole {
+	if s.plugin != nil {
+		result := s.plugin.BlockAfterBroadCast(pluginContext(s.b), slot)
 		return types.AttackerResponse{
-			Cmd: types.CMD_NULL,
+			Cmd: result.Cmd,
 		}
 	}
-	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
-
-	duties, err := s.b.GetProposeDuties(int(epoch))
-	if err != nil {
-		return types.AttackerResponse{
-			Cmd: types.CMD_NULL,
-		}
-	}
-
-	latestSlotWithAttacker := int64(-1)
-	for _, duty := range duties {
-		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
-		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-		log.WithFields(log.Fields{
-			"slot":   dutySlot,
-			"valIdx": dutyValIdx,
-		}).Debug("duty slot")
-		if s.b.GetValidatorRole(int(slot), dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
-			latestSlotWithAttacker = dutySlot
-			log.WithField("latestSlotWithAttacker", latestSlotWithAttacker).Debug("update latestSlotWithAttacker")
-		}
-	}
-	log.WithFields(log.Fields{
-		"slot":               slot,
-		"latestAttackerSlot": latestSlotWithAttacker,
-	}).Info("modify block")
-
-	if slot != uint64(latestSlotWithAttacker) {
-		// 不是最后一个恶意的出块，不出块
-		return types.AttackerResponse{
-			Cmd: types.CMD_RETURN,
-		}
-	}
-
 	return types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
 }
 
 func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
-	modifyBlockRes := s.modifyBlock(slot, pubkey, blockDataBase64)
-	return modifyBlockRes
+	genericSignedBlock, err := common.Base64ToGenericSignedBlock(blockDataBase64)
+	if err != nil {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: blockDataBase64,
+		}
+	}
+	if s.plugin != nil {
+		result := s.plugin.BlockBeforeSign(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
+		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
+		if ok {
+			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+				Capella: newBlock,
+			}
+			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+			return types.AttackerResponse{
+				Cmd:    result.Cmd,
+				Result: newBlockBase64,
+			}
+		} else {
+
+			return types.AttackerResponse{
+				Cmd:    result.Cmd,
+				Result: blockDataBase64,
+			}
+		}
+	}
+	return types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: blockDataBase64,
+	}
 }
 
 func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
-	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
 	if err != nil {
-		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
-		if val == nil {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedBlockDataBase64,
+		}
+	}
+	if s.plugin != nil {
+		result := s.plugin.BlockAfterSign(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
+		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
+		if ok {
+			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+				Capella: newBlock,
+			}
+			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
 			return types.AttackerResponse{
-				Cmd: types.CMD_NULL,
+				Cmd:    result.Cmd,
+				Result: newBlockBase64,
+			}
+		} else {
+
+			return types.AttackerResponse{
+				Cmd:    result.Cmd,
+				Result: signedBlockDataBase64,
 			}
 		}
-		valIdx = int(val.Index)
 	}
-	role := s.b.GetValidatorRole(int(slot), valIdx)
-	log.WithFields(log.Fields{
-		"slot":   slot,
-		"valIdx": valIdx,
-		"role":   role,
-	}).Info("in AfterSign, get validator by propose slot")
-
-	if role != types.AttackerRole {
-		return types.AttackerResponse{
-			Cmd: types.CMD_NULL,
-		}
-	}
-	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
-
-	duties, err := s.b.GetProposeDuties(int(epoch))
-	if err != nil {
-		return types.AttackerResponse{
-			Cmd: types.CMD_NULL,
-		}
-	}
-
-	latestSlotWithAttacker := int64(-1)
-	for _, duty := range duties {
-		dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
-		dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
-		log.WithFields(log.Fields{
-			"slot":   dutySlot,
-			"valIdx": dutyValIdx,
-		}).Debug("duty slot")
-		if s.b.GetValidatorRole(int(slot), dutyValIdx) == types.AttackerRole && dutySlot > latestSlotWithAttacker {
-			latestSlotWithAttacker = dutySlot
-			log.WithField("latestSlotWithAttacker", latestSlotWithAttacker).Debug("update latestSlotWithAttacker")
-		}
-	}
-
-	if slot != uint64(latestSlotWithAttacker) {
-		// 不是最后一个恶意的出块，不出块
-		return types.AttackerResponse{
-			Cmd: types.CMD_RETURN,
-		}
-	}
-
 	return types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,
@@ -554,6 +408,33 @@ func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 s
 }
 
 func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
+	if err != nil {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedBlockDataBase64,
+		}
+	}
+	if s.plugin != nil {
+		result := s.plugin.BlockBeforePropose(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
+		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
+		if ok {
+			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+				Capella: newBlock,
+			}
+			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+			return types.AttackerResponse{
+				Cmd:    result.Cmd,
+				Result: newBlockBase64,
+			}
+		} else {
+
+			return types.AttackerResponse{
+				Cmd:    result.Cmd,
+				Result: signedBlockDataBase64,
+			}
+		}
+	}
 	return types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,
@@ -561,9 +442,34 @@ func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase
 }
 
 func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
+	if err != nil {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedBlockDataBase64,
+		}
+	}
+	if s.plugin != nil {
+		result := s.plugin.BlockAfterPropose(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
+		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
+		if ok {
+			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+				Capella: newBlock,
+			}
+			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+			return types.AttackerResponse{
+				Cmd:    result.Cmd,
+				Result: newBlockBase64,
+			}
+		} else {
+			return types.AttackerResponse{
+				Cmd:    result.Cmd,
+				Result: signedBlockDataBase64,
+			}
+		}
+	}
 	return types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,
 	}
-
 }
