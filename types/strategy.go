@@ -17,3 +17,19 @@ type AttestStrategy struct {
 	BroadCastDelay int64 `json:"broad_cast_delay"` // unit millisecond
 	ModifyEnable   bool  `json:"modify_enable"`
 }
+type Strategy struct {
+	Validators []ValidatorStrategy `json:"validator"`
+	Block      BlockStrategy       `json:"block"`
+	Attest     AttestStrategy      `json:"attest"`
+}
+
+func (s *Strategy) GetValidatorRole(valIdx int, slot int64) RoleType {
+	for _, v := range s.Validators {
+		if v.ValidatorIndex == valIdx {
+			if slot >= int64(v.AttackerStartSlot) && slot <= int64(v.AttackerEndSlot) {
+				return AttackerRole
+			}
+		}
+	}
+	return NormalRole
+}

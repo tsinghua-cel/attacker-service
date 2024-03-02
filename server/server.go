@@ -24,7 +24,7 @@ type Server struct {
 	config       *config.Config
 	rpcAPIs      []rpc.API   // List of APIs currently provided by the node
 	http         *httpServer //
-	strategy     *strategy.Strategy
+	strategy     *types.Strategy
 	execClient   *ethclient.Client
 	beaconClient *beaconapi.BeaconGwClient
 
@@ -147,7 +147,7 @@ func (s *Server) GetHeightByNumber(number *big.Int) (*ethtype.Header, error) {
 	return s.execClient.HeaderByNumber(context.Background(), number)
 }
 
-func (s *Server) GetStrategy() *strategy.Strategy {
+func (s *Server) GetStrategy() *types.Strategy {
 	return s.strategy
 }
 

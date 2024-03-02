@@ -3,7 +3,6 @@ package types
 import (
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	"github.com/tsinghua-cel/attacker-service/strategy"
 	"math/big"
 )
 
@@ -36,7 +35,7 @@ type CacheBackend interface {
 
 type StrategyBackend interface {
 	// update strategy
-	GetStrategy() *strategy.Strategy
+	GetStrategy() *Strategy
 	UpdateBlockBroadDelay(milliSecond int64) error
 	UpdateAttestBroadDelay(milliSecond int64) error
 }
