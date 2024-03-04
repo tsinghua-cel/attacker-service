@@ -83,9 +83,22 @@ type delayInfo struct {
 	delayType int
 }
 
-var slotToDelay sync.Map // slot => blockType 1: the latest attacker slot in the epoch 2: the attacker slot not the latest.
+var (
+	checkpointInfo    sync.Map // slot => map[slot]block
+	currentCheckpoint int64
+)
+
+type centryInfo struct {
+	startSlot                  uint64
+	normalSlot                 map[uint64]interface{}
+	slotToDelay                sync.Map
+	latestAttackerDelayEndSlot uint64
+}
+
+var lastCentryInfo *centryInfo
+var nowCentryInfo *centryInfo
+
 var localCache sync.Map
-var latestAttackerDelayEndSlot int64
 
 func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 
@@ -125,6 +138,12 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 				Result: blockDataBase64,
 			}
 		} else {
+			// update to new centry.
+			lastCentryInfo = nowCentryInfo
+			nowCentryInfo = &centryInfo{
+				startSlot: slot,
+			}
+
 			attackerState = AttackerStateDelay
 			// make block, add att.
 			genericBlock, err := s.getGenericSignedBlockFromData(blockDataBase64)
@@ -208,22 +227,22 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			}
 
 			delayEnd := s.delayEndSlot(int(slot))
-			latestAttackerDelayEndSlot = int64(delayEnd)
-
-			slotToDelay.Store(slot, delayInfo{
-				endSlot:   latestAttackerDelayEndSlot,
+			nowCentryInfo.latestAttackerDelayEndSlot = uint64(delayEnd)
+			nowCentryInfo.slotToDelay.Store(slot, delayInfo{
+				endSlot:   int64(delayEnd),
 				delayType: ATTACKER_SLOT_LATEST,
 			})
+			nowCentryInfo.normalSlot[slot] = struct{}{}
+
 			return types.AttackerResponse{
 				Cmd:    types.CMD_NULL,
 				Result: resBlockBase64,
 			}
-
 		}
 	} else {
 		// make block normally.
-		slotToDelay.Store(slot, delayInfo{
-			endSlot:   latestAttackerDelayEndSlot,
+		nowCentryInfo.slotToDelay.Store(slot, delayInfo{
+			endSlot:   int64(nowCentryInfo.latestAttackerDelayEndSlot),
 			delayType: ATTACKER_SLOT_NOT_LATEST,
 		})
 		return types.AttackerResponse{
@@ -358,7 +377,12 @@ func (s *BlockAPI) genericSignedBlockToBase64(block *ethpb.GenericSignedBeaconBl
 }
 
 func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
-	if v, exist := slotToDelay.Load(slot); !exist {
+	if nowCentryInfo == nil {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+	if v, exist := nowCentryInfo.slotToDelay.Load(slot); !exist {
 		return types.AttackerResponse{
 			Cmd: types.CMD_NULL,
 		}
@@ -371,7 +395,6 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 			}
 		} else {
 			// latest attacker slot delay for receive
-			// 当前是最后一个出块的恶意节点，进行延时
 			epochSlots := s.b.GetSlotsPerEpoch()
 			seconds := s.b.GetIntervalPerSlot()
 			delay := (epochSlots - int(slot%uint64(epochSlots))) * seconds
@@ -391,7 +414,12 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 }
 
 func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
-	if v, exist := slotToDelay.Load(slot); !exist {
+	if nowCentryInfo == nil {
+		return types.AttackerResponse{
+			Cmd: types.CMD_NULL,
+		}
+	}
+	if v, exist := nowCentryInfo.slotToDelay.Load(slot); !exist {
 		// not attacker block, don't need delay.
 		return types.AttackerResponse{
 			Cmd: types.CMD_NULL,
@@ -452,10 +480,7 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 	if err != nil {
 		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
 		if val == nil {
-			return types.AttackerResponse{
-				Cmd:    types.CMD_NULL,
-				Result: parentRoot,
-			}
+			return ret
 		}
 		valIdx = int(val.Index)
 	}
@@ -467,27 +492,34 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 	}).Info("in GetNewParentRoot, get validator by propose slot")
 
 	if role != types.AttackerRole {
-		return types.AttackerResponse{
-			Cmd:    types.CMD_NULL,
-			Result: parentRoot,
+		return ret
+	}
+	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
+	latestSlotWithAttacker := s.latestAttackerSlot(int(epoch))
+	if slot == uint64(latestSlotWithAttacker) {
+		// this is new centry.
+		if nowCentryInfo == nil {
+			return ret
+		}
+		var maxSlot uint64
+		for k, _ := range nowCentryInfo.normalSlot {
+			if k > maxSlot {
+				maxSlot = k
+			}
+		}
+		data, exist := localCache.Load(maxSlot)
+		if !exist {
+			return ret
+		}
+		genericBlock := data.(*ethpb.GenericSignedBeaconBlock)
+		newRoot, err := genericBlock.GetCapella().HashTreeRoot()
+		if err != nil {
+			log.WithError(err).Error("calc checkpoint block hashTreeRoot failed")
+		} else {
+			ret.Result = hex.EncodeToString(newRoot[:])
 		}
 	}
-	// current val is attacker.
-	if attackerState != AttackerStateDelay {
-		return ret
-	}
 
-	data, exist := localCache.Load("checkpointblock")
-	if !exist {
-		return ret
-	}
-	genericBlock := data.(*ethpb.GenericSignedBeaconBlock)
-	newRoot, err := genericBlock.GetCapella().HashTreeRoot()
-	if err != nil {
-		log.WithError(err).Error("calc checkpoint block hashTreeRoot failed")
-	} else {
-		ret.Result = hex.EncodeToString(newRoot[:])
-	}
 	return ret
 }
 
@@ -497,14 +529,20 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 }
 
 func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
-	if v, exist := slotToDelay.Load(slot); !exist {
+	if nowCentryInfo == nil {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedBlockDataBase64,
+		}
+	}
+	if v, exist := nowCentryInfo.slotToDelay.Load(slot); !exist {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: signedBlockDataBase64,
 		}
 	} else {
 		dinfo := v.(delayInfo)
-		if dinfo.delayType == ATTACKER_SLOT_LATEST {
+		if dinfo.delayType == ATTACKER_SLOT_NOT_LATEST {
 			genericBlock, err := s.getGenericSignedBlockFromData(signedBlockDataBase64)
 			if err != nil {
 				log.WithError(err).Error("get block from data failed")
@@ -514,7 +552,7 @@ func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 s
 				}
 			}
 			// save block to checkpoint.
-			localCache.Store("checkpointblock", genericBlock)
+			localCache.Store(slot, genericBlock)
 		}
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
