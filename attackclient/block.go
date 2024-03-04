@@ -18,6 +18,15 @@ func (ec *Client) DelayForReceiveBlock(ctx context.Context, slot uint64) (types.
 
 }
 
+func (ec *Client) BlockGetNewParentRoot(ctx context.Context, slot uint64, pubkey string, parentRoot string) (types.AttackerResponse, error) {
+	var result types.AttackerResponse
+	err := ec.c.CallContext(ctx, &result, blockModule+"_getNewParentRoot", slot, pubkey, parentRoot)
+	if err != nil {
+		return result, err
+	}
+	return result, nil
+}
+
 func (ec *Client) BlockBeforeBroadCast(ctx context.Context, slot uint64) (types.AttackerResponse, error) {
 	var result types.AttackerResponse
 	err := ec.c.CallContext(ctx, &result, blockModule+"_beforeBroadCast", slot)

@@ -2,6 +2,7 @@ package apis
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -83,6 +84,7 @@ type delayInfo struct {
 }
 
 var slotToDelay sync.Map // slot => blockType 1: the latest attacker slot in the epoch 2: the attacker slot not the latest.
+var localCache sync.Map
 var latestAttackerDelayEndSlot int64
 
 func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
@@ -439,15 +441,85 @@ func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 	}
 }
 
+func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot string) types.AttackerResponse {
+	var ret = types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: parentRoot,
+	}
+
+	// if current val is not attacker, return directly
+	valIdx, err := s.b.GetValidatorByProposeSlot(slot)
+	if err != nil {
+		val := s.b.GetValidatorDataSet().GetValidatorByPubkey(pubkey)
+		if val == nil {
+			return types.AttackerResponse{
+				Cmd:    types.CMD_NULL,
+				Result: parentRoot,
+			}
+		}
+		valIdx = int(val.Index)
+	}
+	role := s.b.GetValidatorRole(int(slot), valIdx)
+	log.WithFields(log.Fields{
+		"slot":   slot,
+		"valIdx": valIdx,
+		"role":   role,
+	}).Info("in GetNewParentRoot, get validator by propose slot")
+
+	if role != types.AttackerRole {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: parentRoot,
+		}
+	}
+	// current val is attacker.
+	if attackerState != AttackerStateDelay {
+		return ret
+	}
+
+	data, exist := localCache.Load("checkpointblock")
+	if !exist {
+		return ret
+	}
+	genericBlock := data.(*ethpb.GenericSignedBeaconBlock)
+	newRoot, err := genericBlock.GetCapella().HashTreeRoot()
+	if err != nil {
+		log.WithError(err).Error("calc checkpoint block hashTreeRoot failed")
+	} else {
+		ret.Result = hex.EncodeToString(newRoot[:])
+	}
+	return ret
+}
+
 func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 	modifyBlockRes := s.modifyBlock(slot, pubkey, blockDataBase64)
 	return modifyBlockRes
 }
 
 func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
-	return types.AttackerResponse{
-		Cmd:    types.CMD_NULL,
-		Result: signedBlockDataBase64,
+	if v, exist := slotToDelay.Load(slot); !exist {
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedBlockDataBase64,
+		}
+	} else {
+		dinfo := v.(delayInfo)
+		if dinfo.delayType == ATTACKER_SLOT_LATEST {
+			genericBlock, err := s.getGenericSignedBlockFromData(signedBlockDataBase64)
+			if err != nil {
+				log.WithError(err).Error("get block from data failed")
+				return types.AttackerResponse{
+					Cmd:    types.CMD_NULL,
+					Result: signedBlockDataBase64,
+				}
+			}
+			// save block to checkpoint.
+			localCache.Store("checkpointblock", genericBlock)
+		}
+		return types.AttackerResponse{
+			Cmd:    types.CMD_NULL,
+			Result: signedBlockDataBase64,
+		}
 	}
 }
 
