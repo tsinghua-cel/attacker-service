@@ -233,7 +233,6 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 				endSlot:   int64(delayEnd),
 				delayType: ATTACKER_SLOT_LATEST,
 			})
-			nowCentryInfo.normalSlot[slot] = struct{}{}
 
 			return types.AttackerResponse{
 				Cmd:    types.CMD_NULL,
@@ -246,6 +245,7 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			endSlot:   int64(nowCentryInfo.latestAttackerDelayEndSlot),
 			delayType: ATTACKER_SLOT_NOT_LATEST,
 		})
+		nowCentryInfo.normalSlot[slot] = struct{}{}
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: blockDataBase64,
