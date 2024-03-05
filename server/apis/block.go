@@ -141,7 +141,8 @@ func (s *BlockAPI) modifyBlock(slot uint64, pubkey string, blockDataBase64 strin
 			// update to new centry.
 			lastCentryInfo = nowCentryInfo
 			nowCentryInfo = &centryInfo{
-				startSlot: slot,
+				startSlot:  slot,
+				normalSlot: make(map[uint64]interface{}),
 			}
 
 			attackerState = AttackerStateDelay
