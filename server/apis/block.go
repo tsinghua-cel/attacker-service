@@ -485,20 +485,22 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 		valIdx = int(val.Index)
 	}
 	role := s.b.GetValidatorRole(int(slot), valIdx)
-	log.WithFields(log.Fields{
-		"slot":   slot,
-		"valIdx": valIdx,
-		"role":   role,
-	}).Info("in GetNewParentRoot, get validator by propose slot")
-
 	if role != types.AttackerRole {
 		return ret
 	}
 	epoch := SlotTool{s.b}.SlotToEpoch(int(slot))
 	latestSlotWithAttacker := s.latestAttackerSlot(int(epoch))
+	log.WithFields(log.Fields{
+		"slot":               slot,
+		"latestAttackerSlot": latestSlotWithAttacker,
+		"role":               role,
+		"epoch":              epoch,
+		"valIdx":             valIdx,
+	}).Info("in GetNewParentRoot, get latest attacker slot")
 	if slot == uint64(latestSlotWithAttacker) {
 		// this is new centry.
 		if nowCentryInfo == nil {
+			log.Info("nowCentryInfo is nil")
 			return ret
 		}
 		var maxSlot uint64
@@ -507,8 +509,10 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 				maxSlot = k
 			}
 		}
+		log.WithField("maxSlot", maxSlot).Info("now century info")
 		data, exist := localCache.Load(maxSlot)
 		if !exist {
+			log.WithField("maxSlot", maxSlot).Info("the block is not exist")
 			return ret
 		}
 		genericBlock := data.(*ethpb.GenericSignedBeaconBlock)
@@ -553,6 +557,7 @@ func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 s
 			}
 			// save block to checkpoint.
 			localCache.Store(slot, genericBlock)
+			log.WithField("slot", slot).Info("save block to local cache")
 		}
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
