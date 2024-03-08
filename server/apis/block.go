@@ -2,7 +2,6 @@ package apis
 
 import (
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -511,18 +510,26 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 			}
 		}
 		log.WithField("maxSlot", maxSlot).Info("now century info")
-		data, exist := localCache.Load(maxSlot)
-		if !exist {
-			log.WithField("maxSlot", maxSlot).Info("the block is not exist")
-			return ret
-		}
-		genericBlock := data.(*ethpb.GenericSignedBeaconBlock)
-		newRoot, err := genericBlock.GetCapella().HashTreeRoot()
+		newRoot, err := s.b.GetSlotRoot(int64(maxSlot))
 		if err != nil {
-			log.WithError(err).Error("calc checkpoint block hashTreeRoot failed")
+			log.WithField("parentslot", maxSlot).WithError(err).Error("get slot root failed")
 		} else {
-			ret.Result = hex.EncodeToString(newRoot[:])
+			ret.Result = newRoot
+			log.WithField("parentslot", maxSlot).WithField("root", newRoot).Info("get slot root success")
 		}
+
+		//data, exist := localCache.Load(maxSlot)
+		//if !exist {
+		//	log.WithField("maxSlot", maxSlot).Info("the block is not exist")
+		//	return ret
+		//}
+		//genericBlock := data.(*ethpb.GenericSignedBeaconBlock)
+		//newRoot, err := genericBlock.GetCapella().HashTreeRoot()
+		//if err != nil {
+		//	log.WithError(err).Error("calc checkpoint block hashTreeRoot failed")
+		//} else {
+		//	ret.Result = hex.EncodeToString(newRoot[:])
+		//}
 	}
 
 	return ret

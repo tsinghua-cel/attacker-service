@@ -275,3 +275,7 @@ func (s *Server) GetCurrentSlot() (int64, error) {
 	slot, _ := strconv.ParseInt(slotStr, 10, 64)
 	return slot, nil
 }
+
+func (s *Server) GetSlotRoot(slot int64) (string, error) {
+	return s.beaconClient.GetSlotRoot(slot)
+}

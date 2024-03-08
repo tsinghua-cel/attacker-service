@@ -46,6 +46,10 @@ type AttestDuty struct {
 	Slot                    string `json:"slot"`
 }
 
+type SlotStateRoot struct {
+	Root string `json:"root"`
+}
+
 type BeaconResponse struct {
 	Data json.RawMessage `json:"data"`
 }
