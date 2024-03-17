@@ -30,6 +30,28 @@ func (f FunctionSlot) Compare(slot int64) int {
 func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 
 	switch name {
+	case "attackerSlot":
+		return func(slot int64) int64 {
+			slotsPerEpoch := backend.SlotsPerEpoch()
+			tool := common.SlotTool{
+				SlotsPerEpoch: slotsPerEpoch,
+			}
+			epoch := tool.SlotToEpoch(slot)
+			duties, err := backend.GetProposeDuties(int(epoch))
+			if err != nil {
+				return slot + 1
+			}
+
+			for _, duty := range duties {
+				dutySlot, _ := strconv.ParseInt(duty.Slot, 10, 64)
+				dutyValIdx, _ := strconv.Atoi(duty.ValidatorIndex)
+				if backend.GetValidatorRole(int(dutySlot), dutyValIdx) == types.AttackerRole && dutySlot == slot {
+					return slot
+				}
+			}
+			return slot + 1
+		}
+
 	case "lastSlotInCurrentEpoch":
 		slotsPerEpoch := backend.SlotsPerEpoch()
 		tool := common.SlotTool{
@@ -112,7 +134,7 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 			return latestSlotWithAttacker
 		}
 	default:
-		log.WithField("funcname", name).Error("unknown function slot name")
+		log.WithField("name", name).Error("unknown function slot name")
 		return nil
 	}
 }

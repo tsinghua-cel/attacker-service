@@ -240,7 +240,7 @@ func (c *CaseV1) BlockBeforeSign(ctx plugins.PluginContext, slot uint64, pubkey 
 	if role != types.AttackerRole {
 		return ret
 	}
-	epoch := slotTool.SlotToEpoch(int(slot))
+	epoch := slotTool.SlotToEpoch(int64(slot))
 
 	duties, err := backend.GetProposeDuties(int(epoch))
 	if err != nil {
@@ -354,7 +354,7 @@ func (c *CaseV1) BlockAfterSign(ctx plugins.PluginContext, slot uint64, pubkey s
 	slotTool := common.SlotTool{
 		SlotsPerEpoch: backend.GetSlotsPerEpoch(),
 	}
-	epoch := slotTool.SlotToEpoch(int(slot))
+	epoch := slotTool.SlotToEpoch(int64(slot))
 
 	duties, err := backend.GetProposeDuties(int(epoch))
 	if err != nil {

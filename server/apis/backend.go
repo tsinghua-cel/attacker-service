@@ -5,6 +5,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
+	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 )
 
@@ -12,6 +13,7 @@ import (
 // both full and light clients) with access to necessary functions.
 type Backend interface {
 	SomeNeedBackend() bool
+	GetInternalSlotStrategy() []slotstrategy.InternalSlotStrategy
 	types.ExecuteBackend
 	types.BeaconBackend
 	types.StrategyBackend

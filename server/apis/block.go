@@ -43,54 +43,84 @@ func (s *BlockAPI) UpdateStrategy(data []byte) error {
 	return nil
 }
 
-func (s *BlockAPI) BroadCastDelay() types.AttackerResponse {
-	if s.plugin != nil {
-		result := s.plugin.BlockDelayForBroadCast(pluginContext(s.b))
-		return types.AttackerResponse{
-			Cmd: result.Cmd,
-		}
-	}
-	return types.AttackerResponse{
+func (s *BlockAPI) BroadCastDelay(slot uint64) types.AttackerResponse {
+	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockDelayForBroadCast"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), "")
+				result.Cmd = r.Cmd
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
-	if s.plugin != nil {
-		result := s.plugin.BlockDelayForReceiveBlock(pluginContext(s.b), slot)
-		return types.AttackerResponse{
-			Cmd: result.Cmd,
+	result := types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockDelayForReceiveBlock"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), "")
+				result.Cmd = r.Cmd
+			}
+			break
 		}
 	}
 
-	return types.AttackerResponse{
-		Cmd: types.CMD_NULL,
-	}
+	return result
 }
 
 func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
-	if s.plugin != nil {
-		result := s.plugin.BlockBeforeBroadCast(pluginContext(s.b), slot)
-		return types.AttackerResponse{
-			Cmd: result.Cmd,
+	result := types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockBeforeBroadCast"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), "")
+				result.Cmd = r.Cmd
+			}
+			break
 		}
 	}
 
-	return types.AttackerResponse{
-		Cmd: types.CMD_NULL,
-	}
+	return result
 }
 
 func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
-	if s.plugin != nil {
-		result := s.plugin.BlockAfterBroadCast(pluginContext(s.b), slot)
-		return types.AttackerResponse{
-			Cmd: result.Cmd,
-		}
-	}
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockAfterBroadCast"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), "")
+				result.Cmd = r.Cmd
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
@@ -101,30 +131,32 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 			Result: blockDataBase64,
 		}
 	}
-	if s.plugin != nil {
-		result := s.plugin.BlockBeforeSign(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
-		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
-		if ok {
-			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-				Capella: newBlock,
-			}
-			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newBlockBase64,
-			}
-		} else {
-
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: blockDataBase64,
-			}
-		}
-	}
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: blockDataBase64,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockBeforeSign"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+				result.Cmd = r.Cmd
+				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+				if ok {
+					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+						Capella: newBlock,
+					}
+					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+					result.Result = newBlockBase64
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
@@ -135,30 +167,32 @@ func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 s
 			Result: signedBlockDataBase64,
 		}
 	}
-	if s.plugin != nil {
-		result := s.plugin.BlockAfterSign(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
-		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
-		if ok {
-			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-				Capella: newBlock,
-			}
-			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newBlockBase64,
-			}
-		} else {
-
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: signedBlockDataBase64,
-			}
-		}
-	}
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockAfterSign"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+				result.Cmd = r.Cmd
+				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+				if ok {
+					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+						Capella: newBlock,
+					}
+					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+					result.Result = newBlockBase64
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
@@ -169,30 +203,32 @@ func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase
 			Result: signedBlockDataBase64,
 		}
 	}
-	if s.plugin != nil {
-		result := s.plugin.BlockBeforePropose(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
-		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
-		if ok {
-			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-				Capella: newBlock,
-			}
-			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newBlockBase64,
-			}
-		} else {
-
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: signedBlockDataBase64,
-			}
-		}
-	}
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockBeforePropose"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+				result.Cmd = r.Cmd
+				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+				if ok {
+					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+						Capella: newBlock,
+					}
+					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+					result.Result = newBlockBase64
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
@@ -203,27 +239,30 @@ func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase6
 			Result: signedBlockDataBase64,
 		}
 	}
-	if s.plugin != nil {
-		result := s.plugin.BlockAfterPropose(pluginContext(s.b), slot, pubkey, genericSignedBlock.GetCapella())
-		newBlock, ok := result.Result.(*ethpb.SignedBeaconBlockCapella)
-		if ok {
-			genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-				Capella: newBlock,
-			}
-			newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newBlockBase64,
-			}
-		} else {
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: signedBlockDataBase64,
-			}
-		}
-	}
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["BlockAfterPropose"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+				result.Cmd = r.Cmd
+				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+				if ok {
+					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+						Capella: newBlock,
+					}
+					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+					result.Result = newBlockBase64
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }

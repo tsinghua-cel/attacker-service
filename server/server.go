@@ -14,6 +14,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
 	"github.com/tsinghua-cel/attacker-service/strategy"
+	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"math/big"
 	"strconv"
@@ -25,6 +26,7 @@ type Server struct {
 	rpcAPIs      []rpc.API   // List of APIs currently provided by the node
 	http         *httpServer //
 	strategy     *types.Strategy
+	internal     []slotstrategy.InternalSlotStrategy
 	execClient   *ethclient.Client
 	beaconClient *beaconapi.BeaconGwClient
 
@@ -42,7 +44,7 @@ func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s.execClient = client
 	s.beaconClient = beaconapi.NewBeaconGwClient(conf.BeaconRpc)
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
-	s.strategy = strategy.ParseStrategy(conf.Strategy)
+	s.strategy = strategy.ParseStrategy(s, conf.Strategy)
 	s.validatorSetInfo = types.NewValidatorSet()
 	return s
 }
@@ -247,4 +249,11 @@ func (s *Server) GetValidatorRole(slot int, valIdx int) types.RoleType {
 		slot, _ = strconv.Atoi(header.Header.Message.Slot)
 	}
 	return s.strategy.GetValidatorRole(valIdx, int64(slot))
+}
+
+func (s *Server) GetInternalSlotStrategy() []slotstrategy.InternalSlotStrategy {
+	if len(s.internal) == 0 {
+		s.internal = slotstrategy.ParseToInternalSlotStrategy(s, s.strategy.Slots)
+	}
+	return s.internal
 }

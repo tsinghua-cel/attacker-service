@@ -240,7 +240,7 @@ func (c *PluginCaseV1) BlockBeforeSign(ctx plugins.PluginContext, slot uint64, p
 	if role != types.AttackerRole {
 		return ret
 	}
-	epoch := slotTool.SlotToEpoch(int(slot))
+	epoch := slotTool.SlotToEpoch(int64(slot))
 
 	duties, err := backend.GetProposeDuties(int(epoch))
 	if err != nil {
@@ -328,6 +328,7 @@ func (c *PluginCaseV1) BlockBeforeSign(ctx plugins.PluginContext, slot uint64, p
 }
 
 func (c *PluginCaseV1) BlockAfterSign(ctx plugins.PluginContext, slot uint64, pubkey string, block *ethpb.SignedBeaconBlockCapella) plugins.PluginResponse {
+	// 不是最后一个恶意的出块，不出块
 	backend := ctx.Backend
 	ret := plugins.PluginResponse{
 		Cmd:    types.CMD_NULL,
@@ -354,7 +355,7 @@ func (c *PluginCaseV1) BlockAfterSign(ctx plugins.PluginContext, slot uint64, pu
 	slotTool := common.SlotTool{
 		SlotsPerEpoch: backend.GetSlotsPerEpoch(),
 	}
-	epoch := slotTool.SlotToEpoch(int(slot))
+	epoch := slotTool.SlotToEpoch(int64(slot))
 
 	duties, err := backend.GetProposeDuties(int(epoch))
 	if err != nil {

@@ -36,31 +36,49 @@ func (s *AttestAPI) UpdateStrategy(data []byte) error {
 }
 
 func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
-	if s.plugin != nil {
-		result := s.plugin.AttestBeforeBroadCast(pluginContext(s.b), slot)
-		return types.AttackerResponse{
-			Cmd: result.Cmd,
-		}
-	}
-	return types.AttackerResponse{
+	strategys := s.b.GetInternalSlotStrategy()
+	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["AttestBeforeBroadCast"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), "")
+				result.Cmd = r.Cmd
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
-	if s.plugin != nil {
-		result := s.plugin.AttestAfterBroadCast(pluginContext(s.b), slot)
-		return types.AttackerResponse{
-			Cmd: result.Cmd,
+	strategys := s.b.GetInternalSlotStrategy()
+	result := types.AttackerResponse{
+		Cmd: types.CMD_NULL,
+	}
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["AttestAfterBroadCast"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), "")
+				result.Cmd = r.Cmd
+			}
+			break
 		}
 	}
 
-	return types.AttackerResponse{
-		Cmd: types.CMD_NULL,
-	}
+	return result
 }
 
 func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 string) types.AttackerResponse {
+	result := types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: attestDataBase64,
+	}
+
 	attestation, err := common.Base64ToAttestationData(attestDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
@@ -69,27 +87,24 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 		}
 	}
 
-	if s.plugin != nil {
-		result := s.plugin.AttestBeforeSign(pluginContext(s.b), slot, pubkey, attestation)
-		newAttestation, ok := result.Result.(*ethpb.AttestationData)
-		if ok {
-			newData, _ := common.AttestationDataToBase64(newAttestation)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newData,
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["AttestBeforeSign"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, attestation)
+				result.Cmd = r.Cmd
+				newAttestation, ok := r.Result.(*ethpb.AttestationData)
+				if ok {
+					newData, _ := common.AttestationDataToBase64(newAttestation)
+					result.Result = newData
+				}
 			}
-		} else {
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: attestDataBase64,
-			}
+			break
 		}
 	}
 
-	return types.AttackerResponse{
-		Cmd:    types.CMD_NULL,
-		Result: attestDataBase64,
-	}
+	return result
 }
 
 func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
@@ -100,28 +115,29 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 			Result: signedAttestDataBase64,
 		}
 	}
-
-	if s.plugin != nil {
-		result := s.plugin.AttestAfterSign(pluginContext(s.b), slot, pubkey, signedAttestData)
-		newAttestation, ok := result.Result.(*ethpb.Attestation)
-		if ok {
-			newData, _ := common.SignedAttestationToBase64(newAttestation)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newData,
-			}
-		} else {
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: signedAttestDataBase64,
-			}
-		}
-	}
-
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedAttestDataBase64,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["AttestAfterSign"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, signedAttestData)
+				result.Cmd = r.Cmd
+				newAttestation, ok := r.Result.(*ethpb.Attestation)
+				if ok {
+					newData, _ := common.SignedAttestationToBase64(newAttestation)
+					result.Result = newData
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
@@ -132,27 +148,29 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 			Result: signedAttestDataBase64,
 		}
 	}
-	if s.plugin != nil {
-		result := s.plugin.AttestBeforePropose(pluginContext(s.b), slot, pubkey, signedAttest)
-		newAttestation, ok := result.Result.(*ethpb.Attestation)
-		if ok {
-			newData, _ := common.SignedAttestationToBase64(newAttestation)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newData,
-			}
-		} else {
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: signedAttestDataBase64,
-			}
-		}
-	}
-
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedAttestDataBase64,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["AttestBeforePropose"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
+				result.Cmd = r.Cmd
+				newAttestation, ok := r.Result.(*ethpb.Attestation)
+				if ok {
+					newData, _ := common.SignedAttestationToBase64(newAttestation)
+					result.Result = newData
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }
 
 func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
@@ -163,25 +181,27 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 			Result: signedAttestDataBase64,
 		}
 	}
-	if s.plugin != nil {
-		result := s.plugin.AttestAfterPropose(pluginContext(s.b), slot, pubkey, signedAttest)
-		newAttestation, ok := result.Result.(*ethpb.Attestation)
-		if ok {
-			newData, _ := common.SignedAttestationToBase64(newAttestation)
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: newData,
-			}
-		} else {
-			return types.AttackerResponse{
-				Cmd:    result.Cmd,
-				Result: signedAttestDataBase64,
-			}
-		}
-	}
-
-	return types.AttackerResponse{
+	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedAttestDataBase64,
 	}
+
+	strategys := s.b.GetInternalSlotStrategy()
+	for _, t := range strategys {
+		if t.Slot.Compare(int64(slot)) == 0 {
+			action := t.Actions["AttestAfterPropose"]
+			if action != nil {
+				r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
+				result.Cmd = r.Cmd
+				newAttestation, ok := r.Result.(*ethpb.Attestation)
+				if ok {
+					newData, _ := common.SignedAttestationToBase64(newAttestation)
+					result.Result = newData
+				}
+			}
+			break
+		}
+	}
+
+	return result
 }
