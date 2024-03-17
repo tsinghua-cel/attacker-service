@@ -1,5 +1,10 @@
 package types
 
+type SlotStrategy struct {
+	Slot    string            `json:"slot"`
+	Actions map[string]string `json:"actions"`
+}
+
 type ValidatorStrategy struct {
 	ValidatorIndex    int `json:"validator_index"`
 	AttackerStartSlot int `json:"attacker_start_slot"`
@@ -17,7 +22,9 @@ type AttestStrategy struct {
 	BroadCastDelay int64 `json:"broad_cast_delay"` // unit millisecond
 	ModifyEnable   bool  `json:"modify_enable"`
 }
+
 type Strategy struct {
+	Slots      []SlotStrategy      `json:"slots"`
 	Validators []ValidatorStrategy `json:"validator"`
 	Block      BlockStrategy       `json:"block"`
 	Attest     AttestStrategy      `json:"attest"`

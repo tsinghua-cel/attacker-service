@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	defaultValidators    = []types.ValidatorStrategy{}
+	defaultValidators    = make([]types.ValidatorStrategy, 0)
+	defaultSlots         = make([]types.SlotStrategy, 0)
 	defaultBlockStrategy = types.BlockStrategy{
 		DelayEnable:    false,
 		BroadCastDelay: 3000, // 3s
@@ -21,10 +22,12 @@ var (
 	}
 )
 
-func ParseStrategy(file string) *types.Strategy {
+func ParseStrategy(backend types.ServiceBackend, file string) *types.Strategy {
 	var defautConfig = &types.Strategy{
-		Block:  defaultBlockStrategy,
-		Attest: defaultAttestStrategy,
+		Slots:      defaultSlots,
+		Validators: defaultValidators,
+		Block:      defaultBlockStrategy,
+		Attest:     defaultAttestStrategy,
 	}
 	var s types.Strategy
 	d, err := os.ReadFile(file)
