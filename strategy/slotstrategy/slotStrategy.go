@@ -19,12 +19,14 @@ type ActionIns interface {
 
 type InternalSlotStrategy struct {
 	Slot    SlotIns              `json:"slot"`
+	Level   int                  `json:"level"`
 	Actions map[string]ActionIns `json:"actions"`
 }
 
 func ParseToInternalSlotStrategy(backend types.ServiceBackend, strategy []types.SlotStrategy) []InternalSlotStrategy {
 	is := make([]InternalSlotStrategy, len(strategy))
 	for i, s := range strategy {
+		is[i].Level = s.Level
 		if n, err := strconv.ParseInt(s.Slot, 10, 64); err == nil {
 			is[i].Slot = NumberSlot(n)
 		} else {

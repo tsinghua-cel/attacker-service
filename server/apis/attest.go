@@ -6,6 +6,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/plugins"
+	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 )
 
@@ -18,6 +19,19 @@ type AttestAPI struct {
 // NewAttestAPI creates a new tx pool service that gives information about the transaction pool.
 func NewAttestAPI(b Backend, plugin plugins.AttackerPlugin) *AttestAPI {
 	return &AttestAPI{b, plugin}
+}
+
+func findMaxLevelStrategy(is []slotstrategy.InternalSlotStrategy, slot int64) (slotstrategy.InternalSlotStrategy, bool) {
+	if len(is) == 0 {
+		return slotstrategy.InternalSlotStrategy{}, false
+	}
+	last := is[0]
+	for _, s := range is {
+		if s.Slot.Compare(slot) == 0 && s.Level > last.Level {
+			last = s
+		}
+	}
+	return last, last.Slot.Compare(slot) == 0
 }
 
 func (s *AttestAPI) GetStrategy() []byte {
@@ -36,18 +50,15 @@ func (s *AttestAPI) UpdateStrategy(data []byte) error {
 }
 
 func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
-	strategys := s.b.GetInternalSlotStrategy()
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["AttestBeforeBroadCast"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), "")
-				result.Cmd = r.Cmd
-			}
-			break
+
+	if st, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := st.Actions["AttestBeforeBroadCast"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), "")
+			result.Cmd = r.Cmd
 		}
 	}
 
@@ -55,18 +66,14 @@ func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 }
 
 func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
-	strategys := s.b.GetInternalSlotStrategy()
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["AttestAfterBroadCast"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), "")
-				result.Cmd = r.Cmd
-			}
-			break
+	if st, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := st.Actions["AttestAfterBroadCast"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), "")
+			result.Cmd = r.Cmd
 		}
 	}
 
@@ -87,20 +94,16 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 		}
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["AttestBeforeSign"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, attestation)
-				result.Cmd = r.Cmd
-				newAttestation, ok := r.Result.(*ethpb.AttestationData)
-				if ok {
-					newData, _ := common.AttestationDataToBase64(newAttestation)
-					result.Result = newData
-				}
+	if st, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := st.Actions["AttestBeforeSign"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, attestation)
+			result.Cmd = r.Cmd
+			newAttestation, ok := r.Result.(*ethpb.AttestationData)
+			if ok {
+				newData, _ := common.AttestationDataToBase64(newAttestation)
+				result.Result = newData
 			}
-			break
 		}
 	}
 
@@ -120,20 +123,16 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 		Result: signedAttestDataBase64,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["AttestAfterSign"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, signedAttestData)
-				result.Cmd = r.Cmd
-				newAttestation, ok := r.Result.(*ethpb.Attestation)
-				if ok {
-					newData, _ := common.SignedAttestationToBase64(newAttestation)
-					result.Result = newData
-				}
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["AttestAfterSign"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, signedAttestData)
+			result.Cmd = r.Cmd
+			newAttestation, ok := r.Result.(*ethpb.Attestation)
+			if ok {
+				newData, _ := common.SignedAttestationToBase64(newAttestation)
+				result.Result = newData
 			}
-			break
 		}
 	}
 
@@ -153,20 +152,16 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 		Result: signedAttestDataBase64,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["AttestBeforePropose"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
-				result.Cmd = r.Cmd
-				newAttestation, ok := r.Result.(*ethpb.Attestation)
-				if ok {
-					newData, _ := common.SignedAttestationToBase64(newAttestation)
-					result.Result = newData
-				}
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["AttestBeforePropose"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
+			result.Cmd = r.Cmd
+			newAttestation, ok := r.Result.(*ethpb.Attestation)
+			if ok {
+				newData, _ := common.SignedAttestationToBase64(newAttestation)
+				result.Result = newData
 			}
-			break
 		}
 	}
 
@@ -186,20 +181,16 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 		Result: signedAttestDataBase64,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["AttestAfterPropose"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
-				result.Cmd = r.Cmd
-				newAttestation, ok := r.Result.(*ethpb.Attestation)
-				if ok {
-					newData, _ := common.SignedAttestationToBase64(newAttestation)
-					result.Result = newData
-				}
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["AttestAfterPropose"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
+			result.Cmd = r.Cmd
+			newAttestation, ok := r.Result.(*ethpb.Attestation)
+			if ok {
+				newData, _ := common.SignedAttestationToBase64(newAttestation)
+				result.Result = newData
 			}
-			break
 		}
 	}
 

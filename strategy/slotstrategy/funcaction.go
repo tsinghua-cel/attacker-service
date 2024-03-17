@@ -92,6 +92,26 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 			}
 			return r
 		}
+	case "rePackAttestation":
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			slotsPerEpoch := backend.GetSlotsPerEpoch()
+			tool := common.SlotTool{
+				SlotsPerEpoch: slotsPerEpoch,
+			}
+			epoch := tool.SlotToEpoch(slot)
+			end := tool.EpochEnd(epoch)
+			seconds := backend.GetIntervalPerSlot()
+			total := int64(seconds) * (end - slot)
+			time.Sleep(time.Second * time.Duration(total))
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			if len(params) > 0 {
+				r.Result = params[0]
+			}
+			return r
+		}
 	default:
 		log.WithField("name", name).Error("unknown function action name")
 		return nil

@@ -2,6 +2,7 @@ package types
 
 type SlotStrategy struct {
 	Slot    string            `json:"slot"`
+	Level   int               `json:"level"`
 	Actions map[string]string `json:"actions"`
 }
 

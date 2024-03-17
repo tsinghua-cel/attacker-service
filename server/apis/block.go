@@ -48,15 +48,11 @@ func (s *BlockAPI) BroadCastDelay(slot uint64) types.AttackerResponse {
 		Cmd: types.CMD_NULL,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockDelayForBroadCast"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), "")
-				result.Cmd = r.Cmd
-			}
-			break
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockDelayForBroadCast"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), "")
+			result.Cmd = r.Cmd
 		}
 	}
 
@@ -68,15 +64,11 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 		Cmd: types.CMD_NULL,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockDelayForReceiveBlock"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), "")
-				result.Cmd = r.Cmd
-			}
-			break
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockDelayForReceiveBlock"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), "")
+			result.Cmd = r.Cmd
 		}
 	}
 
@@ -88,15 +80,11 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 		Cmd: types.CMD_NULL,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockBeforeBroadCast"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), "")
-				result.Cmd = r.Cmd
-			}
-			break
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockBeforeBroadCast"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), "")
+			result.Cmd = r.Cmd
 		}
 	}
 
@@ -108,15 +96,11 @@ func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 		Cmd: types.CMD_NULL,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockAfterBroadCast"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), "")
-				result.Cmd = r.Cmd
-			}
-			break
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockAfterBroadCast"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), "")
+			result.Cmd = r.Cmd
 		}
 	}
 
@@ -136,23 +120,19 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 		Result: blockDataBase64,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockBeforeSign"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
-				result.Cmd = r.Cmd
-				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-				if ok {
-					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-						Capella: newBlock,
-					}
-					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-					result.Result = newBlockBase64
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockBeforeSign"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+			result.Cmd = r.Cmd
+			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+			if ok {
+				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+					Capella: newBlock,
 				}
+				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+				result.Result = newBlockBase64
 			}
-			break
 		}
 	}
 
@@ -172,23 +152,19 @@ func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 s
 		Result: signedBlockDataBase64,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockAfterSign"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
-				result.Cmd = r.Cmd
-				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-				if ok {
-					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-						Capella: newBlock,
-					}
-					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-					result.Result = newBlockBase64
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockAfterSign"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+			result.Cmd = r.Cmd
+			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+			if ok {
+				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+					Capella: newBlock,
 				}
+				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+				result.Result = newBlockBase64
 			}
-			break
 		}
 	}
 
@@ -208,23 +184,19 @@ func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase
 		Result: signedBlockDataBase64,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockBeforePropose"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
-				result.Cmd = r.Cmd
-				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-				if ok {
-					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-						Capella: newBlock,
-					}
-					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-					result.Result = newBlockBase64
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockBeforePropose"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+			result.Cmd = r.Cmd
+			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+			if ok {
+				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+					Capella: newBlock,
 				}
+				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+				result.Result = newBlockBase64
 			}
-			break
 		}
 	}
 
@@ -244,23 +216,19 @@ func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase6
 		Result: signedBlockDataBase64,
 	}
 
-	strategys := s.b.GetInternalSlotStrategy()
-	for _, t := range strategys {
-		if t.Slot.Compare(int64(slot)) == 0 {
-			action := t.Actions["BlockAfterPropose"]
-			if action != nil {
-				r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
-				result.Cmd = r.Cmd
-				newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-				if ok {
-					genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-						Capella: newBlock,
-					}
-					newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-					result.Result = newBlockBase64
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockAfterPropose"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+			result.Cmd = r.Cmd
+			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
+			if ok {
+				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
+					Capella: newBlock,
 				}
+				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+				result.Result = newBlockBase64
 			}
-			break
 		}
 	}
 
