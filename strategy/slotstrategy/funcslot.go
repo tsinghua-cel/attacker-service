@@ -30,6 +30,10 @@ func (f FunctionSlot) Compare(slot int64) int {
 func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 
 	switch name {
+	case "every":
+		return func(slot int64) int64 {
+			return slot
+		}
 	case "attackerSlot":
 		return func(slot int64) int64 {
 			slotsPerEpoch := backend.SlotsPerEpoch()

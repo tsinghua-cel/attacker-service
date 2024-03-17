@@ -2,6 +2,7 @@ package slotstrategy
 
 import (
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/plugins"
@@ -92,16 +93,11 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 			}
 			return r
 		}
-	case "rePackAttestation":
+	case "delayHalfEpoch":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 			slotsPerEpoch := backend.GetSlotsPerEpoch()
-			tool := common.SlotTool{
-				SlotsPerEpoch: slotsPerEpoch,
-			}
-			epoch := tool.SlotToEpoch(slot)
-			end := tool.EpochEnd(epoch)
 			seconds := backend.GetIntervalPerSlot()
-			total := int64(seconds) * (end - slot)
+			total := (seconds) * (slotsPerEpoch / 2)
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
@@ -110,6 +106,73 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 			if len(params) > 0 {
 				r.Result = params[0]
 			}
+			return r
+		}
+	case "rePackAttestation":
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			if len(params) == 0 {
+				return r
+			}
+			block := params[0].(*ethpb.SignedBeaconBlockCapella)
+
+			tool := common.SlotTool{
+				SlotsPerEpoch: backend.SlotsPerEpoch(),
+			}
+			epoch := tool.SlotToEpoch(slot)
+			startEpoch := tool.EpochStart(epoch)
+			endEpoch := tool.EpochEnd(epoch)
+			attackerAttestations := make([]*ethpb.Attestation, 0)
+
+			for i := startEpoch; i <= endEpoch; i++ {
+				allSlotAttest := backend.GetAttestSet(uint64(i))
+				if allSlotAttest == nil {
+					continue
+				}
+
+				for publicKey, att := range allSlotAttest.Attestations {
+					log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
+					attackerAttestations = append(attackerAttestations, att)
+				}
+			}
+
+			allAtt := append(block.Block.Body.Attestations, attackerAttestations...)
+			{
+				// Remove duplicates from both aggregated/unaggregated attestations. This
+				// prevents inefficient aggregates being created.
+				atts, _ := types.ProposerAtts(allAtt).Dedup()
+				attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+				for _, att := range atts {
+					attDataRoot, err := att.Data.HashTreeRoot()
+					if err != nil {
+					}
+					attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+				}
+
+				attsForInclusion := types.ProposerAtts(make([]*ethpb.Attestation, 0))
+				for _, as := range attsByDataRoot {
+					as, err := attaggregation.Aggregate(as)
+					if err != nil {
+						continue
+					}
+					attsForInclusion = append(attsForInclusion, as...)
+				}
+				deduped, _ := attsForInclusion.Dedup()
+				sorted, err := deduped.SortByProfitability()
+				if err != nil {
+					log.WithError(err).Error("sort attestation failed")
+				} else {
+					atts = sorted.LimitToMaxAttestations()
+				}
+				allAtt = atts
+			}
+
+			block.Block.Body.Attestations = allAtt
+
+			r.Result = block
 			return r
 		}
 	default:
