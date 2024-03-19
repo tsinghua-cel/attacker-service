@@ -1,6 +1,7 @@
 package slotstrategy
 
 import (
+	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
@@ -39,5 +40,6 @@ func ParseToInternalSlotStrategy(backend types.ServiceBackend, strategy []types.
 			is[i].Actions[point] = FunctionAction{doFunc: actionDo}
 		}
 	}
+	log.Printf("parsed internal slot strategy is %v\n", is)
 	return is
 }
