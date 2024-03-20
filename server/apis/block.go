@@ -489,6 +489,7 @@ func (s *BlockAPI) BeforeMakeBlock(slot uint64, pubkey string) types.AttackerRes
 }
 
 func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
+	s.dumpDuties(slot)
 	modifyBlockRes := s.modifyBlock(slot, pubkey, blockDataBase64)
 	return modifyBlockRes
 }
@@ -565,4 +566,34 @@ func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase6
 		Result: signedBlockDataBase64,
 	}
 
+}
+
+func (s *BlockAPI) dumpDuties(slot uint64) {
+	tool := SlotTool{
+		sloti: s.b,
+	}
+	epoch := tool.SlotToEpoch(int(slot))
+	if int(slot) == tool.EpochStart(epoch) {
+		// dump next epoch duties.
+		if slot == 0 {
+			if duties, err := s.b.GetProposeDuties(epoch); err == nil {
+				for _, duty := range duties {
+					log.WithFields(log.Fields{
+						"epoch":     epoch,
+						"slot":      duty.Slot,
+						"validator": duty.ValidatorIndex,
+					}).Info("epoch duty")
+				}
+			}
+		}
+		if duties, err := s.b.GetProposeDuties(epoch + 1); err == nil {
+			for _, duty := range duties {
+				log.WithFields(log.Fields{
+					"epoch":     epoch,
+					"slot":      duty.Slot,
+					"validator": duty.ValidatorIndex,
+				}).Info("epoch duty")
+			}
+		}
+	}
 }
