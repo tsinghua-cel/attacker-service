@@ -4,17 +4,10 @@ import (
 	"fmt"
 	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
+	"github.com/tsinghua-cel/attacker-service/config"
 )
 
-type DbConfig struct {
-	User   string
-	Passwd string
-	Host   string
-	Port   int
-	DbName string
-}
-
-func DbInit(dbconf DbConfig) {
+func DbInit(dbconf config.MysqlConfig) {
 	// Set up database
 	datasource := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", dbconf.User, dbconf.Passwd, dbconf.Host, dbconf.Port, dbconf.DbName)
 	orm.RegisterDriver("mysql", orm.DRMySQL)
