@@ -96,9 +96,34 @@ func (n *Server) startRPC() error {
 func (s *Server) monitorDuties() {
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
+	dutyTicker := time.NewTicker(time.Minute)
+	defer dutyTicker.Stop()
+
+	slotsPerEpoch := int64(32)
+	dumped := make(map[int64]bool)
 
 	for {
 		select {
+		case <-dutyTicker.C:
+			header, err := s.beaconClient.GetLatestBeaconHeader()
+			if err != nil {
+				log.WithError(err).Debug("duty ticker get latest beacon header failed")
+				continue
+			}
+			curSlot, _ := strconv.ParseInt(header.Header.Message.Slot, 10, 64)
+			curEpoch := curSlot / slotsPerEpoch
+			nextEpoch := curEpoch + 1
+			if curEpoch == 0 && dumped[curEpoch] == false {
+				//
+				if err := s.dumpDuties(curEpoch); err == nil {
+					dumped[curEpoch] = true
+				}
+			}
+			if dumped[nextEpoch] == false {
+				if err := s.dumpDuties(nextEpoch); err == nil {
+					dumped[nextEpoch] = true
+				}
+			}
 
 		case <-ticker.C:
 			duties, err := s.beaconClient.GetCurrentEpochAttestDuties()
@@ -247,4 +272,19 @@ func (s *Server) GetValidatorRole(slot int, valIdx int) types.RoleType {
 		slot, _ = strconv.Atoi(header.Header.Message.Slot)
 	}
 	return s.strategy.GetValidatorRole(valIdx, int64(slot))
+}
+
+func (s *Server) dumpDuties(epoch int64) error {
+	duties, err := s.GetProposeDuties(int(epoch))
+	if err != nil {
+		return err
+	}
+	for _, duty := range duties {
+		log.WithFields(log.Fields{
+			"epoch":     epoch,
+			"slot":      duty.Slot,
+			"validator": duty.ValidatorIndex,
+		}).Info("epoch duty")
+	}
+	return nil
 }

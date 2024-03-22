@@ -39,6 +39,10 @@ func GetRewardsToMysql(gwEndpoint string) error {
 		return err
 	}
 	repo := dbmodel.NewBlockRewardRepository(o)
+	log.WithFields(log.Fields{
+		"epochNumber": epochNumber,
+		"latestEpoch": latestEpoch,
+	}).Debug("GetRewardsToMysql")
 
 	for epochNumber <= (latestEpoch - 2) {
 		totalRewards, err := client.GetAllValReward(int(epochNumber))
