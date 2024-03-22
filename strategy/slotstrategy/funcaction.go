@@ -18,7 +18,7 @@ type FunctionAction struct {
 
 func (f FunctionAction) RunAction(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 	if f.doFunc != nil {
-		return f.doFunc(backend, slot, pubkey, params)
+		return f.doFunc(backend, slot, pubkey, params...)
 	}
 	return plugins.PluginResponse{
 		Cmd: types.CMD_NULL,
