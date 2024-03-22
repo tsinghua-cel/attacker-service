@@ -6,11 +6,11 @@ import (
 )
 
 type BlockReward struct {
-	ID             int64 `orm:"column(id)" db:"id" json:"id" form:"id"`                                             //  任务类型id
-	Epoch          int64 `orm:"column(epoch)" db:"epoch" json:"epoch" form:"epoch"`                                 // epoch
-	ValidatorIndex int   `orm:"validator_index" db:"validator_index" json:"validator_index" form:"validator_index"` // 验证者索引
-	HeadAmount     int64 `orm:"head_amount" db:"head_amount" json:"head_amount" form:"head_amount"`                 // Head 奖励数量
-	TargetAmount   int64 `orm:"target_amount" db:"target_amount" json:"target_amount" form:"target_amount"`         // Target 奖励数量
+	ID             int64 `orm:"column(id)" db:"id" json:"id" form:"id"`                                                     //  任务类型id
+	Epoch          int64 `orm:"column(epoch)" db:"epoch" json:"epoch" form:"epoch"`                                         // epoch
+	ValidatorIndex int   `orm:"column(validator_index)" db:"validator_index" json:"validator_index" form:"validator_index"` // 验证者索引
+	HeadAmount     int64 `orm:"column(head_amount)" db:"head_amount" json:"head_amount" form:"head_amount"`                 // Head 奖励数量
+	TargetAmount   int64 `orm:"column(target_amount)" db:"target_amount" json:"target_amount" form:"target_amount"`         // Target 奖励数量
 	//Head	Target	Source	Inclusion Delay	Inactivity
 }
 
