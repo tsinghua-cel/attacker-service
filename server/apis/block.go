@@ -139,7 +139,13 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
 					Capella: newBlock,
 				}
-				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
+				newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock)
+				if err != nil {
+					log.WithError(err).WithFields(log.Fields{
+						"slot":   slot,
+						"action": "BlockBeforeSign",
+					}).Error("marshal to block failed")
+				}
 				result.Result = newBlockBase64
 			}
 		}
