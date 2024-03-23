@@ -128,6 +128,13 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 		Cmd:    types.CMD_NULL,
 		Result: blockDataBase64,
 	}
+	{
+		blockinfo, _ := json.Marshal(genericSignedBlock)
+		log.WithFields(log.Fields{
+			"slot":  slot,
+			"block": blockinfo,
+		}).Info("in block before sign, origin block info")
+	}
 
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
 		action := t.Actions["BlockBeforeSign"]
@@ -135,6 +142,13 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 			capellaBlock := genericSignedBlock.GetCapella()
 			r := action.RunAction(s.b, int64(slot), pubkey, capellaBlock)
 			result.Cmd = r.Cmd
+			{
+				blockinfo, _ := json.Marshal(genericSignedBlock)
+				log.WithFields(log.Fields{
+					"slot":  slot,
+					"block": blockinfo,
+				}).Info("in block before sign, after action block info")
+			}
 			if newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
