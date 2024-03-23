@@ -118,6 +118,7 @@ func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
 	genericSignedBlock, err := common.Base64ToGenericSignedBlock(blockDataBase64)
 	if err != nil {
+		log.WithError(err).WithField("slot", slot).Error("unmarshal block failed in BeforeSign")
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: blockDataBase64,
@@ -150,6 +151,7 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
 	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
 	if err != nil {
+		log.WithError(err).WithField("slot", slot).Error("unmarshal block failed in after sign")
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
 			Result: signedBlockDataBase64,
