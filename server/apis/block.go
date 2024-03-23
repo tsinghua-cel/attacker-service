@@ -132,20 +132,15 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
 		action := t.Actions["BlockBeforeSign"]
 		if action != nil {
-			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
+			capellaBlock := genericSignedBlock.GetCapella()
+			r := action.RunAction(s.b, int64(slot), pubkey, capellaBlock)
 			result.Cmd = r.Cmd
-			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-			if ok {
-				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-					Capella: newBlock,
-				}
-				newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock)
-				if err != nil {
-					log.WithError(err).WithFields(log.Fields{
-						"slot":   slot,
-						"action": "BlockBeforeSign",
-					}).Error("marshal to block failed")
-				}
+			if newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock); err != nil {
+				log.WithError(err).WithFields(log.Fields{
+					"slot":   slot,
+					"action": "BlockBeforeSign",
+				}).Error("marshal to block failed")
+			} else {
 				result.Result = newBlockBase64
 			}
 		}
