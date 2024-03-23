@@ -134,6 +134,7 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 			startEpoch := tool.EpochStart(epoch)
 			endEpoch := tool.EpochEnd(epoch)
 			attackerAttestations := make([]*ethpb.Attestation, 0)
+			validatorSet := backend.GetValidatorDataSet()
 			log.WithFields(log.Fields{
 				"slot": slot,
 			}).Info("rePackAttestation")
@@ -144,8 +145,14 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 				}
 
 				for publicKey, att := range allSlotAttest.Attestations {
-					log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
-					attackerAttestations = append(attackerAttestations, att)
+					val := validatorSet.GetValidatorByPubkey(publicKey)
+					valRole := backend.GetValidatorRole(int(i), int(val.Index))
+					if val != nil && valRole == types.AttackerRole {
+						log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
+						attackerAttestations = append(attackerAttestations, att)
+					}
+					//log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
+					//attackerAttestations = append(attackerAttestations, att)
 				}
 			}
 
@@ -164,8 +171,8 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 				}
 
 				attsForInclusion := types.ProposerAtts(make([]*ethpb.Attestation, 0))
-				for _, as := range attsByDataRoot {
-					as, err := attaggregation.Aggregate(as)
+				for _, ass := range attsByDataRoot {
+					as, err := attaggregation.Aggregate(ass)
 					if err != nil {
 						continue
 					}
