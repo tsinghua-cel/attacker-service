@@ -79,10 +79,15 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 			tool := common.SlotTool{
 				SlotsPerEpoch: slotsPerEpoch,
 			}
+
 			epoch := tool.SlotToEpoch(slot)
 			end := tool.EpochEnd(epoch)
 			seconds := backend.GetIntervalPerSlot()
 			total := int64(seconds) * (end - slot)
+			log.WithFields(log.Fields{
+				"slot":  slot,
+				"total": total,
+			}).Info("delayToEpochEnd")
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
@@ -98,11 +103,14 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 			slotsPerEpoch := backend.GetSlotsPerEpoch()
 			seconds := backend.GetIntervalPerSlot()
 			total := (seconds) * (slotsPerEpoch / 2)
+			log.WithFields(log.Fields{
+				"slot":  slot,
+				"total": total,
+			}).Info("delayHalfEpoch")
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
 			}
-
 			if len(params) > 0 {
 				r.Result = params[0]
 			}
@@ -126,7 +134,9 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 			startEpoch := tool.EpochStart(epoch)
 			endEpoch := tool.EpochEnd(epoch)
 			attackerAttestations := make([]*ethpb.Attestation, 0)
-
+			log.WithFields(log.Fields{
+				"slot": slot,
+			}).Info("rePackAttestation")
 			for i := startEpoch; i <= endEpoch; i++ {
 				allSlotAttest := backend.GetAttestSet(uint64(i))
 				if allSlotAttest == nil {
@@ -148,6 +158,7 @@ func GetFunctionAction(backend types.ServiceBackend, name string) ActionDo {
 				for _, att := range atts {
 					attDataRoot, err := att.Data.HashTreeRoot()
 					if err != nil {
+						continue
 					}
 					attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
 				}

@@ -67,6 +67,10 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
 		action := t.Actions["BlockDelayForReceiveBlock"]
 		if action != nil {
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": "BlockDelayForReceiveBlock",
+			}).Info("do action")
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
 		}
@@ -83,6 +87,10 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
 		action := t.Actions["BlockBeforeBroadCast"]
 		if action != nil {
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": "BlockBeforeBroadCast",
+			}).Info("do action")
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
 		}
