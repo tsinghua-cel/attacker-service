@@ -132,7 +132,7 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 		blockinfo, _ := json.Marshal(genericSignedBlock)
 		log.WithFields(log.Fields{
 			"slot":  slot,
-			"block": blockinfo,
+			"block": string(blockinfo),
 		}).Info("in block before sign, origin block info")
 	}
 
@@ -146,7 +146,7 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 				blockinfo, _ := json.Marshal(genericSignedBlock)
 				log.WithFields(log.Fields{
 					"slot":  slot,
-					"block": blockinfo,
+					"block": string(blockinfo),
 				}).Info("in block before sign, after action block info")
 			}
 			if newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock); err != nil {
