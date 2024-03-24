@@ -55,6 +55,10 @@ func (s *BlockAPI) BroadCastDelay(slot uint64) types.AttackerResponse {
 			result.Cmd = r.Cmd
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockDelayForBroadCast")
 
 	return result
 }
@@ -75,6 +79,10 @@ func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
 			result.Cmd = r.Cmd
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockDelayForReceiveBlock")
 
 	return result
 }
@@ -95,6 +103,10 @@ func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 			result.Cmd = r.Cmd
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockBeforeBroadCast")
 
 	return result
 }
@@ -111,6 +123,10 @@ func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 			result.Cmd = r.Cmd
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockAfterBroadCast")
 
 	return result
 }
@@ -129,11 +145,11 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 		Result: blockDataBase64,
 	}
 	{
-		blockinfo, _ := json.Marshal(genericSignedBlock)
-		log.WithFields(log.Fields{
-			"slot":  slot,
-			"block": string(blockinfo),
-		}).Info("in block before sign, origin block info")
+		//blockinfo, _ := json.Marshal(genericSignedBlock)
+		//log.WithFields(log.Fields{
+		//	"slot":  slot,
+		//	"block": string(blockinfo),
+		//}).Info("in block before sign, origin block info")
 	}
 
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
@@ -142,13 +158,13 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 			capellaBlock := genericSignedBlock.GetCapella()
 			r := action.RunAction(s.b, int64(slot), pubkey, capellaBlock)
 			result.Cmd = r.Cmd
-			{
-				blockinfo, _ := json.Marshal(genericSignedBlock)
-				log.WithFields(log.Fields{
-					"slot":  slot,
-					"block": string(blockinfo),
-				}).Info("in block before sign, after action block info")
-			}
+			//{
+			//	blockinfo, _ := json.Marshal(genericSignedBlock)
+			//	log.WithFields(log.Fields{
+			//		"slot":  slot,
+			//		"block": string(blockinfo),
+			//	}).Info("in block before sign, after action block info")
+			//}
 			if newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
@@ -159,6 +175,10 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 			}
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockBeforeSign")
 
 	return result
 }
@@ -192,6 +212,10 @@ func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 s
 			}
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockAfterSign")
 
 	return result
 }
@@ -224,6 +248,10 @@ func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase
 			}
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockBeforePropose")
 
 	return result
 }
@@ -256,6 +284,10 @@ func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase6
 			}
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit BlockAfterPropose")
 
 	return result
 }

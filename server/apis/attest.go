@@ -61,6 +61,10 @@ func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 			result.Cmd = r.Cmd
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit AttestBeforeBroadCast")
 
 	return result
 }
@@ -76,6 +80,10 @@ func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 			result.Cmd = r.Cmd
 		}
 	}
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit AttestAfterBroadCast")
 
 	return result
 }
@@ -106,7 +114,10 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 			}
 		}
 	}
-
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit AttestBeforeSign")
 	return result
 }
 
@@ -135,7 +146,10 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 			}
 		}
 	}
-
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit AttestAfterSign")
 	return result
 }
 
@@ -164,7 +178,10 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 			}
 		}
 	}
-
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit AttestBeforePropose")
 	return result
 }
 
@@ -193,6 +210,11 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 			}
 		}
 	}
+
+	log.WithFields(log.Fields{
+		"cmd":  result.Cmd,
+		"slot": slot,
+	}).Info("exit AttestAfterPropose")
 
 	return result
 }
