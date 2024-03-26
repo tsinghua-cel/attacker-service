@@ -96,7 +96,7 @@ func (s *BlockAPI) todoActionsWithSlot(slot uint64, name string) types.AttackerR
 }
 
 func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signedBlockDataBase64 string, name string) types.AttackerResponse {
-	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
+	signedDenebBlock, err := common.Base64ToSignedDenebBlock(signedBlockDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
@@ -111,14 +111,14 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
 		action := t.Actions[name]
 		if action != nil {
-			block, err := common.GetDenebBlockFromGenericSignedBlock(genericSignedBlock)
-			if err != nil {
-				log.WithError(err).WithField("slot", slot).Error("get block instance failed")
-				return result
-			}
-			r := action.RunAction(s.b, int64(slot), pubkey, block)
+			//block, err := common.GetDenebBlockFromGenericSignedBlock()
+			//if err != nil {
+			//	log.WithError(err).WithField("slot", slot).Error("get block instance failed")
+			//	return result
+			//}
+			r := action.RunAction(s.b, int64(slot), pubkey, signedDenebBlock)
 			result.Cmd = r.Cmd
-			if newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock); err != nil {
+			if newBlockBase64, err := common.SignedDenebBlockToBase64(signedDenebBlock); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
 					"action": name,

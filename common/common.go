@@ -58,6 +58,30 @@ func SignedAttestationToBase64(signedAttestation *ethpb.Attestation) (string, er
 	}
 	return base64.StdEncoding.EncodeToString(data), nil
 }
+
+func Base64ToSignedDenebBlock(signedBlockBase64 string) (*ethpb.SignedBeaconBlockDeneb, error) {
+	signedBlockData, err := base64.StdEncoding.DecodeString(signedBlockBase64)
+	if err != nil {
+		log.WithError(err).Error("base64 decode signed block data failed")
+		return nil, err
+	}
+	var signedBlock = new(ethpb.SignedBeaconBlockDeneb)
+	if err := proto.Unmarshal(signedBlockData, signedBlock); err != nil {
+		log.WithError(err).Error("unmarshal signed block data failed")
+		return nil, err
+	}
+	return signedBlock, nil
+}
+
+func SignedDenebBlockToBase64(signedBlock *ethpb.SignedBeaconBlockDeneb) (string, error) {
+	data, err := proto.Marshal(signedBlock)
+	if err != nil {
+		log.WithError(err).Error("marshal signed block data failed")
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
 func Base64ToGenericSignedBlock(signedBlockBase64 string) (*ethpb.GenericSignedBeaconBlock, error) {
 	signedBlockData, err := base64.StdEncoding.DecodeString(signedBlockBase64)
 	if err != nil {
