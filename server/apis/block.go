@@ -3,8 +3,7 @@ package apis
 import (
 	"encoding/json"
 	"errors"
-	"github.com/prysmaticlabs/prysm/v4/cache/lru"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	"github.com/prysmaticlabs/prysm/v5/cache/lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/plugins"
@@ -44,131 +43,85 @@ func (s *BlockAPI) UpdateStrategy(data []byte) error {
 }
 
 func (s *BlockAPI) BroadCastDelay(slot uint64) types.AttackerResponse {
-	result := types.AttackerResponse{
-		Cmd: types.CMD_NULL,
-	}
-
-	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockDelayForBroadCast"]
-		if action != nil {
-			r := action.RunAction(s.b, int64(slot), "")
-			result.Cmd = r.Cmd
-		}
-	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockDelayForBroadCast")
-
-	return result
+	return s.todoActionsWithSlot(slot, "BlockDelayForBroadCast")
 }
 
 func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
-	result := types.AttackerResponse{
-		Cmd: types.CMD_NULL,
-	}
-
-	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockDelayForReceiveBlock"]
-		if action != nil {
-			log.WithFields(log.Fields{
-				"slot":   slot,
-				"action": "BlockDelayForReceiveBlock",
-			}).Info("do action")
-			r := action.RunAction(s.b, int64(slot), "")
-			result.Cmd = r.Cmd
-		}
-	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockDelayForReceiveBlock")
-
-	return result
+	return s.todoActionsWithSlot(slot, "BlockDelayForReceiveBlock")
 }
 
 func (s *BlockAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
-	result := types.AttackerResponse{
-		Cmd: types.CMD_NULL,
-	}
-
-	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockBeforeBroadCast"]
-		if action != nil {
-			log.WithFields(log.Fields{
-				"slot":   slot,
-				"action": "BlockBeforeBroadCast",
-			}).Info("do action")
-			r := action.RunAction(s.b, int64(slot), "")
-			result.Cmd = r.Cmd
-		}
-	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockBeforeBroadCast")
-
-	return result
+	return s.todoActionsWithSlot(slot, "BlockBeforeBroadCast")
 }
 
 func (s *BlockAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
+	return s.todoActionsWithSlot(slot, "BlockAfterBroadCast")
+}
+
+func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	return s.todoActionsWithSignedBlock(slot, pubkey, signedBlockDataBase64, "BlockBeforeSign")
+}
+
+func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	return s.todoActionsWithSignedBlock(slot, pubkey, signedBlockDataBase64, "BlockAfterSign")
+}
+
+func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	return s.todoActionsWithSignedBlock(slot, pubkey, signedBlockDataBase64, "BlockBeforePropose")
+}
+
+func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
+	return s.todoActionsWithSignedBlock(slot, pubkey, signedBlockDataBase64, "BlockAfterPropose")
+}
+
+func (s *BlockAPI) todoActionsWithSlot(slot uint64, name string) types.AttackerResponse {
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
 
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockAfterBroadCast"]
+		action := t.Actions[name]
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
 		}
 	}
 	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockAfterBroadCast")
+		"cmd":    result.Cmd,
+		"slot":   slot,
+		"action": name,
+	}).Info("exit todoActionsWithSlot")
 
 	return result
 }
 
-func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string) types.AttackerResponse {
-	genericSignedBlock, err := common.Base64ToGenericSignedBlock(blockDataBase64)
+func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signedBlockDataBase64 string, name string) types.AttackerResponse {
+	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
 	if err != nil {
-		log.WithError(err).WithField("slot", slot).Error("unmarshal block failed in BeforeSign")
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
-			Result: blockDataBase64,
+			Result: signedBlockDataBase64,
 		}
 	}
 	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
-		Result: blockDataBase64,
-	}
-	{
-		//blockinfo, _ := json.Marshal(genericSignedBlock)
-		//log.WithFields(log.Fields{
-		//	"slot":  slot,
-		//	"block": string(blockinfo),
-		//}).Info("in block before sign, origin block info")
+		Result: signedBlockDataBase64,
 	}
 
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockBeforeSign"]
+		action := t.Actions[name]
 		if action != nil {
-			capellaBlock := genericSignedBlock.GetCapella()
-			r := action.RunAction(s.b, int64(slot), pubkey, capellaBlock)
+			block, err := common.GetDenebBlockFromGenericSignedBlock(genericSignedBlock)
+			if err != nil {
+				log.WithError(err).WithField("slot", slot).Error("get block instance failed")
+				return result
+			}
+			r := action.RunAction(s.b, int64(slot), pubkey, block)
 			result.Cmd = r.Cmd
-			//{
-			//	blockinfo, _ := json.Marshal(genericSignedBlock)
-			//	log.WithFields(log.Fields{
-			//		"slot":  slot,
-			//		"block": string(blockinfo),
-			//	}).Info("in block before sign, after action block info")
-			//}
 			if newBlockBase64, err := common.GenericSignedBlockToBase64(genericSignedBlock); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
-					"action": "BlockBeforeSign",
+					"action": name,
 				}).Error("marshal to block failed")
 			} else {
 				result.Result = newBlockBase64
@@ -176,118 +129,10 @@ func (s *BlockAPI) BeforeSign(slot uint64, pubkey string, blockDataBase64 string
 		}
 	}
 	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockBeforeSign")
-
-	return result
-}
-
-func (s *BlockAPI) AfterSign(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
-	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
-	if err != nil {
-		log.WithError(err).WithField("slot", slot).Error("unmarshal block failed in after sign")
-		return types.AttackerResponse{
-			Cmd:    types.CMD_NULL,
-			Result: signedBlockDataBase64,
-		}
-	}
-	result := types.AttackerResponse{
-		Cmd:    types.CMD_NULL,
-		Result: signedBlockDataBase64,
-	}
-
-	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockAfterSign"]
-		if action != nil {
-			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
-			result.Cmd = r.Cmd
-			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-			if ok {
-				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-					Capella: newBlock,
-				}
-				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-				result.Result = newBlockBase64
-			}
-		}
-	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockAfterSign")
-
-	return result
-}
-
-func (s *BlockAPI) BeforePropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
-	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
-	if err != nil {
-		return types.AttackerResponse{
-			Cmd:    types.CMD_NULL,
-			Result: signedBlockDataBase64,
-		}
-	}
-	result := types.AttackerResponse{
-		Cmd:    types.CMD_NULL,
-		Result: signedBlockDataBase64,
-	}
-
-	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockBeforePropose"]
-		if action != nil {
-			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
-			result.Cmd = r.Cmd
-			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-			if ok {
-				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-					Capella: newBlock,
-				}
-				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-				result.Result = newBlockBase64
-			}
-		}
-	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockBeforePropose")
-
-	return result
-}
-
-func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase64 string) types.AttackerResponse {
-	genericSignedBlock, err := common.Base64ToGenericSignedBlock(signedBlockDataBase64)
-	if err != nil {
-		return types.AttackerResponse{
-			Cmd:    types.CMD_NULL,
-			Result: signedBlockDataBase64,
-		}
-	}
-	result := types.AttackerResponse{
-		Cmd:    types.CMD_NULL,
-		Result: signedBlockDataBase64,
-	}
-
-	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		action := t.Actions["BlockAfterPropose"]
-		if action != nil {
-			r := action.RunAction(s.b, int64(slot), pubkey, genericSignedBlock.GetCapella())
-			result.Cmd = r.Cmd
-			newBlock, ok := r.Result.(*ethpb.SignedBeaconBlockCapella)
-			if ok {
-				genericSignedBlock.Block = &ethpb.GenericSignedBeaconBlock_Capella{
-					Capella: newBlock,
-				}
-				newBlockBase64, _ := common.GenericSignedBlockToBase64(genericSignedBlock)
-				result.Result = newBlockBase64
-			}
-		}
-	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Info("exit BlockAfterPropose")
+		"cmd":    result.Cmd,
+		"slot":   slot,
+		"action": name,
+	}).Info("exit todoActionsWithBlock")
 
 	return result
 }

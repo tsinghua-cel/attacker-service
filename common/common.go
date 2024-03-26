@@ -3,7 +3,7 @@ package common
 import (
 	"encoding/base64"
 	"errors"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -79,6 +79,35 @@ func GenericSignedBlockToBase64(signedBlock *ethpb.GenericSignedBeaconBlock) (st
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func GetDenebBlockFromGenericSignedBlock(signedBlock *ethpb.GenericSignedBeaconBlock) (*ethpb.SignedBeaconBlockDeneb, error) {
+	if signedBlock == nil {
+		return nil, ErrNilObject
+	}
+	switch b := signedBlock.Block.(type) {
+	case nil:
+		return nil, ErrNilObject
+	case *ethpb.GenericSignedBeaconBlock_Phase0:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericSignedBeaconBlock_Altair:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericSignedBeaconBlock_Bellatrix:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericSignedBeaconBlock_BlindedBellatrix:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericSignedBeaconBlock_Capella:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericSignedBeaconBlock_BlindedCapella:
+		return nil, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericSignedBeaconBlock_Deneb:
+		return b.Deneb.Block, ErrUnsupportedBeaconBlock
+	case *ethpb.GenericSignedBeaconBlock_BlindedDeneb:
+		return nil, ErrUnsupportedBeaconBlock
+	default:
+		log.WithError(ErrUnsupportedBeaconBlock).Errorf("unsupported beacon block from type %T", b)
+		return nil, ErrUnsupportedBeaconBlock
+	}
 }
 
 func GetCapellaBlockFromGenericSignedBlock(signedBlock *ethpb.GenericSignedBeaconBlock) (*ethpb.SignedBeaconBlockCapella, error) {

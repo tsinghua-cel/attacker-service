@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/golang/groupcache/lru"
-	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
-	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/plugins"
