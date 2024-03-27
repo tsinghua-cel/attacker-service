@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/tsinghua-cel/attacker-service/cmd/attacker/testcases"
 	"github.com/tsinghua-cel/attacker-service/config"
+	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/reward"
 	"github.com/tsinghua-cel/attacker-service/server"
 	"time"
@@ -84,6 +85,8 @@ func runNode() {
 	rpcServer := server.NewServer(config.GetConfig(), testcases.NewCaseV1())
 	rpcServer.Start()
 
+	dbmodel.DbInit(config.GetConfig().DbConfig)
+
 	go getRewardBackgroud()
 
 	wg := sync.WaitGroup{}
@@ -143,9 +146,9 @@ func getRewardBackgroud() {
 		case <-ticker.C:
 			log.WithFields(log.Fields{
 				"beacon": config.GetConfig().BeaconRpc,
-				"file":   config.GetConfig().RewardFile,
 			}).Debug("goto get reward")
-			err := reward.GetRewards(config.GetConfig().BeaconRpc, config.GetConfig().RewardFile)
+			err := reward.GetRewardsToMysql(config.GetConfig().BeaconRpc)
+			//err := reward.GetRewards(config.GetConfig().BeaconRpc, config.GetConfig().RewardFile)
 			if err != nil {
 				log.WithError(err).Error("collect reward failed")
 			}
