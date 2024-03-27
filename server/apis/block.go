@@ -42,6 +42,30 @@ func (s *BlockAPI) UpdateStrategy(data []byte) error {
 	return nil
 }
 
+func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot string) types.AttackerResponse {
+	result := types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: parentRoot,
+	}
+	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		action := t.Actions["BlockGetNewParentRoot"]
+		if action != nil {
+			r := action.RunAction(s.b, int64(slot), pubkey, parentRoot)
+			result.Cmd = r.Cmd
+			if r.Result != nil {
+				result.Result = r.Result.(string)
+			}
+		}
+	}
+	log.WithFields(log.Fields{
+		"cmd":    result.Cmd,
+		"slot":   slot,
+		"action": "BlockGetNewParentRoot",
+	}).Info("exit GetNewParentRoot")
+
+	return result
+}
+
 func (s *BlockAPI) BroadCastDelay(slot uint64) types.AttackerResponse {
 	return s.todoActionsWithSlot(slot, "BlockDelayForBroadCast")
 }

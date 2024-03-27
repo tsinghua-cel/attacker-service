@@ -257,3 +257,6 @@ func (s *Server) GetInternalSlotStrategy() []slotstrategy.InternalSlotStrategy {
 	}
 	return s.internal
 }
+func (s *Server) GetSlotRoot(slot int64) (string, error) {
+	return s.beaconClient.GetSlotRoot(slot)
+}

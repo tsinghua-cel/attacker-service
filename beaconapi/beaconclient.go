@@ -214,3 +214,15 @@ func (b *BeaconGwClient) GetNextEpochAttestDuties() ([]types.AttestDuty, error) 
 	}
 	return b.GetAttesterDuties(epoch+1, vals)
 }
+
+func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
+	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/states/%d/root", b.endpoint, slot))
+	var rootInfo = types.SlotStateRoot{}
+	err = json.Unmarshal(response.Data, &rootInfo)
+	if err != nil {
+		// todo: add log.
+		return "", err
+	}
+
+	return rootInfo.Root, nil
+}
