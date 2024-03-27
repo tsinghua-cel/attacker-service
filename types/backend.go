@@ -20,6 +20,7 @@ type BeaconBackend interface {
 	GetIntervalPerSlot() int
 	GetValidatorByProposeSlot(slot uint64) (int, error)
 	GetProposeDuties(epoch int) ([]ProposerDuty, error)
+	GetSlotRoot(slot int64) (string, error)
 }
 
 type CacheBackend interface {

@@ -17,3 +17,7 @@ func ToClientInfo(cliInfo string) ClientInfo {
 	json.Unmarshal([]byte(cliInfo), &cinfo)
 	return cinfo
 }
+
+type SlotStateRoot struct {
+	Root string `json:"root"`
+}
