@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	rotatelogs "github.com/lestrrat-go/file-rotatelogs"
 	"github.com/rifflock/lfshook"
 	log "github.com/sirupsen/logrus"
@@ -80,7 +81,7 @@ func initConfig() {
 		log.WithField("error", err).Fatal("parse config failed")
 	}
 	if len(conf.SwagHost) != 0 {
-		docs.SwaggerInfo.Host = conf.SwagHost
+		docs.SwaggerInfo.Host = fmt.Sprintf("%s:%d", conf.SwagHost, conf.HttpPort+1)
 	}
 }
 
