@@ -22,6 +22,7 @@ type Config struct {
 	MetricsPort int         `json:"metrics_port" toml:"metrics_port"`
 	Strategy    string      `json:"strategy" toml:"strategy"`
 	DbConfig    MysqlConfig `json:"mysql" toml:"mysql"`
+	SwagHost    string      `json:"swag_host" toml:"swag_host"`
 }
 
 var _cfg *Config = nil

@@ -9,6 +9,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/cmd/attacker/testcases"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
+	"github.com/tsinghua-cel/attacker-service/docs"
 	"github.com/tsinghua-cel/attacker-service/reward"
 	"github.com/tsinghua-cel/attacker-service/server"
 	"time"
@@ -74,18 +75,19 @@ func initConfig() {
 		return
 	}
 
-	_, err := config.ParseConfig(viper.ConfigFileUsed())
+	conf, err := config.ParseConfig(viper.ConfigFileUsed())
 	if err != nil {
 		log.WithField("error", err).Fatal("parse config failed")
+	}
+	if len(conf.SwagHost) != 0 {
+		docs.SwaggerInfo.Host = conf.SwagHost
 	}
 }
 
 func runNode() {
-
+	dbmodel.DbInit(config.GetConfig().DbConfig)
 	rpcServer := server.NewServer(config.GetConfig(), testcases.NewCaseV1())
 	rpcServer.Start()
-
-	dbmodel.DbInit(config.GetConfig().DbConfig)
 
 	go getRewardBackgroud()
 

@@ -39,6 +39,7 @@ type StrategyBackend interface {
 	GetStrategy() *Strategy
 	UpdateBlockBroadDelay(milliSecond int64) error
 	UpdateAttestBroadDelay(milliSecond int64) error
+	UpdateStrategy(*Strategy) error
 }
 
 // ServiceBackend interface provides the common API services (that are provided by
