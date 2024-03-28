@@ -81,7 +81,7 @@ func initConfig() {
 		log.WithField("error", err).Fatal("parse config failed")
 	}
 	if len(conf.SwagHost) != 0 {
-		docs.SwaggerInfo.Host = fmt.Sprintf("%s:%d", conf.SwagHost, conf.HttpPort+1)
+		docs.SwaggerInfo.Host = fmt.Sprintf("%s", conf.SwagHost)
 	}
 }
 
