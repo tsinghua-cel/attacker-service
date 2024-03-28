@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/config"
+	"github.com/tsinghua-cel/attacker-service/openapi"
 	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
@@ -31,6 +32,7 @@ type Server struct {
 	beaconClient *beaconapi.BeaconGwClient
 
 	validatorSetInfo *types.ValidatorDataSet
+	openApi          *openapi.OpenAPI
 }
 
 func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
@@ -46,6 +48,7 @@ func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
 	s.strategy = strategy.ParseStrategy(s, conf.Strategy)
 	s.validatorSetInfo = types.NewValidatorSet()
+	s.openApi = openapi.NewOpenAPI(s, conf)
 	return s
 }
 
@@ -150,6 +153,7 @@ func (s *Server) Start() {
 	if err != nil {
 		s.stopRPC()
 	}
+	s.openApi.Start()
 	// start collect duties info.
 	go s.monitorDuties()
 }
@@ -299,5 +303,11 @@ func (s *Server) dumpDuties(epoch int64) error {
 			"validator": duty.ValidatorIndex,
 		}).Info("epoch duty")
 	}
+	return nil
+}
+
+func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
+	s.strategy = strategy
+	s.internal = slotstrategy.ParseToInternalSlotStrategy(s, strategy.Slots)
 	return nil
 }
