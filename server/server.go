@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/config"
+	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/openapi"
 	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
@@ -108,8 +109,15 @@ func (s *Server) monitorDuties() {
 	slotsPerEpoch := int64(32)
 	dumped := make(map[int64]bool)
 
+	eventCh := s.beaconClient.MonitorReorgEvent()
+
 	for {
 		select {
+		case reorg := <-eventCh:
+			log.WithFields(log.Fields{
+				"slot": reorg.Slot,
+			}).Info("reorg event")
+			dbmodel.InsertNewReorg(reorg)
 		case <-dutyTicker.C:
 			header, err := s.beaconClient.GetLatestBeaconHeader()
 			if err != nil {

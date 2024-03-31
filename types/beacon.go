@@ -49,3 +49,13 @@ type AttestDuty struct {
 type BeaconResponse struct {
 	Data json.RawMessage `json:"data"`
 }
+
+type ReorgEvent struct {
+	Slot         string `json:"slot"`
+	Depth        string `json:"depth"`
+	OldHeadBlock string `json:"old_head_block"`
+	NewHeadBlock string `json:"new_head_block"`
+	OldHeadState string `json:"old_head_state"`
+	NewHeadState string `json:"new_head_state"`
+	Epoch        string `json:"epoch"`
+}

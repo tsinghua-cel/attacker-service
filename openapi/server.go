@@ -46,6 +46,7 @@ func (s *OpenAPI) startHttp(port int) {
 		v1.GET("/reward/:epoch", apiHandler{backend: s.backend}.GetRewardByEpoch)
 		v1.GET("/strategy", apiHandler{backend: s.backend}.GetStrategy)
 		v1.POST("/update-strategy", apiHandler{backend: s.backend}.UpdateStrategy)
+		v1.GET("/reorgs", apiHandler{backend: s.backend}.GetReorgs)
 	}
 	log.WithField("swagger", fmt.Sprintf("http://%s/swagger/index.html", docs.SwaggerInfo.Host)).Info("swagger docs url")
 
