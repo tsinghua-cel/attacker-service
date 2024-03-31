@@ -77,3 +77,27 @@ func (api apiHandler) UpdateStrategy(c *gin.Context) {
 	_ = api.backend.UpdateStrategy(&req)
 	c.JSON(http.StatusOK, "ok")
 }
+
+// @Summary Get reorgs
+// @Description get reorgs
+// @ID get-reorgs
+// @Accept  json
+// @Produce  json
+// @Success 200 {array} types.ReorgEvent
+// @Router /reorgs [get]
+func (api apiHandler) GetReorgs(c *gin.Context) {
+	reorgs := dbmodel.GetAllReorgList()
+	var res []types.ReorgEvent
+	for _, reorg := range reorgs {
+		res = append(res, types.ReorgEvent{
+			Epoch:        strconv.FormatInt(reorg.Epoch, 10),
+			Slot:         strconv.FormatInt(reorg.Slot, 10),
+			Depth:        strconv.Itoa(reorg.Depth),
+			OldHeadBlock: reorg.OldHeadBlock,
+			NewHeadBlock: reorg.NewHeadBlock,
+			OldHeadState: reorg.OldHeadState,
+			NewHeadState: reorg.NewHeadState,
+		})
+	}
+	c.JSON(200, res)
+}

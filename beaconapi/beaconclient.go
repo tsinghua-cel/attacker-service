@@ -1,9 +1,12 @@
 package beaconapi
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/astaxie/beego/httplib"
+	eth2client "github.com/attestantio/go-eth2-client"
+	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
@@ -17,12 +20,15 @@ const (
 type BeaconGwClient struct {
 	endpoint string
 	config   map[string]string
+	service  eth2client.Service
 }
 
 func NewBeaconGwClient(endpoint string) *BeaconGwClient {
+	service, _ := NewClient(context.Background(), endpoint)
 	return &BeaconGwClient{
 		endpoint: endpoint,
 		config:   make(map[string]string),
+		service:  service,
 	}
 }
 
@@ -225,4 +231,19 @@ func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
 	}
 
 	return rootInfo.Root, nil
+}
+
+func (b *BeaconGwClient) MonitorReorgEvent() <-chan types.ReorgEvent {
+	ch := make(chan types.ReorgEvent, 100)
+	b.service.(eth2client.EventsProvider).Events(context.Background(), []string{"chain_reorg"}, func(event *apiv1.Event) {
+		reorg := types.ReorgEvent{}
+		if err := json.Unmarshal(event.Data.([]byte), &reorg); err != nil {
+			log.WithError(err).Error("Failed to unmarshal reorg event")
+			return
+		} else {
+			ch <- reorg
+		}
+		return
+	})
+	return ch
 }
