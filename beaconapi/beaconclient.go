@@ -24,7 +24,10 @@ type BeaconGwClient struct {
 }
 
 func NewBeaconGwClient(endpoint string) *BeaconGwClient {
-	service, _ := NewClient(context.Background(), endpoint)
+	service, err := NewClient(context.Background(), endpoint)
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+	}
 	return &BeaconGwClient{
 		endpoint: endpoint,
 		config:   make(map[string]string),
@@ -235,15 +238,19 @@ func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
 
 func (b *BeaconGwClient) MonitorReorgEvent() <-chan types.ReorgEvent {
 	ch := make(chan types.ReorgEvent, 100)
-	b.service.(eth2client.EventsProvider).Events(context.Background(), []string{"chain_reorg"}, func(event *apiv1.Event) {
-		reorg := types.ReorgEvent{}
-		if err := json.Unmarshal(event.Data.([]byte), &reorg); err != nil {
-			log.WithError(err).Error("Failed to unmarshal reorg event")
+	go func() {
+		b.service.(eth2client.EventsProvider).Events(context.Background(), []string{"chain_reorg"}, func(event *apiv1.Event) {
+			reorg := types.ReorgEvent{}
+			if err := json.Unmarshal(event.Data.([]byte), &reorg); err != nil {
+				log.WithError(err).Error("Failed to unmarshal reorg event")
+				return
+			} else {
+				if event != nil {
+					ch <- reorg
+				}
+			}
 			return
-		} else {
-			ch <- reorg
-		}
-		return
-	})
+		})
+	}()
 	return ch
 }
