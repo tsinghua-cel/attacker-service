@@ -90,13 +90,15 @@ func (api apiHandler) GetReorgs(c *gin.Context) {
 	var res []types.ReorgEvent
 	for _, reorg := range reorgs {
 		res = append(res, types.ReorgEvent{
-			Epoch:        strconv.FormatInt(reorg.Epoch, 10),
-			Slot:         strconv.FormatInt(reorg.Slot, 10),
-			Depth:        strconv.Itoa(reorg.Depth),
-			OldHeadBlock: reorg.OldHeadBlock,
-			NewHeadBlock: reorg.NewHeadBlock,
-			OldHeadState: reorg.OldHeadState,
-			NewHeadState: reorg.NewHeadState,
+			Epoch:                 reorg.Epoch,
+			Slot:                  reorg.Slot,
+			Depth:                 int64(reorg.Depth),
+			OldBlockSlot:          reorg.OldBlockSlot,
+			NewBlockSlot:          reorg.NewBlockSlot,
+			OldBlockProposerIndex: reorg.OldBlockProposerIndex,
+			NewBlockProposerIndex: reorg.NewBlockProposerIndex,
+			OldHeadState:          reorg.OldHeadState,
+			NewHeadState:          reorg.NewHeadState,
 		})
 	}
 	c.JSON(200, res)
