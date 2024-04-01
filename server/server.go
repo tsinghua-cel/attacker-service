@@ -137,7 +137,7 @@ func (s *Server) monitorEvent() {
 			eventCh := s.beaconClient.MonitorReorgEvent()
 			if eventCh != nil {
 				go handler(eventCh)
-				ticker.Reset(time.Minute * 5)
+				ticker.Reset(time.Hour * 256)
 			} else {
 				ticker.Reset(time.Minute)
 			}
