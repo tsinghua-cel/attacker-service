@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
@@ -99,6 +100,52 @@ func (n *Server) startRPC() error {
 	return nil
 }
 
+func (s *Server) monitorEvent() {
+	ticker := time.NewTicker(time.Minute * 2)
+	defer ticker.Stop()
+
+	handler := func(ch chan *apiv1.ChainReorgEvent) {
+		for {
+			select {
+			case reorg := <-ch:
+				log.WithFields(log.Fields{
+					"slot": reorg.Slot,
+				}).Info("reorg event")
+				ev := types.ReorgEvent{
+					Epoch:        int64(reorg.Epoch),
+					Slot:         int64(reorg.Slot),
+					Depth:        int64(reorg.Depth),
+					OldHeadState: reorg.OldHeadState.String(),
+					NewHeadState: reorg.NewHeadState.String(),
+				}
+				if oldHeader, err := s.beaconClient.GetBlockHeaderById(reorg.OldHeadBlock.String()); err == nil {
+					ev.OldBlockSlot = int64(oldHeader.Header.Message.Slot)
+					ev.OldBlockProposerIndex = int64(oldHeader.Header.Message.ProposerIndex)
+				}
+				if newHeader, err := s.beaconClient.GetBlockHeaderById(reorg.NewHeadBlock.String()); err == nil {
+					ev.NewBlockSlot = int64(newHeader.Header.Message.Slot)
+					ev.NewBlockProposerIndex = int64(newHeader.Header.Message.ProposerIndex)
+				}
+				dbmodel.InsertNewReorg(ev)
+			}
+		}
+	}
+
+	for {
+		select {
+		case <-ticker.C:
+			eventCh := s.beaconClient.MonitorReorgEvent()
+			if eventCh != nil {
+				go handler(eventCh)
+				ticker.Reset(time.Minute * 5)
+			} else {
+				ticker.Reset(time.Minute)
+			}
+		}
+	}
+
+}
+
 func (s *Server) monitorDuties() {
 	ticker := time.NewTicker(time.Millisecond * 100)
 	defer ticker.Stop()
@@ -109,30 +156,8 @@ func (s *Server) monitorDuties() {
 	slotsPerEpoch := int64(32)
 	dumped := make(map[int64]bool)
 
-	eventCh := s.beaconClient.MonitorReorgEvent()
-
 	for {
 		select {
-		case reorg := <-eventCh:
-			log.WithFields(log.Fields{
-				"slot": reorg.Slot,
-			}).Info("reorg event")
-			ev := types.ReorgEvent{
-				Epoch:        int64(reorg.Epoch),
-				Slot:         int64(reorg.Slot),
-				Depth:        int64(reorg.Depth),
-				OldHeadState: reorg.OldHeadState.String(),
-				NewHeadState: reorg.NewHeadState.String(),
-			}
-			if oldHeader, err := s.beaconClient.GetBlockHeaderById(reorg.OldHeadBlock.String()); err == nil {
-				ev.OldBlockSlot = int64(oldHeader.Header.Message.Slot)
-				ev.OldBlockProposerIndex = int64(oldHeader.Header.Message.ProposerIndex)
-			}
-			if newHeader, err := s.beaconClient.GetBlockHeaderById(reorg.NewHeadBlock.String()); err == nil {
-				ev.NewBlockSlot = int64(newHeader.Header.Message.Slot)
-				ev.NewBlockProposerIndex = int64(newHeader.Header.Message.ProposerIndex)
-			}
-			dbmodel.InsertNewReorg(ev)
 
 		case <-dutyTicker.C:
 			header, err := s.beaconClient.GetLatestBeaconHeader()
@@ -180,6 +205,7 @@ func (s *Server) Start() {
 	s.openApi.Start()
 	// start collect duties info.
 	go s.monitorDuties()
+	go s.monitorEvent()
 }
 
 func (s *Server) stopRPC() {

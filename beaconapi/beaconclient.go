@@ -21,18 +21,13 @@ const (
 type BeaconGwClient struct {
 	endpoint string
 	config   map[string]string
-	service  eth2client.Service
 }
 
 func NewBeaconGwClient(endpoint string) *BeaconGwClient {
-	service, err := NewClient(context.Background(), endpoint)
-	if err != nil {
-		log.WithError(err).Error("create eth2client failed")
-	}
+
 	return &BeaconGwClient{
 		endpoint: endpoint,
 		config:   make(map[string]string),
-		service:  service,
 	}
 }
 
@@ -237,10 +232,15 @@ func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
 	return rootInfo.Root, nil
 }
 
-func (b *BeaconGwClient) MonitorReorgEvent() <-chan *apiv1.ChainReorgEvent {
+func (b *BeaconGwClient) MonitorReorgEvent() chan *apiv1.ChainReorgEvent {
+	service, err := NewClient(context.Background(), b.endpoint)
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil
+	}
 	ch := make(chan *apiv1.ChainReorgEvent, 100)
 	go func() {
-		b.service.(eth2client.EventsProvider).Events(context.Background(), []string{"chain_reorg"}, func(event *apiv1.Event) {
+		service.(eth2client.EventsProvider).Events(context.Background(), []string{"chain_reorg"}, func(event *apiv1.Event) {
 			if ev, ok := event.Data.(*apiv1.ChainReorgEvent); !ok {
 				log.Error("Failed to unmarshal reorg event")
 				return
@@ -254,10 +254,15 @@ func (b *BeaconGwClient) MonitorReorgEvent() <-chan *apiv1.ChainReorgEvent {
 }
 
 func (b *BeaconGwClient) GetBlockHeaderById(id string) (*apiv1.BeaconBlockHeader, error) {
+	service, err := NewClient(context.Background(), b.endpoint)
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
 	opts := &api.BeaconBlockHeaderOpts{
 		Block: id,
 	}
-	res, err := b.service.(eth2client.BeaconBlockHeadersProvider).BeaconBlockHeader(context.Background(), opts)
+	res, err := service.(eth2client.BeaconBlockHeadersProvider).BeaconBlockHeader(context.Background(), opts)
 	if err != nil {
 		log.WithError(err).Error("get block header failed")
 		return &apiv1.BeaconBlockHeader{}, err
