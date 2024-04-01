@@ -17,5 +17,6 @@ func DbInit(dbconf config.MysqlConfig) {
 		log.WithError(err).Fatal("failed to connect to database")
 	}
 	orm.RegisterModel(new(BlockReward))
+	orm.RegisterModel(new(ChainReorg))
 	orm.RunSyncdb("default", true, true)
 }
