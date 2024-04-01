@@ -6,7 +6,7 @@ import (
 )
 
 func TestBeaconGwClient_MonitorReorgEvent(t *testing.T) {
-	beaconGwClient := NewBeaconGwClient("13.41.176.56:14000")
+	beaconGwClient := NewBeaconGwClient("13.41.176.56:15000")
 	//ch := beaconGwClient.MonitorReorgEvent()
 	//for {
 	//	select {
