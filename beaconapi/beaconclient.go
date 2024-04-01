@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/astaxie/beego/httplib"
 	eth2client "github.com/attestantio/go-eth2-client"
+	"github.com/attestantio/go-eth2-client/api"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
@@ -236,21 +237,30 @@ func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
 	return rootInfo.Root, nil
 }
 
-func (b *BeaconGwClient) MonitorReorgEvent() <-chan types.ReorgEvent {
-	ch := make(chan types.ReorgEvent, 100)
+func (b *BeaconGwClient) MonitorReorgEvent() <-chan *apiv1.ChainReorgEvent {
+	ch := make(chan *apiv1.ChainReorgEvent, 100)
 	go func() {
 		b.service.(eth2client.EventsProvider).Events(context.Background(), []string{"chain_reorg"}, func(event *apiv1.Event) {
-			reorg := types.ReorgEvent{}
-			if err := json.Unmarshal(event.Data.([]byte), &reorg); err != nil {
-				log.WithError(err).Error("Failed to unmarshal reorg event")
+			if ev, ok := event.Data.(*apiv1.ChainReorgEvent); !ok {
+				log.Error("Failed to unmarshal reorg event")
 				return
 			} else {
-				if event != nil {
-					ch <- reorg
-				}
+				ch <- ev
 			}
 			return
 		})
 	}()
 	return ch
+}
+
+func (b *BeaconGwClient) GetBlockHeaderById(id string) (*apiv1.BeaconBlockHeader, error) {
+	opts := &api.BeaconBlockHeaderOpts{
+		Block: id,
+	}
+	res, err := b.service.(eth2client.BeaconBlockHeadersProvider).BeaconBlockHeader(context.Background(), opts)
+	if err != nil {
+		log.WithError(err).Error("get block header failed")
+		return &apiv1.BeaconBlockHeader{}, err
+	}
+	return res.Data, nil
 }

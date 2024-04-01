@@ -117,7 +117,23 @@ func (s *Server) monitorDuties() {
 			log.WithFields(log.Fields{
 				"slot": reorg.Slot,
 			}).Info("reorg event")
-			dbmodel.InsertNewReorg(reorg)
+			ev := types.ReorgEvent{
+				Epoch:        int64(reorg.Epoch),
+				Slot:         int64(reorg.Slot),
+				Depth:        int64(reorg.Depth),
+				OldHeadState: reorg.OldHeadState.String(),
+				NewHeadState: reorg.NewHeadState.String(),
+			}
+			if oldHeader, err := s.beaconClient.GetBlockHeaderById(reorg.OldHeadBlock.String()); err == nil {
+				ev.OldBlockSlot = int64(oldHeader.Header.Message.Slot)
+				ev.OldBlockProposerIndex = int64(oldHeader.Header.Message.ProposerIndex)
+			}
+			if newHeader, err := s.beaconClient.GetBlockHeaderById(reorg.NewHeadBlock.String()); err == nil {
+				ev.NewBlockSlot = int64(newHeader.Header.Message.Slot)
+				ev.NewBlockProposerIndex = int64(newHeader.Header.Message.ProposerIndex)
+			}
+			dbmodel.InsertNewReorg(ev)
+
 		case <-dutyTicker.C:
 			header, err := s.beaconClient.GetLatestBeaconHeader()
 			if err != nil {
