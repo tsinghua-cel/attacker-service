@@ -45,6 +45,30 @@
                 }
             }
         },
+        "/reorgs": {
+            "get": {
+                "description": "get reorgs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get reorgs",
+                "operationId": "get-reorgs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/types.ReorgEvent"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/reward/{epoch}": {
             "get": {
                 "description": "get reward by epoch",
@@ -199,6 +223,38 @@
                 },
                 "validator_index": {
                     "type": "string"
+                }
+            }
+        },
+        "types.ReorgEvent": {
+            "type": "object",
+            "properties": {
+                "depth": {
+                    "type": "integer"
+                },
+                "epoch": {
+                    "type": "integer"
+                },
+                "new_block_proposer_index": {
+                    "type": "integer"
+                },
+                "new_block_slot": {
+                    "type": "integer"
+                },
+                "new_head_state": {
+                    "type": "string"
+                },
+                "old_block_proposer_index": {
+                    "type": "integer"
+                },
+                "old_block_slot": {
+                    "type": "integer"
+                },
+                "old_head_state": {
+                    "type": "string"
+                },
+                "slot": {
+                    "type": "integer"
                 }
             }
         },
