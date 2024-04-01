@@ -49,6 +49,27 @@ definitions:
       validator_index:
         type: string
     type: object
+  types.ReorgEvent:
+    properties:
+      depth:
+        type: integer
+      epoch:
+        type: integer
+      new_block_proposer_index:
+        type: integer
+      new_block_slot:
+        type: integer
+      new_head_state:
+        type: string
+      old_block_proposer_index:
+        type: integer
+      old_block_slot:
+        type: integer
+      old_head_state:
+        type: string
+      slot:
+        type: integer
+    type: object
   types.SlotStrategy:
     properties:
       actions:
@@ -113,6 +134,22 @@ paths:
               $ref: '#/definitions/types.ProposerDuty'
             type: array
       summary: Get duties by epoch
+  /reorgs:
+    get:
+      consumes:
+      - application/json
+      description: get reorgs
+      operationId: get-reorgs
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/types.ReorgEvent'
+            type: array
+      summary: Get reorgs
   /reward/{epoch}:
     get:
       consumes:
