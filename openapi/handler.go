@@ -87,8 +87,12 @@ func (api apiHandler) UpdateStrategy(c *gin.Context) {
 // @Router /reorgs [get]
 func (api apiHandler) GetReorgs(c *gin.Context) {
 	reorgs := dbmodel.GetAllReorgList()
+	slots := make(map[int64]bool)
 	var res []types.ReorgEvent
 	for _, reorg := range reorgs {
+		if _, ok := slots[reorg.Slot]; ok {
+			continue
+		}
 		res = append(res, types.ReorgEvent{
 			Epoch:                 reorg.Epoch,
 			Slot:                  reorg.Slot,
