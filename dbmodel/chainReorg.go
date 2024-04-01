@@ -3,18 +3,19 @@ package dbmodel
 import (
 	"github.com/astaxie/beego/orm"
 	"github.com/tsinghua-cel/attacker-service/types"
-	"strconv"
 )
 
 type ChainReorg struct {
-	ID           int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                                                 //  任务类型id
-	Epoch        int64  `orm:"column(epoch)" db:"epoch" json:"epoch" form:"epoch"`                                     // epoch
-	Slot         int64  `orm:"column(slot)" db:"slot" json:"slot" form:"slot"`                                         // slot
-	Depth        int    `orm:"column(depth)" db:"depth" json:"depth" form:"depth"`                                     // depth
-	OldHeadBlock string `orm:"column(old_head_block)" db:"old_head_block" json:"old_head_block" form:"old_head_block"` // old_head_block
-	NewHeadBlock string `orm:"column(new_head_block)" db:"new_head_block" json:"new_head_block" form:"new_head_block"` // new_head_block
-	OldHeadState string `orm:"column(old_head_state)" db:"old_head_state" json:"old_head_state" form:"old_head_state"` // old_head_state
-	NewHeadState string `orm:"column(new_head_state)" db:"new_head_state" json:"new_head_state" form:"new_head_state"` // new_head_state
+	ID                    int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                                                                                         //  任务类型id
+	Epoch                 int64  `orm:"column(epoch)" db:"epoch" json:"epoch" form:"epoch"`                                                                             // epoch
+	Slot                  int64  `orm:"column(slot)" db:"slot" json:"slot" form:"slot"`                                                                                 // slot
+	Depth                 int    `orm:"column(depth)" db:"depth" json:"depth" form:"depth"`                                                                             // depth
+	OldBlockSlot          int64  `orm:"column(old_block_slot)" db:"old_block_slot" json:"old_block_slot" form:"old_block_slot"`                                         // old_block_slot
+	NewBlockSlot          int64  `orm:"column(new_block_slot)" db:"new_block_slot" json:"new_block_slot" form:"new_block_slot"`                                         // new_block_slot
+	OldBlockProposerIndex int64  `orm:"column(old_block_proposer_index)" db:"old_block_proposer_index" json:"old_block_proposer_index" form:"old_block_proposer_index"` // old_block_proposer_index
+	NewBlockProposerIndex int64  `orm:"column(new_block_proposer_index)" db:"new_block_proposer_index" json:"new_block_proposer_index" form:"new_block_proposer_index"` // new_block_proposer_index
+	OldHeadState          string `orm:"column(old_head_state)" db:"old_head_state" json:"old_head_state" form:"old_head_state"`                                         // old_head_state
+	NewHeadState          string `orm:"column(new_head_state)" db:"new_head_state" json:"new_head_state" form:"new_head_state"`                                         // new_head_state
 }
 
 func (ChainReorg) TableName() string {
@@ -52,18 +53,17 @@ func (repo *chainReorgRepositoryImpl) GetListByFilter(filters ...interface{}) []
 	return list
 }
 
-func InsertNewReorg(reorg types.ReorgEvent) {
-	epoch, _ := strconv.ParseInt(reorg.Epoch, 10, 64)
-	slot, _ := strconv.ParseInt(reorg.Slot, 10, 64)
-	depth, _ := strconv.Atoi(reorg.Depth)
+func InsertNewReorg(ev types.ReorgEvent) {
 	NewChainReorgRepository(orm.NewOrm()).Create(&ChainReorg{
-		Epoch:        epoch,
-		Slot:         slot,
-		Depth:        depth,
-		OldHeadBlock: reorg.OldHeadBlock,
-		NewHeadBlock: reorg.NewHeadBlock,
-		OldHeadState: reorg.OldHeadState,
-		NewHeadState: reorg.NewHeadState,
+		Epoch:                 int64(ev.Epoch),
+		Slot:                  int64(ev.Slot),
+		Depth:                 int(ev.Depth),
+		OldBlockSlot:          ev.OldBlockSlot,
+		NewBlockSlot:          ev.NewBlockSlot,
+		OldBlockProposerIndex: ev.OldBlockProposerIndex,
+		NewBlockProposerIndex: ev.NewBlockProposerIndex,
+		OldHeadState:          ev.OldHeadState,
+		NewHeadState:          ev.NewHeadState,
 	})
 }
 
