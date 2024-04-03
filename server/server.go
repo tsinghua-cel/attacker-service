@@ -7,6 +7,7 @@ import (
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/golang/groupcache/lru"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
@@ -35,10 +36,12 @@ type Server struct {
 
 	validatorSetInfo *types.ValidatorDataSet
 	openApi          *openapi.OpenAPI
+	cache            *lru.Cache
 }
 
 func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s := &Server{}
+	s.cache = lru.New(10000)
 	s.config = conf
 	s.rpcAPIs = apis.GetAPIs(s, plugin)
 	client, err := ethclient.Dial(conf.ExecuteRpc)
@@ -360,4 +363,19 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	s.strategy = strategy
 	s.internal = slotstrategy.ParseToInternalSlotStrategy(s, strategy.Slots)
 	return nil
+}
+
+func (s *Server) GetSlotStartTime(slot int) (int64, bool) {
+	key := fmt.Sprintf("slot_start_time_%d", slot)
+	if v, ok := s.cache.Get(key); ok {
+		return v.(int64), true
+	}
+	return 0, false
+}
+
+func (s *Server) SetSlotStartTime(slot int, time int64) {
+	key := fmt.Sprintf("slot_start_time_%d", slot)
+	if _, ok := s.cache.Get(key); !ok {
+		s.cache.Add(key, time)
+	}
 }

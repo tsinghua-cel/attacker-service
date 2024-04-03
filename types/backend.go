@@ -32,6 +32,8 @@ type CacheBackend interface {
 
 	GetValidatorRole(slot int, valIdx int) RoleType
 	GetValidatorRoleByPubkey(slot int, pubkey string) RoleType
+	GetSlotStartTime(slot int) (int64, bool)
+	SetSlotStartTime(slot int, time int64)
 }
 
 type StrategyBackend interface {
