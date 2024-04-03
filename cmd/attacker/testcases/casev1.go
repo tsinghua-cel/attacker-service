@@ -94,19 +94,6 @@ func (c *CaseV1) AttestAfterPropose(ctx plugins.PluginContext, slot uint64, pubk
 	}
 }
 
-func (c *CaseV1) BlockDelayForBroadCast(ctx plugins.PluginContext) plugins.PluginResponse {
-	bs := ctx.Backend.GetStrategy().Block
-	if !bs.DelayEnable {
-		return plugins.PluginResponse{
-			Cmd: types.CMD_NULL,
-		}
-	}
-	time.Sleep(time.Millisecond * time.Duration(bs.BroadCastDelay))
-	return plugins.PluginResponse{
-		Cmd: types.CMD_NULL,
-	}
-}
-
 func (c *CaseV1) BlockDelayForReceiveBlock(ctx plugins.PluginContext, slot uint64) plugins.PluginResponse {
 	backend := ctx.Backend
 	ret := plugins.PluginResponse{

@@ -12,23 +12,9 @@ type ValidatorStrategy struct {
 	AttackerEndSlot   int `json:"attacker_end_slot"`
 }
 
-type BlockStrategy struct {
-	DelayEnable    bool  `json:"delay_enable"`
-	BroadCastDelay int64 `json:"broad_cast_delay"` // unit millisecond
-	ModifyEnable   bool  `json:"modify_enable"`
-}
-
-type AttestStrategy struct {
-	DelayEnable    bool  `json:"delay_enable"`
-	BroadCastDelay int64 `json:"broad_cast_delay"` // unit millisecond
-	ModifyEnable   bool  `json:"modify_enable"`
-}
-
 type Strategy struct {
 	Slots      []SlotStrategy      `json:"slots"`
 	Validators []ValidatorStrategy `json:"validator"`
-	Block      BlockStrategy       `json:"block"`
-	Attest     AttestStrategy      `json:"attest"`
 }
 
 func (s *Strategy) GetValidatorRole(valIdx int, slot int64) RoleType {

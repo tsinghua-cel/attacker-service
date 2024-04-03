@@ -26,9 +26,7 @@ type AttackerPlugin interface {
 	AttestBeforePropose(ctx PluginContext, slot uint64, pubkey string, attest *ethpb.Attestation) PluginResponse
 	AttestAfterPropose(ctx PluginContext, slot uint64, pubkey string, attest *ethpb.Attestation) PluginResponse
 
-	BlockDelayForBroadCast(ctx PluginContext) PluginResponse
 	BlockDelayForReceiveBlock(ctx PluginContext, slot uint64) PluginResponse
-
 	BlockBeforeBroadCast(ctx PluginContext, slot uint64) PluginResponse
 	BlockAfterBroadCast(ctx PluginContext, slot uint64) PluginResponse
 	BlockBeforeSign(ctx PluginContext, slot uint64, pubkey string, block *ethpb.SignedBeaconBlockCapella) PluginResponse

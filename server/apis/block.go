@@ -1,7 +1,6 @@
 package apis
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/prysmaticlabs/prysm/v4/cache/lru"
 	log "github.com/sirupsen/logrus"
@@ -26,21 +25,6 @@ type BlockAPI struct {
 // NewBlockAPI creates a new tx pool service that gives information about the transaction pool.
 func NewBlockAPI(b Backend, plugin plugins.AttackerPlugin) *BlockAPI {
 	return &BlockAPI{b, plugin}
-}
-
-func (s *BlockAPI) GetStrategy(cliInfo string) []byte {
-	d, _ := json.Marshal(s.b.GetStrategy().Block)
-	return d
-}
-
-func (s *BlockAPI) UpdateStrategy(data []byte) error {
-	var blockStrategy types.BlockStrategy
-	if err := json.Unmarshal(data, &blockStrategy); err != nil {
-		return err
-	}
-	s.b.GetStrategy().Block = blockStrategy
-	log.Infof("block strategy updated to %v\n", blockStrategy)
-	return nil
 }
 
 func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot string) types.AttackerResponse {

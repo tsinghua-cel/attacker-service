@@ -1,7 +1,6 @@
 package apis
 
 import (
-	"encoding/json"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
@@ -32,21 +31,6 @@ func findMaxLevelStrategy(is []slotstrategy.InternalSlotStrategy, slot int64) (s
 		}
 	}
 	return last, last.Slot.Compare(slot) == 0
-}
-
-func (s *AttestAPI) GetStrategy() []byte {
-	d, _ := json.Marshal(s.b.GetStrategy().Attest)
-	return d
-}
-
-func (s *AttestAPI) UpdateStrategy(data []byte) error {
-	var attestStrategy types.AttestStrategy
-	if err := json.Unmarshal(data, &attestStrategy); err != nil {
-		return err
-	}
-	s.b.GetStrategy().Attest = attestStrategy
-	log.Infof("attest strategy updated to %v\n", attestStrategy)
-	return nil
 }
 
 func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
