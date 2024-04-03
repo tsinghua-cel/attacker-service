@@ -8,6 +8,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/types"
+	"time"
 )
 
 var (
@@ -71,6 +72,7 @@ func (s *BlockAPI) BroadCastDelay(slot uint64) types.AttackerResponse {
 }
 
 func (s *BlockAPI) DelayForReceiveBlock(slot uint64) types.AttackerResponse {
+	s.b.SetSlotStartTime(int(slot), time.Now().Unix())
 	return s.todoActionsWithSlot(slot, "BlockDelayForReceiveBlock")
 }
 
