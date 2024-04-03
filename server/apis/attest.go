@@ -1,7 +1,6 @@
 package apis
 
 import (
-	"encoding/json"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
