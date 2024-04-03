@@ -39,8 +39,6 @@ type CacheBackend interface {
 type StrategyBackend interface {
 	// update strategy
 	GetStrategy() *Strategy
-	UpdateBlockBroadDelay(milliSecond int64) error
-	UpdateAttestBroadDelay(milliSecond int64) error
 	UpdateStrategy(*Strategy) error
 }
 

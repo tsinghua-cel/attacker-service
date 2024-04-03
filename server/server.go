@@ -236,16 +236,6 @@ func (s *Server) GetStrategy() *types.Strategy {
 	return s.strategy
 }
 
-func (s *Server) UpdateBlockBroadDelay(milliSecond int64) error {
-	s.strategy.Block.BroadCastDelay = milliSecond
-	return nil
-}
-
-func (s *Server) UpdateAttestBroadDelay(milliSecond int64) error {
-	s.strategy.Attest.BroadCastDelay = milliSecond
-	return nil
-}
-
 func (s *Server) GetValidatorRoleByPubkey(slot int, pubkey string) types.RoleType {
 	if val := s.validatorSetInfo.GetValidatorByPubkey(pubkey); val != nil {
 		return s.GetValidatorRole(slot, int(val.Index))
