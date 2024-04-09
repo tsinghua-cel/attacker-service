@@ -325,8 +325,13 @@ func (s *Server) GetValidatorRole(slot int, valIdx int) types.RoleType {
 }
 
 func (s *Server) GetInternalSlotStrategy() []slotstrategy.InternalSlotStrategy {
+	var err error
 	if len(s.internal) == 0 {
-		s.internal = slotstrategy.ParseToInternalSlotStrategy(s, s.strategy.Slots)
+		s.internal, err = slotstrategy.ParseToInternalSlotStrategy(s, s.strategy.Slots)
+		if err != nil {
+			log.WithError(err).Error("parse strategy failed")
+			return nil
+		}
 	}
 	return s.internal
 }
@@ -350,8 +355,12 @@ func (s *Server) dumpDuties(epoch int64) error {
 }
 
 func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
+	parsed, err := slotstrategy.ParseToInternalSlotStrategy(s, strategy.Slots)
+	if err != nil {
+		return err
+	}
 	s.strategy = strategy
-	s.internal = slotstrategy.ParseToInternalSlotStrategy(s, strategy.Slots)
+	s.internal = parsed
 	return nil
 }
 
