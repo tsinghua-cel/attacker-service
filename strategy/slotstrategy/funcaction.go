@@ -1,6 +1,8 @@
 package slotstrategy
 
 import (
+	"fmt"
+	"github.com/pkg/errors"
 	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
@@ -62,7 +64,7 @@ func ParseActionName(action string) (string, []int) {
 	return strs[0], params
 }
 
-func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
+func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, error) {
 	name, params := ParseActionName(action)
 	switch name {
 	case "null", "return", "continue", "abort", "skip", "exit":
@@ -75,7 +77,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 				r.Result = params[0]
 			}
 			return r
-		}
+		}, nil
 	case "storeSignedAttest":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 			var attestation *ethpb.Attestation
@@ -90,7 +92,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 			}
 
 			return r
-		}
+		}, nil
 
 	case "delayWithSecond":
 		var seconds int
@@ -111,7 +113,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 			}).Info("delayWithSecond")
 			time.Sleep(time.Second * time.Duration(seconds))
 			return r
-		}
+		}, nil
 	case "delayToNextSlot":
 		seconds := backend.GetIntervalPerSlot()
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
@@ -131,7 +133,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 			}).Info("delayToNextSlot")
 			time.Sleep(time.Second * time.Duration(esti))
 			return r
-		}
+		}, nil
 	case "delayToAfterNextSlot":
 		seconds := backend.GetIntervalPerSlot()
 		afters := rand.Intn(10)
@@ -156,7 +158,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 			}).Info("delayToAfterNextSlot")
 			time.Sleep(time.Second * time.Duration(esti))
 			return r
-		}
+		}, nil
 	case "delayToNextNEpochStart":
 		n := 1
 		if len(params) > 0 {
@@ -183,7 +185,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 				r.Result = params[0]
 			}
 			return r
-		}
+		}, nil
 	case "delayToNextNEpochEnd":
 		n := 0
 		if len(params) > 0 {
@@ -210,7 +212,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 				r.Result = params[0]
 			}
 			return r
-		}
+		}, nil
 	case "delayToNextNEpochHalf":
 		n := 1
 		if len(params) > 0 {
@@ -237,7 +239,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 				r.Result = params[0]
 			}
 			return r
-		}
+		}, nil
 
 	case "delayToEpochEnd":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
@@ -263,7 +265,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 				r.Result = params[0]
 			}
 			return r
-		}
+		}, nil
 	case "delayHalfEpoch":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 			slotsPerEpoch := backend.GetSlotsPerEpoch()
@@ -281,7 +283,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 				r.Result = params[0]
 			}
 			return r
-		}
+		}, nil
 	case "rePackAttestation":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 			r := plugins.PluginResponse{
@@ -358,9 +360,9 @@ func GetFunctionAction(backend types.ServiceBackend, action string) ActionDo {
 
 			r.Result = block
 			return r
-		}
+		}, nil
 	default:
 		log.WithField("name", name).Error("unknown function action name")
-		return nil
+		return nil, errors.New(fmt.Sprintf("unknown function action name:%s", name))
 	}
 }

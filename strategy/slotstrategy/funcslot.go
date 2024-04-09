@@ -1,6 +1,8 @@
 package slotstrategy
 
 import (
+	"errors"
+	"fmt"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/types"
@@ -27,13 +29,13 @@ func (f FunctionSlot) Compare(slot int64) int {
 	return 0
 }
 
-func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
+func GetFunctionSlot(backend types.ServiceBackend, name string) (SlotCalc, error) {
 
 	switch name {
 	case "every":
 		return func(slot int64) int64 {
 			return slot
-		}
+		}, nil
 	case "attackerSlot":
 		return func(slot int64) int64 {
 			slotsPerEpoch := backend.SlotsPerEpoch()
@@ -54,7 +56,7 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 				}
 			}
 			return slot + 1
-		}
+		}, nil
 
 	case "lastSlotInCurrentEpoch":
 		slotsPerEpoch := backend.SlotsPerEpoch()
@@ -64,7 +66,7 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 		return func(slot int64) int64 {
 			epoch := tool.SlotToEpoch(slot)
 			return tool.EpochEnd(epoch)
-		}
+		}, nil
 	case "lastSlotInNextEpoch":
 		slotsPerEpoch := backend.SlotsPerEpoch()
 		tool := common.SlotTool{
@@ -73,7 +75,7 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 		return func(slot int64) int64 {
 			epoch := tool.SlotToEpoch(slot)
 			return tool.EpochEnd(epoch + 1)
-		}
+		}, nil
 
 	case "firstSlotInCurrentEpoch":
 		slotsPerEpoch := backend.SlotsPerEpoch()
@@ -83,7 +85,7 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 		return func(slot int64) int64 {
 			epoch := tool.SlotToEpoch(slot)
 			return tool.EpochStart(epoch)
-		}
+		}, nil
 	case "firstSlotInNextEpoch":
 		slotsPerEpoch := backend.SlotsPerEpoch()
 		tool := common.SlotTool{
@@ -92,7 +94,7 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 		return func(slot int64) int64 {
 			epoch := tool.SlotToEpoch(slot)
 			return tool.EpochStart(epoch + 1)
-		}
+		}, nil
 	case "lastAttackerSlotInCurrentEpoch":
 		return func(slot int64) int64 {
 			slotsPerEpoch := backend.SlotsPerEpoch()
@@ -114,7 +116,7 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 				}
 			}
 			return latestSlotWithAttacker
-		}
+		}, nil
 	case "lastAttackerSlotInNextEpoch":
 		return func(slot int64) int64 {
 			slotsPerEpoch := backend.SlotsPerEpoch()
@@ -136,9 +138,9 @@ func GetFunctionSlot(backend types.ServiceBackend, name string) SlotCalc {
 				}
 			}
 			return latestSlotWithAttacker
-		}
+		}, nil
 	default:
 		log.WithField("name", name).Error("unknown function slot name")
-		return nil
+		return nil, errors.New(fmt.Sprintf("unknown function slot name:%s", name))
 	}
 }
