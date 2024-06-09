@@ -39,6 +39,14 @@ type Server struct {
 	cache            *lru.Cache
 }
 
+func (n *Server) GetBlockBySlot(slot uint64) (interface{}, error) {
+	return n.beaconClient.GetDenebBlockBySlot(slot)
+}
+
+func (n *Server) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
+	return n.beaconClient.GetLatestBeaconHeader()
+}
+
 func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s := &Server{}
 	s.cache = lru.New(10000)

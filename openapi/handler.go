@@ -110,3 +110,39 @@ func (api apiHandler) GetReorgs(c *gin.Context) {
 	}
 	c.JSON(200, res)
 }
+
+// @Summary Get block by slot
+// @Description get block by slot
+// @ID get-block-by-slot
+// @Accept  json
+// @Produce  json
+// @Param slot path int true "Slot"
+// @Success 200 {object} types.BeaconBlock
+// @Router /block/{slot} [get]
+func (api apiHandler) GetBlockBySlot(c *gin.Context) {
+	param := c.Param("slot")
+	slot, _ := strconv.Atoi(param)
+	block, err := api.backend.GetBlockBySlot(uint64(slot))
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, block)
+}
+
+// @Summary Get epoch
+// @Description get epoch
+// @ID get-epoch
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} types.EpochInfo
+// @Router /epoch [get]
+func (api apiHandler) GetEpoch(c *gin.Context) {
+	header, err := api.backend.GetLatestBeaconHeader()
+	if err != nil {
+		c.JSON(500, err)
+	}
+	slot, _ := strconv.Atoi(header.Header.Message.Slot)
+	epoch := slot / api.backend.GetSlotsPerEpoch()
+	c.JSON(200, epoch)
+}

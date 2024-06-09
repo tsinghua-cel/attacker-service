@@ -21,6 +21,8 @@ type BeaconBackend interface {
 	GetValidatorByProposeSlot(slot uint64) (int, error)
 	GetProposeDuties(epoch int) ([]ProposerDuty, error)
 	GetSlotRoot(slot int64) (string, error)
+	GetBlockBySlot(slot uint64) (interface{}, error)
+	GetLatestBeaconHeader() (BeaconHeaderInfo, error)
 }
 
 type CacheBackend interface {

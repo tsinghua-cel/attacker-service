@@ -86,3 +86,14 @@ func TestGetAllAttestDuties(t *testing.T) {
 		fmt.Printf("get attest duty :%s\n", string(d))
 	}
 }
+
+func TestGetSignedBlockById(t *testing.T) {
+	endpoint := "13.41.176.56:14000" // grpc gateway endpoint
+	client := NewBeaconGwClient(endpoint)
+	data, err := client.GetDenebBlockBySlot(2)
+	if err != nil {
+		t.Fatalf("get block failed err:%s", err)
+	}
+	d, _ := json.MarshalIndent(data, "", "  ")
+	fmt.Printf("get block :%s\n", d)
+}

@@ -8,6 +8,8 @@ import (
 	eth2client "github.com/attestantio/go-eth2-client"
 	"github.com/attestantio/go-eth2-client/api"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
+	"github.com/attestantio/go-eth2-client/spec/capella"
+	"github.com/attestantio/go-eth2-client/spec/deneb"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
@@ -268,4 +270,36 @@ func (b *BeaconGwClient) GetBlockHeaderById(id string) (*apiv1.BeaconBlockHeader
 		return &apiv1.BeaconBlockHeader{}, err
 	}
 	return res.Data, nil
+}
+
+func (b *BeaconGwClient) GetDenebBlockBySlot(slot uint64) (*deneb.SignedBeaconBlock, error) {
+	service, err := NewClient(context.Background(), b.endpoint)
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.SignedBeaconBlockProvider).SignedBeaconBlock(context.Background(), &api.SignedBeaconBlockOpts{
+		Block: fmt.Sprintf("%d", slot),
+	})
+	if err != nil {
+		log.WithError(err).Error("get block failed")
+		return nil, err
+	}
+	return res.Data.Deneb, nil
+}
+
+func (b *BeaconGwClient) GetCapellaBlockBySlot(slot uint64) (*capella.SignedBeaconBlock, error) {
+	service, err := NewClient(context.Background(), b.endpoint)
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.SignedBeaconBlockProvider).SignedBeaconBlock(context.Background(), &api.SignedBeaconBlockOpts{
+		Block: fmt.Sprintf("%d", slot),
+	})
+	if err != nil {
+		log.WithError(err).Error("get block failed")
+		return nil, err
+	}
+	return res.Data.Capella, nil
 }
