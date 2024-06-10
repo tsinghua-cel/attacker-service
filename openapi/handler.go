@@ -146,3 +146,19 @@ func (api apiHandler) GetEpoch(c *gin.Context) {
 	epoch := slot / api.backend.GetSlotsPerEpoch()
 	c.JSON(200, epoch)
 }
+
+// @Summary Get slot
+// @Description get slot
+// @ID get-slot
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} types.SlotInfo
+// @Router /slot [get]
+func (api apiHandler) GetSlot(c *gin.Context) {
+	header, err := api.backend.GetLatestBeaconHeader()
+	if err != nil {
+		c.JSON(500, err)
+	}
+	slot, _ := strconv.Atoi(header.Header.Message.Slot)
+	c.JSON(200, slot)
+}

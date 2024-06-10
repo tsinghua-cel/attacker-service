@@ -49,6 +49,7 @@ func (s *OpenAPI) startHttp(port int) {
 		v1.GET("/reorgs", apiHandler{backend: s.backend}.GetReorgs)
 		v1.GET("/block/:slot", apiHandler{backend: s.backend}.GetBlockBySlot)
 		v1.GET("/epoch", apiHandler{backend: s.backend}.GetEpoch)
+		v1.GET("/slot", apiHandler{backend: s.backend}.GetSlot)
 	}
 	log.WithField("swagger", fmt.Sprintf("http://%s/swagger/index.html", docs.SwaggerInfo.Host)).Info("swagger docs url")
 
