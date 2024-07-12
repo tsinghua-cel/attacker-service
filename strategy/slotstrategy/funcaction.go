@@ -351,6 +351,16 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
 			}
+			tool := common.SlotTool{
+				SlotsPerEpoch: backend.SlotsPerEpoch(),
+			}
+			epoch := tool.SlotToEpoch(slot)
+			last := epoch - 1
+			if last < 0 {
+				last = 0
+			}
+			minSlot := tool.EpochStart(last)
+			maxSlot := tool.EpochEnd(epoch)
 			log.WithFields(log.Fields{
 				"slot":   slot,
 				"action": name,
@@ -363,12 +373,15 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 
 			attackerAttestations := make([]*ethpb.Attestation, 0)
 			pool := backend.GetAttestPool()
-			pool.Range(func(key, value interface{}) bool {
-				if attest, ok := value.(*ethpb.Attestation); ok {
-					attackerAttestations = append(attackerAttestations, attest)
+			for ns, atts := range pool {
+				if int64(ns) < minSlot || int64(ns) > maxSlot {
+					log.WithField("slot", ns).Debug("skip attestation at slot")
+					continue
 				}
-				return true
-			})
+				for _, att := range atts {
+					attackerAttestations = append(attackerAttestations, att)
+				}
+			}
 			backend.ResetAttestPool()
 
 			allAtt := append(block.Block.Body.Attestations, attackerAttestations...)

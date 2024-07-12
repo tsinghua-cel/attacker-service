@@ -36,7 +36,8 @@ type Server struct {
 	beaconClient *beaconapi.BeaconGwClient
 
 	validatorSetInfo *types.ValidatorDataSet
-	attestpool       *sync.Map
+	mux              sync.Mutex
+	attestpool       map[uint64]map[string]*ethpb.Attestation
 	openApi          *openapi.OpenAPI
 	cache            *lru.Cache
 }
@@ -63,7 +64,7 @@ func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
 	s.strategy = strategy.ParseStrategy(s, conf.Strategy)
 	s.validatorSetInfo = types.NewValidatorSet()
-	s.attestpool = new(sync.Map)
+	s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
 	s.openApi = openapi.NewOpenAPI(s, conf)
 	return s
 }
@@ -291,15 +292,32 @@ func (s *Server) AddSignedAttestation(slot uint64, pubkey string, attestation *e
 }
 
 func (s *Server) AddAttestToPool(slot uint64, pubkey string, attestation *ethpb.Attestation) {
-	s.attestpool.Store(fmt.Sprintf("%d_%s", slot, pubkey), attestation)
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if _, ok := s.attestpool[slot]; !ok {
+		s.attestpool[slot] = make(map[string]*ethpb.Attestation)
+	}
+	s.attestpool[slot][pubkey] = attestation
 }
 
-func (s *Server) GetAttestPool() *sync.Map {
-	return s.attestpool
+func (s *Server) GetAttestPool() map[uint64]map[string]*ethpb.Attestation {
+	// copy
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	data := make(map[uint64]map[string]*ethpb.Attestation)
+	for k, v := range s.attestpool {
+		data[k] = make(map[string]*ethpb.Attestation)
+		for k1, v1 := range v {
+			data[k][k1] = v1
+		}
+	}
+	return data
 }
 
 func (s *Server) ResetAttestPool() {
-	s.attestpool = new(sync.Map)
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
 }
 
 func (s *Server) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) {
