@@ -4,6 +4,7 @@ import (
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"math/big"
+	"sync"
 )
 
 type ExecuteBackend interface {
@@ -28,6 +29,9 @@ type BeaconBackend interface {
 type CacheBackend interface {
 	AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation)
 	AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock)
+	AddAttestToPool(slot uint64, pubkey string, attestation *ethpb.Attestation)
+	GetAttestPool() *sync.Map
+	ResetAttestPool()
 	GetAttestSet(slot uint64) *SlotAttestSet
 	GetBlockSet(slot uint64) *SlotBlockSet
 	GetValidatorDataSet() *ValidatorDataSet

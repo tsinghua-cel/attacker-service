@@ -78,6 +78,21 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			}
 			return r
 		}, nil
+	case "addAttestToPool":
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			var attestation *ethpb.Attestation
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			if len(params) > 0 {
+				attestation = params[0].(*ethpb.Attestation)
+				backend.AddAttestToPool(uint64(slot), pubkey, attestation)
+				r.Result = attestation
+			}
+
+			return r
+		}, nil
 	case "storeSignedAttest":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 			var attestation *ethpb.Attestation
@@ -282,6 +297,64 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			if len(params) > 0 {
 				r.Result = params[0]
 			}
+			return r
+		}, nil
+	case "packPooledAttest":
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			if len(params) == 0 {
+				return r
+			}
+			block := params[0].(*ethpb.SignedBeaconBlockDeneb)
+
+			attackerAttestations := make([]*ethpb.Attestation, 0)
+			pool := backend.GetAttestPool()
+			pool.Range(func(key, value interface{}) bool {
+				if attest, ok := value.(*ethpb.Attestation); ok {
+					attackerAttestations = append(attackerAttestations, attest)
+				}
+				return true
+			})
+			backend.ResetAttestPool()
+
+			allAtt := append(block.Block.Body.Attestations, attackerAttestations...)
+			{
+				// Remove duplicates from both aggregated/unaggregated attestations. This
+				// prevents inefficient aggregates being created.
+				atts, _ := types.ProposerAtts(allAtt).Dedup()
+				attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+				for _, att := range atts {
+					attDataRoot, err := att.Data.HashTreeRoot()
+					if err != nil {
+						continue
+					}
+					attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+				}
+
+				attsForInclusion := types.ProposerAtts(make([]*ethpb.Attestation, 0))
+				for _, ass := range attsByDataRoot {
+					as, err := attaggregation.Aggregate(ass)
+					if err != nil {
+						continue
+					}
+					attsForInclusion = append(attsForInclusion, as...)
+				}
+				deduped, _ := attsForInclusion.Dedup()
+				sorted, err := deduped.SortByProfitability()
+				if err != nil {
+					log.WithError(err).Error("sort attestation failed")
+				} else {
+					atts = sorted.LimitToMaxAttestations()
+				}
+				allAtt = atts
+			}
+
+			block.Block.Body.Attestations = allAtt
+
+			r.Result = block
 			return r
 		}, nil
 	case "rePackAttestation":

@@ -22,6 +22,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/types"
 	"math/big"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -35,6 +36,7 @@ type Server struct {
 	beaconClient *beaconapi.BeaconGwClient
 
 	validatorSetInfo *types.ValidatorDataSet
+	attestpool       *sync.Map
 	openApi          *openapi.OpenAPI
 	cache            *lru.Cache
 }
@@ -61,6 +63,7 @@ func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
 	s.strategy = strategy.ParseStrategy(s, conf.Strategy)
 	s.validatorSetInfo = types.NewValidatorSet()
+	s.attestpool = new(sync.Map)
 	s.openApi = openapi.NewOpenAPI(s, conf)
 	return s
 }
@@ -285,6 +288,18 @@ func (s *Server) GetIntervalPerSlot() int {
 
 func (s *Server) AddSignedAttestation(slot uint64, pubkey string, attestation *ethpb.Attestation) {
 	s.validatorSetInfo.AddSignedAttestation(slot, pubkey, attestation)
+}
+
+func (s *Server) AddAttestToPool(slot uint64, pubkey string, attestation *ethpb.Attestation) {
+	s.attestpool.Store(fmt.Sprintf("%d_%s", slot, pubkey), attestation)
+}
+
+func (s *Server) GetAttestPool() *sync.Map {
+	return s.attestpool
+}
+
+func (s *Server) ResetAttestPool() {
+	s.attestpool = new(sync.Map)
 }
 
 func (s *Server) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) {
