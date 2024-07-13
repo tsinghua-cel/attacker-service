@@ -34,6 +34,7 @@ func findMaxLevelStrategy(is []slotstrategy.InternalSlotStrategy, slot int64) (s
 }
 
 func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
+	s.b.SetCurSlot(int64(slot))
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
@@ -54,6 +55,7 @@ func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 }
 
 func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
+	s.b.SetCurSlot(int64(slot))
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
@@ -73,6 +75,7 @@ func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 }
 
 func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 string) types.AttackerResponse {
+	s.b.SetCurSlot(int64(slot))
 	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: attestDataBase64,
@@ -106,6 +109,7 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 }
 
 func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
+	s.b.SetCurSlot(int64(slot))
 	signedAttestData, err := common.Base64ToSignedAttestation(signedAttestDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
@@ -171,6 +175,7 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 }
 
 func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
+	s.b.SetCurSlot(int64(slot))
 	signedAttest, err := common.Base64ToSignedAttestation(signedAttestDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
