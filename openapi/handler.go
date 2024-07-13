@@ -162,3 +162,15 @@ func (api apiHandler) GetSlot(c *gin.Context) {
 	slot, _ := strconv.Atoi(header.Header.Message.Slot)
 	c.JSON(200, slot)
 }
+
+// @Summary Get current slot
+// @Description get current slot
+// @ID get-cur-slot
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} types.SlotInfo
+// @Router /curslot [get]
+func (api apiHandler) GetCurSlot(c *gin.Context) {
+	slot := api.backend.GetCurSlot()
+	c.JSON(200, slot)
+}

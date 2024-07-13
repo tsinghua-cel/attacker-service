@@ -138,6 +138,7 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 }
 
 func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
+	s.b.SetCurSlot(int64(slot))
 	signedAttest, err := common.Base64ToSignedAttestation(signedAttestDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
