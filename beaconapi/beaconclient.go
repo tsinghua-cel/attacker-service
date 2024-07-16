@@ -13,6 +13,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
+	"time"
 )
 
 const (
@@ -302,4 +303,22 @@ func (b *BeaconGwClient) GetCapellaBlockBySlot(slot uint64) (*capella.SignedBeac
 		return nil, err
 	}
 	return res.Data.Capella, nil
+}
+
+func (b *BeaconGwClient) GetGenesis() (*apiv1.Genesis, error) {
+	service, err := NewClient(context.Background(), b.endpoint)
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.GenesisProvider).Genesis(context.Background(), &api.GenesisOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+	})
+	if err != nil {
+		log.WithError(err).Error("get genesis failed")
+		return nil, err
+	}
+	return res.Data, nil
 }

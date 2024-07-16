@@ -11,6 +11,7 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
+	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/openapi"
@@ -228,6 +229,21 @@ func (s *Server) Start() {
 	// start collect duties info.
 	go s.monitorDuties()
 	go s.monitorEvent()
+	go s.initTools()
+}
+
+func (s *Server) initTools() {
+	init := false
+	for !init {
+		genesis, err := s.beaconClient.GetGenesis()
+		if err != nil {
+			log.WithError(err).Error("get genesis failed")
+			time.Sleep(time.Second)
+			continue
+		} else {
+			common.InitSlotTime(6, genesis.GenesisTime.Unix())
+		}
+	}
 }
 
 func (s *Server) stopRPC() {

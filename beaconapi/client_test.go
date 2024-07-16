@@ -22,3 +22,12 @@ func TestBeaconGwClient_MonitorReorgEvent(t *testing.T) {
 	fmt.Println("header slot and proposer is ", header.Header.Message.Slot, header.Header.Message.ProposerIndex)
 
 }
+
+func TestBeaconGwClient_GetGenesis(t *testing.T) {
+	beaconGwClient := NewBeaconGwClient("13.41.176.56:14000")
+	genesis, err := beaconGwClient.GetGenesis()
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Println("genesis time is ", genesis.GenesisTime)
+}
