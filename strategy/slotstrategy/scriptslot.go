@@ -8,6 +8,7 @@ type Runable interface {
 }
 
 type ScriptSlot struct {
+	value string
 	toRun Runable
 }
 
@@ -23,6 +24,10 @@ func (s ScriptSlot) Compare(slot int64) int {
 		return -1
 	}
 	return 0
+}
+
+func (s ScriptSlot) StrValue() string {
+	return s.value
 }
 
 func parseStringToRunable(script string) Runable {

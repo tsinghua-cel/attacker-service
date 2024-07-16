@@ -13,6 +13,7 @@ type SlotIns interface {
 	// if slotIns == slot, return 0
 	// if slotIns > slot, return 1
 	Compare(slot int64) int
+	StrValue() string
 }
 
 type ActionIns interface {
@@ -36,7 +37,7 @@ func ParseToInternalSlotStrategy(backend types.ServiceBackend, strategy []types.
 			if err != nil {
 				return nil, err
 			}
-			is[i].Slot = FunctionSlot{calcFunc: calc}
+			is[i].Slot = FunctionSlot{calcFunc: calc, value: s.Slot}
 		}
 		is[i].Actions = make(map[string]ActionIns)
 		for point, action := range s.Actions {

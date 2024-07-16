@@ -423,8 +423,35 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	if err != nil {
 		return err
 	}
-	s.strategy = strategy
-	s.internal = parsed
+	for _, v := range parsed {
+		replaced := false
+		for _, vi := range s.internal {
+			if vi.Slot.StrValue() == v.Slot.StrValue() && vi.Level == v.Level {
+				// replace actions
+				vi.Actions = v.Actions
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			s.internal = append(s.internal, v)
+		}
+	}
+
+	for _, v := range strategy.Slots {
+		replaced := false
+		for _, vi := range s.strategy.Slots {
+			if v.Slot == vi.Slot && vi.Level == v.Level {
+				vi.Actions = v.Actions
+				replaced = true
+				break
+			}
+		}
+		if !replaced {
+			s.strategy.Slots = append(s.strategy.Slots, v)
+		}
+	}
+	s.strategy.Validators = strategy.Validators
 	return nil
 }
 

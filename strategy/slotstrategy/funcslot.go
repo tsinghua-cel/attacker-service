@@ -12,6 +12,7 @@ import (
 type SlotCalc func(slot int64) int64
 
 type FunctionSlot struct {
+	value    string
 	calcFunc SlotCalc
 }
 
@@ -27,6 +28,10 @@ func (f FunctionSlot) Compare(slot int64) int {
 		return -1
 	}
 	return 0
+}
+
+func (f FunctionSlot) StrValue() string {
+	return f.value
 }
 
 func GetFunctionSlot(backend types.ServiceBackend, name string) (SlotCalc, error) {
