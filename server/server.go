@@ -68,6 +68,7 @@ func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s.validatorSetInfo = types.NewValidatorSet()
 	s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
 	s.openApi = openapi.NewOpenAPI(s, conf)
+	s.hotdata = make(map[string]interface{})
 	return s
 }
 
