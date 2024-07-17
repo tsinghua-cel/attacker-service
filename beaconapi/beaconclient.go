@@ -24,6 +24,7 @@ const (
 type BeaconGwClient struct {
 	endpoint string
 	config   map[string]string
+	service  eth2client.Service
 }
 
 func NewBeaconGwClient(endpoint string) *BeaconGwClient {
@@ -235,8 +236,20 @@ func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
 	return rootInfo.Root, nil
 }
 
+func (b *BeaconGwClient) getService() (eth2client.Service, error) {
+	if b.service == nil {
+		service, err := NewClient(context.Background(), b.endpoint)
+		if err != nil {
+			log.WithError(err).Error("create eth2client failed")
+			return nil, err
+		}
+		b.service = service
+	}
+	return b.service, nil
+}
+
 func (b *BeaconGwClient) MonitorReorgEvent() chan *apiv1.ChainReorgEvent {
-	service, err := NewClient(context.Background(), b.endpoint)
+	service, err := b.getService()
 	if err != nil {
 		log.WithError(err).Error("create eth2client failed")
 		return nil
@@ -257,7 +270,7 @@ func (b *BeaconGwClient) MonitorReorgEvent() chan *apiv1.ChainReorgEvent {
 }
 
 func (b *BeaconGwClient) GetBlockHeaderById(id string) (*apiv1.BeaconBlockHeader, error) {
-	service, err := NewClient(context.Background(), b.endpoint)
+	service, err := b.getService()
 	if err != nil {
 		log.WithError(err).Error("create eth2client failed")
 		return nil, err
@@ -274,7 +287,7 @@ func (b *BeaconGwClient) GetBlockHeaderById(id string) (*apiv1.BeaconBlockHeader
 }
 
 func (b *BeaconGwClient) GetDenebBlockBySlot(slot uint64) (*deneb.SignedBeaconBlock, error) {
-	service, err := NewClient(context.Background(), b.endpoint)
+	service, err := b.getService()
 	if err != nil {
 		log.WithError(err).Error("create eth2client failed")
 		return nil, err
@@ -290,11 +303,12 @@ func (b *BeaconGwClient) GetDenebBlockBySlot(slot uint64) (*deneb.SignedBeaconBl
 }
 
 func (b *BeaconGwClient) GetCapellaBlockBySlot(slot uint64) (*capella.SignedBeaconBlock, error) {
-	service, err := NewClient(context.Background(), b.endpoint)
+	service, err := b.getService()
 	if err != nil {
 		log.WithError(err).Error("create eth2client failed")
 		return nil, err
 	}
+
 	res, err := service.(eth2client.SignedBeaconBlockProvider).SignedBeaconBlock(context.Background(), &api.SignedBeaconBlockOpts{
 		Block: fmt.Sprintf("%d", slot),
 	})
@@ -306,7 +320,7 @@ func (b *BeaconGwClient) GetCapellaBlockBySlot(slot uint64) (*capella.SignedBeac
 }
 
 func (b *BeaconGwClient) GetGenesis() (*apiv1.Genesis, error) {
-	service, err := NewClient(context.Background(), b.endpoint)
+	service, err := b.getService()
 	if err != nil {
 		log.WithError(err).Error("create eth2client failed")
 		return nil, err

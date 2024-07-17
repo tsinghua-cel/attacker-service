@@ -41,6 +41,7 @@ type Server struct {
 	attestpool       map[uint64]map[string]*ethpb.Attestation
 	openApi          *openapi.OpenAPI
 	cache            *lru.Cache
+	hotdata          map[string]interface{}
 }
 
 func (n *Server) GetBlockBySlot(slot uint64) (interface{}, error) {
@@ -472,7 +473,9 @@ func (s *Server) SetSlotStartTime(slot int, time int64) {
 
 func (s *Server) GetCurSlot() int64 {
 	key := fmt.Sprintf("cur_slot")
-	if v, ok := s.cache.Get(key); ok {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if v, ok := s.hotdata[key]; ok {
 		return v.(int64)
 	}
 	return 0
@@ -480,11 +483,13 @@ func (s *Server) GetCurSlot() int64 {
 
 func (s *Server) SetCurSlot(slot int64) {
 	key := fmt.Sprintf("cur_slot")
-	if v, ok := s.cache.Get(key); !ok {
-		s.cache.Add(key, slot)
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if v, ok := s.hotdata[key]; !ok {
+		s.hotdata[key] = slot
 	} else {
-		if v.(int64) != slot {
-			s.cache.Add(key, slot)
+		if v.(int64) < slot {
+			s.hotdata[key] = slot
 		}
 	}
 }
