@@ -119,8 +119,16 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 	}
 
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		log.WithFields(log.Fields{
+			"slot":  slot,
+			"point": name,
+		}).Info("find strategy")
 		action := t.Actions[name]
 		if action != nil {
+			log.WithFields(log.Fields{
+				"slot":  slot,
+				"point": name,
+			}).Info("find action")
 			//block, err := common.GetDenebBlockFromGenericSignedBlock()
 			//if err != nil {
 			//	log.WithError(err).WithField("slot", slot).Error("get block instance failed")
@@ -136,6 +144,11 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 			} else {
 				result.Result = newBlockBase64
 			}
+		} else {
+			log.WithFields(log.Fields{
+				"slot":  slot,
+				"point": name,
+			}).Info("no action found")
 		}
 	}
 	log.WithFields(log.Fields{
