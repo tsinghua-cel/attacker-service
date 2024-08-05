@@ -26,8 +26,12 @@ func findMaxLevelStrategy(is []slotstrategy.InternalSlotStrategy, slot int64) (s
 	}
 	last := is[0]
 	for _, s := range is {
-		if s.Slot.Compare(slot) == 0 && s.Level > last.Level {
-			last = s
+		if s.Slot.Compare(slot) == 0 {
+			if last.Slot.Compare(slot) != 0 {
+				last = s
+			} else if s.Level > last.Level {
+				last = s
+			}
 		}
 	}
 	log.WithFields(log.Fields{
