@@ -19,6 +19,7 @@ type ActionDo func(backend types.ServiceBackend, slot int64, pubkey string, para
 
 type FunctionAction struct {
 	doFunc ActionDo
+	name   string
 }
 
 func (f FunctionAction) RunAction(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
@@ -28,6 +29,10 @@ func (f FunctionAction) RunAction(backend types.ServiceBackend, slot int64, pubk
 	return plugins.PluginResponse{
 		Cmd: types.CMD_NULL,
 	}
+}
+
+func (f FunctionAction) Name() string {
+	return f.name
 }
 
 func getCmdFromName(name string) types.AttackerCommand {

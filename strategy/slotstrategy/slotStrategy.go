@@ -18,6 +18,7 @@ type SlotIns interface {
 
 type ActionIns interface {
 	RunAction(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse
+	Name() string
 }
 
 type InternalSlotStrategy struct {
@@ -48,7 +49,7 @@ func ParseToInternalSlotStrategy(backend types.ServiceBackend, strategy []types.
 			if err != nil {
 				return nil, err
 			}
-			is[i].Actions[point] = FunctionAction{doFunc: actionDo}
+			is[i].Actions[point] = FunctionAction{doFunc: actionDo, name: action}
 		}
 	}
 	//log.Printf("parsed internal slot strategy is %v\n", is)

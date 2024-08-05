@@ -439,6 +439,23 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 			s.internal = append(s.internal, v)
 		}
 	}
+	// dump internal strategy
+	for _, v := range s.internal {
+		log.WithFields(log.Fields{
+			"slot":  v.Slot.StrValue(),
+			"level": v.Level,
+		}).Info("internal strategy slot")
+		for k, action := range v.Actions {
+			log.WithFields(log.Fields{
+				"slot":       v.Slot.StrValue(),
+				"level":      v.Level,
+				"checkpoint": k,
+				"action":     action.Name(),
+			}).Info("internal strategy action")
+
+		}
+
+	}
 
 	for _, v := range strategy.Slots {
 		replaced := false
