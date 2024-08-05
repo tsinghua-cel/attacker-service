@@ -46,15 +46,14 @@ func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 	}
 
 	if st, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
-		log.WithFields(log.Fields{
-			"slot":    slot,
-			"actions": st.Actions,
-		}).Info("find strategy for slot")
 
 		action := st.Actions["AttestBeforeBroadCast"]
 		if action != nil {
+			log.WithField("slot", slot).Info("find action AttestBeforeBroadCast")
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
+		} else {
+			log.WithField("slot", slot).Info("not find action AttestBeforeBroadCast")
 		}
 	}
 	log.WithFields(log.Fields{

@@ -92,8 +92,17 @@ func (s *BlockAPI) todoActionsWithSlot(slot uint64, name string) types.AttackerR
 	if t, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
 		action := t.Actions[name]
 		if action != nil {
+			log.WithFields(log.Fields{
+				"slot":       slot,
+				"checkpoint": name,
+			}).Info("find slot and action")
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
+		} else {
+			log.WithFields(log.Fields{
+				"slot":       slot,
+				"checkpoint": name,
+			}).Info("find slot but not find action")
 		}
 	}
 	log.WithFields(log.Fields{
