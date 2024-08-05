@@ -30,6 +30,12 @@ func findMaxLevelStrategy(is []slotstrategy.InternalSlotStrategy, slot int64) (s
 			last = s
 		}
 	}
+	log.WithFields(log.Fields{
+		"slot":      slot,
+		"last.slot": last.Slot.StrValue(),
+		"actions":   last.Actions,
+		"find":      last.Slot.Compare(slot) == 0,
+	}).Info("find max level strategy for slot")
 	return last, last.Slot.Compare(slot) == 0
 }
 
@@ -40,6 +46,11 @@ func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 	}
 
 	if st, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
+		log.WithFields(log.Fields{
+			"slot":    slot,
+			"actions": st.Actions,
+		}).Info("find strategy for slot")
+
 		action := st.Actions["AttestBeforeBroadCast"]
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), "")
