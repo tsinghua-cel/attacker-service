@@ -453,7 +453,8 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 			s.strategy.Slots = append(s.strategy.Slots, v)
 		}
 	}
-	s.strategy.Validators = strategy.Validators
+	// luxq add : not update validators, you can set it at initial time.
+	//s.strategy.Validators = strategy.Validators
 	return nil
 }
 
