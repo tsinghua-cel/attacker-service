@@ -32,7 +32,7 @@ type Server struct {
 	rpcAPIs      []rpc.API   // List of APIs currently provided by the node
 	http         *httpServer //
 	strategy     *types.Strategy
-	internal     []slotstrategy.InternalSlotStrategy
+	internal     []*slotstrategy.InternalSlotStrategy
 	execClient   *ethclient.Client
 	beaconClient *beaconapi.BeaconGwClient
 
@@ -390,7 +390,7 @@ func (s *Server) GetValidatorRole(slot int, valIdx int) types.RoleType {
 	return s.strategy.GetValidatorRole(valIdx, int64(slot))
 }
 
-func (s *Server) GetInternalSlotStrategy() []slotstrategy.InternalSlotStrategy {
+func (s *Server) GetInternalSlotStrategy() []*slotstrategy.InternalSlotStrategy {
 	var err error
 	if len(s.internal) == 0 {
 		s.internal, err = slotstrategy.ParseToInternalSlotStrategy(s, s.strategy.Slots)

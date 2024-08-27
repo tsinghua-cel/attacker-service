@@ -20,9 +20,9 @@ func NewAttestAPI(b Backend, plugin plugins.AttackerPlugin) *AttestAPI {
 	return &AttestAPI{b, plugin}
 }
 
-func findMaxLevelStrategy(is []slotstrategy.InternalSlotStrategy, slot int64) (slotstrategy.InternalSlotStrategy, bool) {
+func findMaxLevelStrategy(is []*slotstrategy.InternalSlotStrategy, slot int64) (*slotstrategy.InternalSlotStrategy, bool) {
 	if len(is) == 0 {
-		return slotstrategy.InternalSlotStrategy{}, false
+		return nil, false
 	}
 	last := is[0]
 	for _, s := range is {

@@ -13,7 +13,7 @@ import (
 // both full and light clients) with access to necessary functions.
 type Backend interface {
 	SomeNeedBackend() bool
-	GetInternalSlotStrategy() []slotstrategy.InternalSlotStrategy
+	GetInternalSlotStrategy() []*slotstrategy.InternalSlotStrategy
 	types.ExecuteBackend
 	types.BeaconBackend
 	types.StrategyBackend
