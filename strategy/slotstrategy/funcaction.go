@@ -415,6 +415,28 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			r.Result = block
 			return r
 		}, nil
+	case "modifyParentRoot":
+		if len(params) < 1 {
+			// error.
+			log.WithField("action", action).Error("need at least 1 param.")
+			return nil, errors.New("invalid param")
+		}
+		newSlot := params[0]
+
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+			// get parent root by newSlot.
+			newRoot, err := backend.GetSlotRoot(int64(newSlot))
+			if err != nil {
+				log.WithError(err).Error("get slot root failed")
+				return r
+			}
+
+			r.Result = newRoot
+			return r
+		}, nil
 	case "rePackAttestation":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 			r := plugins.PluginResponse{

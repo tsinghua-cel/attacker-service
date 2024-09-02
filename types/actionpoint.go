@@ -18,6 +18,7 @@ const (
 	BlockAfterSign            ActionPoint = "BlockAfterSign"
 	BlockBeforePropose        ActionPoint = "BlockBeforePropose"
 	BlockAfterPropose         ActionPoint = "BlockAfterPropose"
+	BlockGetNewParentRoot     ActionPoint = "BlockGetNewParentRoot"
 )
 
 func init() {
@@ -34,6 +35,7 @@ func init() {
 	allActionPoints[BlockAfterSign] = true
 	allActionPoints[BlockBeforePropose] = true
 	allActionPoints[BlockAfterPropose] = true
+	allActionPoints[BlockGetNewParentRoot] = true
 }
 func CheckActionPointExist(action string) bool {
 	_, ok := allActionPoints[ActionPoint(action)]
