@@ -423,6 +423,7 @@ func (s *Server) dumpDuties(epoch int64) error {
 func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	parsed, err := slotstrategy.ParseToInternalSlotStrategy(s, strategy.Slots)
 	if err != nil {
+		log.WithError(err).Error("parse strategy failed")
 		return err
 	}
 	for _, v := range parsed {
