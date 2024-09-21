@@ -76,9 +76,11 @@ func (api apiHandler) UpdateStrategy(c *gin.Context) {
 	}
 	err = api.backend.UpdateStrategy(&req)
 	if err != nil {
+		log.WithError(err).Error("UpdateStrategy backend.UpdateStrategy error")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	} else {
+		c.JSON(http.StatusOK, "ok")
 	}
-	c.JSON(http.StatusOK, "ok")
 }
 
 // @Summary Get reorgs

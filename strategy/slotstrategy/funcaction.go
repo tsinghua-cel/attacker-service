@@ -427,6 +427,10 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
 			}
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": name,
+			}).Info("do action ")
 			// get parent root by newSlot.
 			newRoot, err := backend.GetSlotRoot(int64(newSlot))
 			if err != nil {
