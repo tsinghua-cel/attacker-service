@@ -429,7 +429,7 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	for _, v := range parsed {
 		replaced := false
 		for _, vi := range s.internal {
-			if vi.Slot.StrValue() == v.Slot.StrValue() && vi.Level == v.Level {
+			if vi.Slot.StrValue() == v.Slot.StrValue() && vi.Level <= v.Level {
 				// replace actions
 				vi.Actions = v.Actions
 				replaced = true
@@ -461,7 +461,7 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	for _, v := range strategy.Slots {
 		replaced := false
 		for _, vi := range s.strategy.Slots {
-			if v.Slot == vi.Slot && vi.Level == v.Level {
+			if v.Slot == vi.Slot && vi.Level <= v.Level {
 				vi.Actions = v.Actions
 				replaced = true
 				break
