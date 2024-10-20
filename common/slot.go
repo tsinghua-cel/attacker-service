@@ -4,6 +4,8 @@ type SlotTool struct {
 	SlotsPerEpoch int
 }
 
+var DefaultSlotTool = SlotTool{SlotsPerEpoch: 32}
+
 func (s SlotTool) SlotToEpoch(slot int64) int64 {
 	return slot / int64(s.SlotsPerEpoch)
 }

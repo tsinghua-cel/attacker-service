@@ -14,6 +14,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
+	"github.com/tsinghua-cel/attacker-service/feedback"
 	"github.com/tsinghua-cel/attacker-service/openapi"
 	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
@@ -42,6 +43,9 @@ type Server struct {
 	openApi          *openapi.OpenAPI
 	cache            *lru.Cache
 	hotdata          map[string]interface{}
+
+	feedBacker      *feedback.Feedback
+	historyStrategy sync.Map
 }
 
 func (n *Server) GetBlockBySlot(slot uint64) (interface{}, error) {
@@ -69,6 +73,7 @@ func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
 	s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
 	s.openApi = openapi.NewOpenAPI(s, conf)
 	s.hotdata = make(map[string]interface{})
+	s.feedBacker = feedback.NewFeedback(s)
 	return s
 }
 
@@ -232,6 +237,7 @@ func (s *Server) Start() {
 	go s.monitorDuties()
 	go s.monitorEvent()
 	go s.initTools()
+	s.feedBacker.Start()
 }
 
 func (s *Server) initTools() {
@@ -420,7 +426,18 @@ func (s *Server) dumpDuties(epoch int64) error {
 	return nil
 }
 
+// UpdateStrategy only update strategy slots and actions, not update validators.
 func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
+	check := false
+	if strategy.Uid != "" {
+		check = true
+	}
+	if check {
+		if _, exist := s.historyStrategy.Load(strategy.Uid); exist {
+			return errors.New("strategy already exist")
+		}
+	}
+
 	parsed, err := slotstrategy.ParseToInternalSlotStrategy(s, strategy.Slots)
 	if err != nil {
 		log.WithError(err).Error("parse strategy failed")
@@ -455,7 +472,6 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 			}).Info("internal strategy action")
 
 		}
-
 	}
 
 	for _, v := range strategy.Slots {
@@ -471,8 +487,18 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 			s.strategy.Slots = append(s.strategy.Slots, v)
 		}
 	}
-	// luxq add : not update validators, you can set it at initial time.
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	// not update validators, you can set it at initial time.
 	//s.strategy.Validators = strategy.Validators
+
+	if check {
+		s.historyStrategy.Store(strategy.Uid, HistoryStrategy{
+			Strategy: strategy,
+		})
+		s.feedBacker.AddNewStrategy(strategy.Uid, parsed)
+	}
+
 	return nil
 }
 
@@ -511,5 +537,67 @@ func (s *Server) SetCurSlot(slot int64) {
 		if v.(int64) < slot {
 			s.hotdata[key] = slot
 		}
+	}
+}
+
+func (s *Server) HandleEndStrategy() {
+	ch := make(chan feedback.StrategyEndEvent, 10)
+	sub := s.feedBacker.SubscribeStrategyEndEvent(ch)
+	if sub == nil {
+		log.Error("subscribe strategy end event failed")
+		return
+	}
+	defer sub.Unsubscribe()
+	for {
+		select {
+		case ev := <-ch:
+			uid := ev.Uid
+			if v, exist := s.historyStrategy.Load(uid); exist {
+				historyInfo := v.(HistoryStrategy)
+				// get reorg event count.
+				reorgCount := 0
+				impactValidatorCount := 0
+				normalRewardAmount := int64(1000)
+				for i := ev.MinEpoch; i <= ev.MaxEpoch; i++ {
+					reorgList := dbmodel.GetReorgListByEpoch(i)
+					reorgCount += len(reorgList)
+					rewardList := dbmodel.GetRewardListByEpoch(i)
+					for _, reward := range rewardList {
+						// todo: check reward is little than normal.
+						// if reward.ValidatorIndex is not hacker, and reward.TargetAmount is little than normal.
+						if s.GetValidatorRole(0, int(reward.ValidatorIndex)) == types.NormalRole &&
+							reward.TargetAmount < normalRewardAmount {
+
+							impactValidatorCount += 1
+						}
+
+					}
+				}
+				historyInfo.FeedBackInfo = &types.FeedBackInfo{
+					ReorgCount:           reorgCount,
+					ImpactValidatorCount: impactValidatorCount,
+				}
+				s.historyStrategy.Store(uid, historyInfo)
+				log.WithFields(log.Fields{
+					"uid":  uid,
+					"info": historyInfo,
+				}).Info("update strategy feedback info")
+
+			}
+		}
+
+	}
+}
+
+func (s *Server) GetFeedBack(uid string) (types.FeedBackInfo, error) {
+	if v, exist := s.historyStrategy.Load(uid); exist {
+		historyInfo := v.(HistoryStrategy)
+		if historyInfo.FeedBackInfo != nil {
+			return *historyInfo.FeedBackInfo, nil
+		} else {
+			return types.FeedBackInfo{}, errors.New("strategy feedback not generated")
+		}
+	} else {
+		return types.FeedBackInfo{}, errors.New("strategy not found")
 	}
 }

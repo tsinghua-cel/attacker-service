@@ -176,3 +176,25 @@ func (api apiHandler) GetCurSlot(c *gin.Context) {
 	slot := api.backend.GetCurSlot()
 	c.JSON(200, slot)
 }
+
+// @Summary Get feedback
+// @Description get feedback
+// @ID get-feedback
+// @Accept  json
+// @Produce  json
+// @Param uid path string true "Uid"
+// @Success 200 {object} types.FeedBack
+// @Router /feedback/{uid} [get]
+func (api apiHandler) GetFeedBack(c *gin.Context) {
+	uid := c.Param("uid")
+	if len(uid) == 0 {
+		c.JSON(400, gin.H{"error": "uid is required"})
+		return
+	}
+	feedback, err := api.backend.GetFeedBack(uid)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(200, feedback)
+}

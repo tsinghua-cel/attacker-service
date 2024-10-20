@@ -70,3 +70,7 @@ func InsertNewReorg(ev types.ReorgEvent) {
 func GetAllReorgList() []*ChainReorg {
 	return NewChainReorgRepository(orm.NewOrm()).GetListByFilter()
 }
+
+func GetReorgListByEpoch(epoch int64) []*ChainReorg {
+	return NewChainReorgRepository(orm.NewOrm()).GetListByFilter("epoch", epoch)
+}
