@@ -46,6 +46,7 @@ func (s *OpenAPI) startHttp(port int) {
 		v1.GET("/reward/:epoch", apiHandler{backend: s.backend}.GetRewardByEpoch)
 		v1.GET("/strategy", apiHandler{backend: s.backend}.GetStrategy)
 		v1.POST("/update-strategy", apiHandler{backend: s.backend}.UpdateStrategy)
+		v1.GET("/strategy-feedback/:uid", apiHandler{backend: s.backend}.GetFeedBack)
 		v1.GET("/reorgs", apiHandler{backend: s.backend}.GetReorgs)
 		v1.GET("/block/:slot", apiHandler{backend: s.backend}.GetBlockBySlot)
 		v1.GET("/epoch", apiHandler{backend: s.backend}.GetEpoch)

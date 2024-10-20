@@ -184,7 +184,7 @@ func (api apiHandler) GetCurSlot(c *gin.Context) {
 // @Produce  json
 // @Param uid path string true "Uid"
 // @Success 200 {object} types.FeedBack
-// @Router /feedback/{uid} [get]
+// @Router /strategy-feedback/{uid} [get]
 func (api apiHandler) GetFeedBack(c *gin.Context) {
 	uid := c.Param("uid")
 	if len(uid) == 0 {
