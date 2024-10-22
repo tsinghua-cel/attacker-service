@@ -363,7 +363,14 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			if len(params) == 0 {
 				return r
 			}
-			block := params[0].(*ethpb.SignedBeaconBlockDeneb)
+			block, ok := params[0].(*ethpb.SignedBeaconBlockDeneb)
+			if !ok {
+				log.WithFields(log.Fields{
+					"param": fmt.Sprintf("%T", params[0]),
+				}).Error("invalid param type, require *ethpb.SignedBeaconBlockDeneb")
+				r.Result = params[0]
+				return r
+			}
 
 			attackerAttestations := make([]*ethpb.Attestation, 0)
 			pool := backend.GetAttestPool()
