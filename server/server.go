@@ -551,6 +551,9 @@ func (s *Server) HandleEndStrategy() {
 	for {
 		select {
 		case ev := <-ch:
+			log.WithFields(log.Fields{
+				"uid": ev.Uid,
+			}).Info("got strategy end event")
 			uid := ev.Uid
 			if v, exist := s.historyStrategy.Load(uid); exist {
 				historyInfo := v.(HistoryStrategy)

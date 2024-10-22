@@ -57,11 +57,7 @@ func (f *Feedback) loop() {
 		select {
 		case <-tc.C:
 			f.mux.Lock()
-			unrechedTime := int64(0)
 			for timestamp, pair := range f.historyStrategy {
-				if unrechedTime != 0 && timestamp > unrechedTime {
-					continue
-				}
 				curSlot := f.backend.GetCurSlot()
 				if pair.IsEnd(curSlot) {
 					ev := StrategyEndEvent{
@@ -72,15 +68,12 @@ func (f *Feedback) loop() {
 					// send event
 					f.feed.Send(ev)
 					delete(f.historyStrategy, timestamp)
-					if timestamp < unrechedTime {
-						unrechedTime = timestamp
-					}
 					log.WithFields(log.Fields{
 						"uid":      ev.Uid,
 						"minEpoch": ev.MinEpoch,
 						"maxEpoch": ev.MaxEpoch,
 						"curSlot":  curSlot,
-					}).Info("strategy end")
+					}).Info("post strategy end event")
 				}
 			}
 			f.mux.Unlock()
