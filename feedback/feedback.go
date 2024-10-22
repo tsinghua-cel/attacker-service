@@ -2,6 +2,7 @@ package feedback
 
 import (
 	"github.com/ethereum/go-ethereum/event"
+	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"sync"
@@ -63,16 +64,23 @@ func (f *Feedback) loop() {
 				}
 				curSlot := f.backend.GetCurSlot()
 				if pair.IsEnd(curSlot) {
-					// send event
-					f.feed.Send(StrategyEndEvent{
+					ev := StrategyEndEvent{
 						Uid:      pair.uid,
 						MinEpoch: pair.minEpoch.Load().(int64),
 						MaxEpoch: pair.maxEpoch.Load().(int64),
-					})
+					}
+					// send event
+					f.feed.Send(ev)
 					delete(f.historyStrategy, timestamp)
 					if timestamp < unrechedTime {
 						unrechedTime = timestamp
 					}
+					log.WithFields(log.Fields{
+						"uid":      ev.Uid,
+						"minEpoch": ev.MinEpoch,
+						"maxEpoch": ev.MaxEpoch,
+						"curSlot":  curSlot,
+					}).Info("strategy end")
 				}
 			}
 			f.mux.Unlock()

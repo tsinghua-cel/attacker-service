@@ -54,11 +54,13 @@ func GetRewardsToMysql(gwEndpoint string) error {
 			valIdx, _ := strconv.ParseInt(totalReward.ValidatorIndex, 10, 64)
 			headAmount, _ := strconv.ParseInt(totalReward.Head, 10, 64)
 			targetAmount, _ := strconv.ParseInt(totalReward.Target, 10, 64)
+			sourceAmount, _ := strconv.ParseInt(totalReward.Source, 10, 64)
 			record := &dbmodel.BlockReward{
 				Epoch:          epochNumber,
 				ValidatorIndex: int(valIdx),
 				HeadAmount:     headAmount,
 				TargetAmount:   targetAmount,
+				SourceAmount:   sourceAmount,
 			}
 			if err = repo.Create(record); err != nil {
 				o.Rollback()

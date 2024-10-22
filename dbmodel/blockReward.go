@@ -11,6 +11,7 @@ type BlockReward struct {
 	ValidatorIndex int   `orm:"column(validator_index)" db:"validator_index" json:"validator_index" form:"validator_index"` // 验证者索引
 	HeadAmount     int64 `orm:"column(head_amount)" db:"head_amount" json:"head_amount" form:"head_amount"`                 // Head 奖励数量
 	TargetAmount   int64 `orm:"column(target_amount)" db:"target_amount" json:"target_amount" form:"target_amount"`         // Target 奖励数量
+	SourceAmount   int64 `orm:"column(source_amount)" db:"source_amount" json:"source_amount" form:"source_amount"`         // Source 奖励数量
 	//Head	Target	Source	Inclusion Delay	Inactivity
 }
 

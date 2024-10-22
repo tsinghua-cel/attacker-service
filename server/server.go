@@ -557,7 +557,8 @@ func (s *Server) HandleEndStrategy() {
 				// get reorg event count.
 				reorgCount := 0
 				impactValidatorCount := 0
-				normalRewardAmount := int64(1000)
+				normalTargetAmount := int64(290680)
+				normalHeadAmount := int64(156520)
 				for i := ev.MinEpoch; i <= ev.MaxEpoch; i++ {
 					reorgList := dbmodel.GetReorgListByEpoch(i)
 					reorgCount += len(reorgList)
@@ -566,11 +567,14 @@ func (s *Server) HandleEndStrategy() {
 						// todo: check reward is little than normal.
 						// if reward.ValidatorIndex is not hacker, and reward.TargetAmount is little than normal.
 						if s.GetValidatorRole(0, int(reward.ValidatorIndex)) == types.NormalRole &&
-							reward.TargetAmount < normalRewardAmount {
-
+							(reward.TargetAmount < normalTargetAmount || reward.HeadAmount < normalHeadAmount) {
 							impactValidatorCount += 1
+							log.WithFields(log.Fields{
+								"epoch":     i,
+								"info":      reward,
+								"validator": reward.ValidatorIndex,
+							}).Info("find impact validator")
 						}
-
 					}
 				}
 				historyInfo.FeedBackInfo = &types.FeedBackInfo{
@@ -582,7 +586,6 @@ func (s *Server) HandleEndStrategy() {
 					"uid":  uid,
 					"info": historyInfo,
 				}).Info("update strategy feedback info")
-
 			}
 		}
 
