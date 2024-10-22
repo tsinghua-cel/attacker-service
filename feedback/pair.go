@@ -1,13 +1,17 @@
 package feedback
 
 import (
+	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
+	"github.com/tsinghua-cel/attacker-service/types"
 	"sync/atomic"
 )
 
 type pairStrategy struct {
 	uid      string
+	origin   *types.Strategy
 	parsed   []*slotstrategy.InternalSlotStrategy
 	maxEpoch atomic.Value
 	minEpoch atomic.Value
@@ -21,6 +25,7 @@ var (
 func (p *pairStrategy) calcEpochs() (int64, int64) {
 	var minEpoch, maxEpoch int64 = FOREVER, -1
 	for _, s := range p.parsed {
+		log.WithField("type", fmt.Sprintf("%T", s.Slot)).Debug("check slot type")
 		switch s.Slot.(type) {
 		case *slotstrategy.NumberSlot:
 			slot := s.Slot.(*slotstrategy.NumberSlot)
@@ -31,11 +36,18 @@ func (p *pairStrategy) calcEpochs() (int64, int64) {
 			if epoch < minEpoch {
 				minEpoch = epoch
 			}
+			log.WithFields(log.Fields{
+				"minEpoch": minEpoch,
+				"maxEpoch": maxEpoch,
+				"epoch":    epoch,
+			}).Debug("calc epoch")
 		case *slotstrategy.FunctionSlot:
 			maxEpoch = FOREVER
+			log.WithField("maxEpoch", "forever").Debug("set maxEpoch forever")
 
 		default:
 			// unknown slot type.
+			log.Debug("unknown slot type")
 		}
 	}
 	if minEpoch > maxEpoch {

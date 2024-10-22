@@ -25,11 +25,11 @@ func NewFeedback(backend types.CacheBackend) *Feedback {
 	}
 }
 
-func (f *Feedback) AddNewStrategy(uid string, parsed []*slotstrategy.InternalSlotStrategy) {
+func (f *Feedback) AddNewStrategy(uid string, origin *types.Strategy, parsed []*slotstrategy.InternalSlotStrategy) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 
-	f.historyStrategy[time.Now().UnixMilli()] = &pairStrategy{uid: uid, parsed: parsed}
+	f.historyStrategy[time.Now().UnixMilli()] = &pairStrategy{uid: uid, origin: origin, parsed: parsed}
 }
 
 func (f *Feedback) Start() {
@@ -59,7 +59,12 @@ func (f *Feedback) loop() {
 			f.mux.Lock()
 			for timestamp, pair := range f.historyStrategy {
 				curSlot := f.backend.GetCurSlot()
-				if pair.IsEnd(curSlot) {
+				ended := pair.IsEnd(curSlot)
+				log.WithFields(log.Fields{
+					"strategy": pair.origin,
+					"curSlot":  curSlot,
+				}).Info("check strategy end")
+				if ended {
 					ev := StrategyEndEvent{
 						Uid:      pair.uid,
 						MinEpoch: pair.minEpoch.Load().(int64),

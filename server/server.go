@@ -432,6 +432,7 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	if strategy.Uid != "" {
 		check = true
 	}
+
 	if check {
 		if _, exist := s.historyStrategy.Load(strategy.Uid); exist {
 			return errors.New("strategy already exist")
@@ -491,12 +492,16 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	defer s.mux.Unlock()
 	// not update validators, you can set it at initial time.
 	//s.strategy.Validators = strategy.Validators
+	log.WithFields(log.Fields{
+		"strategy": s.strategy,
+		"check":    check,
+	}).Info("goto check strategy")
 
 	if check {
 		s.historyStrategy.Store(strategy.Uid, HistoryStrategy{
 			Strategy: strategy,
 		})
-		s.feedBacker.AddNewStrategy(strategy.Uid, parsed)
+		s.feedBacker.AddNewStrategy(strategy.Uid, strategy, parsed)
 	}
 
 	return nil
