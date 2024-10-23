@@ -27,9 +27,9 @@ func (p *pairStrategy) calcEpochs() (int64, int64) {
 	for _, s := range p.parsed {
 		log.WithField("type", fmt.Sprintf("%T", s.Slot)).Debug("check slot type")
 		switch s.Slot.(type) {
-		case *slotstrategy.NumberSlot:
-			slot := s.Slot.(*slotstrategy.NumberSlot)
-			epoch := common.DefaultSlotTool.SlotToEpoch(int64(*slot))
+		case slotstrategy.NumberSlot:
+			slot := s.Slot.(slotstrategy.NumberSlot)
+			epoch := common.DefaultSlotTool.SlotToEpoch(int64(slot))
 			if epoch > maxEpoch {
 				maxEpoch = epoch
 			}
@@ -41,7 +41,7 @@ func (p *pairStrategy) calcEpochs() (int64, int64) {
 				"maxEpoch": maxEpoch,
 				"epoch":    epoch,
 			}).Debug("calc epoch")
-		case *slotstrategy.FunctionSlot:
+		case slotstrategy.FunctionSlot:
 			maxEpoch = FOREVER
 			log.WithField("maxEpoch", "forever").Debug("set maxEpoch forever")
 
