@@ -237,6 +237,7 @@ func (s *Server) Start() {
 	go s.monitorDuties()
 	go s.monitorEvent()
 	go s.initTools()
+	go s.HandleEndStrategy()
 	s.feedBacker.Start()
 }
 
@@ -574,7 +575,7 @@ func (s *Server) HandleEndStrategy() {
 					for _, reward := range rewardList {
 						// todo: check reward is little than normal.
 						// if reward.ValidatorIndex is not hacker, and reward.TargetAmount is little than normal.
-						if s.GetValidatorRole(0, int(reward.ValidatorIndex)) == types.NormalRole &&
+						if s.GetValidatorRole(1, int(reward.ValidatorIndex)) == types.NormalRole &&
 							(reward.TargetAmount < normalTargetAmount || reward.HeadAmount < normalHeadAmount) {
 							impactValidatorCount += 1
 							log.WithFields(log.Fields{
