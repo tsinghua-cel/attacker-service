@@ -110,8 +110,10 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 			result.Cmd = r.Cmd
 			newAttestation, ok := r.Result.(*ethpb.AttestationData)
 			if ok {
-				newData, _ := common.AttestationDataToBase64(newAttestation)
-				result.Result = newData
+				if newData, err := common.AttestationDataToBase64(newAttestation); err == nil {
+					result.Result = newData
+				}
+
 			}
 		}
 	}
@@ -143,8 +145,10 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 			result.Cmd = r.Cmd
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
-				newData, _ := common.SignedAttestationToBase64(newAttestation)
-				result.Result = newData
+				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
+					result.Result = newData
+				}
+
 			}
 		}
 	}
@@ -176,8 +180,10 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 			result.Cmd = r.Cmd
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
-				newData, _ := common.SignedAttestationToBase64(newAttestation)
-				result.Result = newData
+				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
+					result.Result = newData
+				}
+
 			}
 		}
 	}
@@ -209,8 +215,10 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 			result.Cmd = r.Cmd
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
-				newData, _ := common.SignedAttestationToBase64(newAttestation)
-				result.Result = newData
+				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
+					result.Result = newData
+				}
+
 			}
 		}
 	}

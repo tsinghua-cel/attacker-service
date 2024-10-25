@@ -38,7 +38,9 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 			r := action.RunAction(s.b, int64(slot), pubkey, parentRoot)
 			result.Cmd = r.Cmd
 			if r.Result != nil {
-				result.Result = r.Result.(string)
+				if v, ok := r.Result.(string); ok {
+					result.Result = v
+				}
 			}
 		}
 	}
