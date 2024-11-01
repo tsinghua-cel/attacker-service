@@ -82,3 +82,16 @@ func GetMaxEpoch() int64 {
 	}
 	return max
 }
+
+func GetImpactValidatorCount(maxHackValIdx int, normalTargetAmount int64, epoch int64) int {
+	// impact normal validator count
+	var countNormal int
+	sql := fmt.Sprintf("select count(1) from %s where epoch = ? and target_amount < ? and validator_index > ?", new(BlockReward).TableName())
+	orm.NewOrm().Raw(sql, epoch, normalTargetAmount, maxHackValIdx).QueryRow(&countNormal)
+
+	var countHacked int
+	sql = fmt.Sprintf("select count(1) from %s where epoch = ? and target_amount >= ? and validator_index <= ?", new(BlockReward).TableName())
+	orm.NewOrm().Raw(sql, epoch, normalTargetAmount, maxHackValIdx).QueryRow(&countHacked)
+	return countNormal + countHacked
+
+}
