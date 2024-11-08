@@ -8,8 +8,6 @@ import (
 type StrategyResult struct {
 	ID                   int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                                                                                 //  任务类型id
 	UUID                 string `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`                                                                         //  策略的唯一id
-	MinEpoch             int64  `orm:"column(min_epoch)" db:"min_epoch" json:"min_epoch" form:"min_epoch"`                                                     //  最小epoch
-	MaxEpoch             int64  `orm:"column(max_epoch)" db:"max_epoch" json:"max_epoch" form:"max_epoch"`                                                     //  最大epoch
 	ReorgCount           int    `orm:"column(rerog_count)" db:"rerog_count" json:"rerog_count" form:"rerog_count"`                                             // 重组次数
 	ImpactValidatorCount int    `orm:"column(impact_validator_count)" db:"impact_validator_count" json:"impact_validator_count" form:"impact_validator_count"` // 影响验证者数量
 }
@@ -56,11 +54,9 @@ func (repo *strategyResultRepositoryImpl) GetListByFilter(filters ...interface{}
 	return list
 }
 
-func InsertNewStrategyResult(st *types.Strategy, minEpoch, maxEpoch int64, reorgCount, impactValidatorCount int) {
+func InsertNewStrategyResult(st *types.Strategy, reorgCount, impactValidatorCount int) {
 	sr := &StrategyResult{
 		UUID:                 st.Uid,
-		MinEpoch:             minEpoch,
-		MaxEpoch:             maxEpoch,
 		ReorgCount:           reorgCount,
 		ImpactValidatorCount: impactValidatorCount,
 	}

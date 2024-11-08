@@ -7,9 +7,14 @@ import (
 )
 
 type Strategy struct {
-	ID      int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                     //  任务类型id
-	UUID    string `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`             //  策略的唯一id
-	Content string `orm:"column(content)" db:"content" json:"content" form:"content"` //  策略内容
+	ID                   int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                                                                                 //  任务类型id
+	UUID                 string `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`                                                                         //  策略的唯一id
+	Content              string `orm:"column(content)" db:"content" json:"content" form:"content"`                                                             //  策略内容
+	MinEpoch             int64  `orm:"column(min_epoch)" db:"min_epoch" json:"min_epoch" form:"min_epoch"`                                                     //  最小epoch
+	MaxEpoch             int64  `orm:"column(max_epoch)" db:"max_epoch" json:"max_epoch" form:"max_epoch"`                                                     //  最大epoch
+	IsEnd                bool   `orm:"column(is_end)" db:"is_end" json:"is_end" form:"is_end"`                                                                 // 是否结束
+	ReorgCount           int    `orm:"column(rerog_count)" db:"rerog_count" json:"rerog_count" form:"rerog_count"`                                             // 重组次数
+	ImpactValidatorCount int    `orm:"column(impact_validator_count)" db:"impact_validator_count" json:"impact_validator_count" form:"impact_validator_count"` // 影响验证者数量
 }
 
 func (Strategy) TableName() string {
@@ -18,6 +23,7 @@ func (Strategy) TableName() string {
 
 type StrategyRepository interface {
 	Create(st *Strategy) error
+	Update(st *Strategy) error
 	GetByUUID(uuid string) *Strategy
 	GetListByFilter(filters ...interface{}) []*Strategy
 }
@@ -33,6 +39,17 @@ func NewStrategyRepository(o orm.Ormer) StrategyRepository {
 func (repo *strategyRepositoryImpl) Create(reward *Strategy) error {
 	_, err := repo.o.Insert(reward)
 	return err
+}
+
+func (repo *strategyRepositoryImpl) Update(st *Strategy) error {
+	_, err := repo.o.Update(st)
+	return err
+}
+
+func (repo *strategyRepositoryImpl) HasByUUID(uuid string) bool {
+	filters := make([]interface{}, 0)
+	filters = append(filters, "uuid", uuid)
+	return len(repo.GetListByFilter(filters...)) > 0
 }
 
 func (repo *strategyRepositoryImpl) GetByUUID(uuid string) *Strategy {
@@ -57,12 +74,19 @@ func (repo *strategyRepositoryImpl) GetListByFilter(filters ...interface{}) []*S
 func InsertNewStrategy(st *types.Strategy) {
 	d, _ := json.Marshal(st)
 	data := &Strategy{
-		UUID:    st.Uid,
-		Content: string(d),
+		UUID:                 st.Uid,
+		Content:              string(d),
+		IsEnd:                false,
+		ReorgCount:           0,
+		ImpactValidatorCount: 0,
 	}
 	NewStrategyRepository(orm.NewOrm()).Create(data)
 }
 
 func GetStrategyByUUID(uuid string) *Strategy {
 	return NewStrategyRepository(orm.NewOrm()).GetByUUID(uuid)
+}
+
+func StrategyUpdate(st *Strategy) {
+	NewStrategyRepository(orm.NewOrm()).Update(st)
 }

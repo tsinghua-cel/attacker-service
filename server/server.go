@@ -45,7 +45,8 @@ type Server struct {
 	hotdata          map[string]interface{}
 
 	feedBacker      *feedback.Feedback
-	historyStrategy sync.Map
+	historyStrategy *lru.Cache
+	maxMaliciousIdx int
 }
 
 func (n *Server) GetBlockBySlot(slot uint64) (interface{}, error) {
@@ -56,9 +57,11 @@ func (n *Server) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
 	return n.beaconClient.GetLatestBeaconHeader()
 }
 
-func NewServer(conf *config.Config, plugin plugins.AttackerPlugin) *Server {
+func NewServer(conf *config.Config, plugin plugins.AttackerPlugin, maxMaliciousIdx int) *Server {
 	s := &Server{}
+	s.maxMaliciousIdx = maxMaliciousIdx
 	s.cache = lru.New(10000)
+	s.historyStrategy = lru.New(10000)
 	s.config = conf
 	s.rpcAPIs = apis.GetAPIs(s, plugin)
 	client, err := ethclient.Dial(conf.ExecuteRpc)
@@ -435,7 +438,7 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	}
 
 	if check {
-		if _, exist := s.historyStrategy.Load(strategy.Uid); exist {
+		if st := dbmodel.GetStrategyByUUID(strategy.Uid); st != nil {
 			return errors.New("strategy already exist")
 		}
 	}
@@ -498,8 +501,10 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 		"check":    check,
 	}).Info("goto check strategy")
 
+	dbmodel.InsertNewStrategy(strategy)
+
 	if check {
-		s.historyStrategy.Store(strategy.Uid, HistoryStrategy{
+		s.historyStrategy.Add(strategy.Uid, HistoryStrategy{
 			Strategy: strategy,
 		})
 		s.feedBacker.AddNewStrategy(strategy.Uid, strategy, parsed)
@@ -561,36 +566,37 @@ func (s *Server) HandleEndStrategy() {
 				"uid": ev.Uid,
 			}).Info("got strategy end event")
 			uid := ev.Uid
-			if v, exist := s.historyStrategy.Load(uid); exist {
+			if v, exist := s.historyStrategy.Get(uid); exist {
+				storeStrategy := dbmodel.GetStrategyByUUID(uid)
 				historyInfo := v.(HistoryStrategy)
 				// get reorg event count.
-				reorgCount := 0
-				impactValidatorCount := 0
+				totalReorgCount := 0
+				totalImpactCount := 0
 				normalTargetAmount := int64(290680)
-				normalHeadAmount := int64(156520)
+				//normalHeadAmount := int64(156520)
 				for i := ev.MinEpoch; i <= ev.MaxEpoch; i++ {
-					reorgList := dbmodel.GetReorgListByEpoch(i)
-					reorgCount += len(reorgList)
-					rewardList := dbmodel.GetRewardListByEpoch(i)
-					for _, reward := range rewardList {
-						// todo: check reward is little than normal.
-						// if reward.ValidatorIndex is not hacker, and reward.TargetAmount is little than normal.
-						if s.GetValidatorRole(1, int(reward.ValidatorIndex)) == types.NormalRole &&
-							(reward.TargetAmount < normalTargetAmount || reward.HeadAmount < normalHeadAmount) {
-							impactValidatorCount += 1
-							log.WithFields(log.Fields{
-								"epoch":     i,
-								"info":      reward,
-								"validator": reward.ValidatorIndex,
-							}).Info("find impact validator")
-						}
-					}
+					reorgCount := dbmodel.GetReorgCountByEpoch(i)
+					impactCount := dbmodel.GetImpactValidatorCount(s.maxMaliciousIdx, normalTargetAmount, i)
+					log.WithFields(log.Fields{
+						"epoch":  i,
+						"reorg":  reorgCount,
+						"impact": impactCount,
+					}).Info("strategy feedback")
+					totalReorgCount += reorgCount
+					totalImpactCount += impactCount
 				}
 				historyInfo.FeedBackInfo = &types.FeedBackInfo{
-					ReorgCount:           reorgCount,
-					ImpactValidatorCount: impactValidatorCount,
+					ReorgCount:           totalReorgCount,
+					ImpactValidatorCount: totalImpactCount,
 				}
-				s.historyStrategy.Store(uid, historyInfo)
+				storeStrategy.MinEpoch = ev.MinEpoch
+				storeStrategy.MaxEpoch = ev.MaxEpoch
+				storeStrategy.ReorgCount = totalReorgCount
+				storeStrategy.ImpactValidatorCount = totalImpactCount
+				storeStrategy.IsEnd = true
+				dbmodel.StrategyUpdate(storeStrategy)
+
+				s.historyStrategy.Add(uid, historyInfo)
 				log.WithFields(log.Fields{
 					"uid":  uid,
 					"info": historyInfo,
@@ -602,14 +608,23 @@ func (s *Server) HandleEndStrategy() {
 }
 
 func (s *Server) GetFeedBack(uid string) (types.FeedBackInfo, error) {
-	if v, exist := s.historyStrategy.Load(uid); exist {
+	v, exist := s.historyStrategy.Get(uid)
+	if exist {
 		historyInfo := v.(HistoryStrategy)
 		if historyInfo.FeedBackInfo != nil {
 			return *historyInfo.FeedBackInfo, nil
 		} else {
 			return types.FeedBackInfo{}, errors.New("strategy feedback not generated")
 		}
-	} else {
-		return types.FeedBackInfo{}, errors.New("strategy not found")
 	}
+	if st := dbmodel.GetStrategyByUUID(uid); st != nil && st.IsEnd {
+		return types.FeedBackInfo{
+			st.ReorgCount,
+			st.ImpactValidatorCount,
+		}, nil
+
+	} else {
+		return types.FeedBackInfo{}, errors.New("strategy not found or not finished")
+	}
+
 }

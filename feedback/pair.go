@@ -21,8 +21,8 @@ var (
 	FOREVER = int64(1<<63 - 100)
 )
 
-// calcEpochs calculate the min and max epoch of the strategy.
-func (p *pairStrategy) calcEpochs() (int64, int64) {
+// CalcEpochs calculate the min and max epoch of the strategy.
+func (p *pairStrategy) CalcEpochs() (int64, int64) {
 	var minEpoch, maxEpoch int64 = FOREVER, -1
 	for _, s := range p.parsed {
 		log.WithField("type", fmt.Sprintf("%T", s.Slot)).Debug("check slot type")
@@ -63,7 +63,7 @@ func (p *pairStrategy) IsEnd(slot int64) bool {
 		maxEpoch = v.(int64)
 	} else {
 		// calc max epoch
-		mi, ma := p.calcEpochs()
+		mi, ma := p.CalcEpochs()
 		p.maxEpoch.Store(ma)
 		p.minEpoch.Store(mi)
 		maxEpoch = ma
