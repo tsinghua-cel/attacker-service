@@ -38,13 +38,13 @@ func GetRewardsToMysql(gwEndpoint string) error {
 		log.WithError(err).Error("GetRewardsToMysql orm begin failed")
 		return err
 	}
-	repo := dbmodel.NewBlockRewardRepository(o)
+	repo := dbmodel.NewAttestRewardRepository(o)
 	log.WithFields(log.Fields{
 		"epochNumber": epochNumber,
 		"latestEpoch": latestEpoch,
 	}).Debug("GetRewardsToMysql")
 
-	for epochNumber <= (latestEpoch - 2) {
+	for epochNumber <= (latestEpoch - 3) {
 		totalRewards, err := client.GetAllValReward(int(epochNumber))
 		if err != nil {
 			return err
@@ -55,7 +55,7 @@ func GetRewardsToMysql(gwEndpoint string) error {
 			headAmount, _ := strconv.ParseInt(totalReward.Head, 10, 64)
 			targetAmount, _ := strconv.ParseInt(totalReward.Target, 10, 64)
 			sourceAmount, _ := strconv.ParseInt(totalReward.Source, 10, 64)
-			record := &dbmodel.BlockReward{
+			record := &dbmodel.AttestReward{
 				Epoch:          epochNumber,
 				ValidatorIndex: int(valIdx),
 				HeadAmount:     headAmount,

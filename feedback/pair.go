@@ -29,7 +29,7 @@ func (p *pairStrategy) CalcEpochs() (int64, int64) {
 		switch s.Slot.(type) {
 		case slotstrategy.NumberSlot:
 			slot := s.Slot.(slotstrategy.NumberSlot)
-			epoch := common.DefaultSlotTool.SlotToEpoch(int64(slot))
+			epoch := common.SlotToEpoch(int64(slot))
 			if epoch > maxEpoch {
 				maxEpoch = epoch
 			}
@@ -58,7 +58,7 @@ func (p *pairStrategy) CalcEpochs() (int64, int64) {
 
 func (p *pairStrategy) IsEnd(slot int64) bool {
 	var maxEpoch int64
-	epoch := common.DefaultSlotTool.SlotToEpoch(slot)
+	epoch := common.SlotToEpoch(slot)
 	if v := p.maxEpoch.Load(); v != nil {
 		maxEpoch = v.(int64)
 	} else {

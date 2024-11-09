@@ -50,7 +50,7 @@ func (api apiHandler) GetStrategy(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param epoch path int true "Epoch"
-// @Success 200 {array} dbmodel.BlockReward
+// @Success 200 {array} dbmodel.AttestReward
 // @Router /reward/{epoch} [get]
 func (api apiHandler) GetRewardByEpoch(c *gin.Context) {
 	param := c.Param("epoch")

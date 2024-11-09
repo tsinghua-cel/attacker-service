@@ -207,7 +207,6 @@ func (c *CaseV1) BlockBeforeSign(ctx plugins.PluginContext, slot uint64, pubkey 
 		Cmd:    types.CMD_NULL,
 		Result: block,
 	}
-	slotTool := common.SlotTool{backend.SlotsPerEpoch()}
 	// 1. 只有每个epoch最后一个出块的恶意节点出块，其他节点不出快
 	valIdx, err := backend.GetValidatorByProposeSlot(slot)
 	if err != nil {
@@ -227,7 +226,7 @@ func (c *CaseV1) BlockBeforeSign(ctx plugins.PluginContext, slot uint64, pubkey 
 	if role != types.AttackerRole {
 		return ret
 	}
-	epoch := slotTool.SlotToEpoch(int64(slot))
+	epoch := common.SlotToEpoch(int64(slot))
 
 	duties, err := backend.GetProposeDuties(int(epoch))
 	if err != nil {
@@ -254,8 +253,8 @@ func (c *CaseV1) BlockBeforeSign(ctx plugins.PluginContext, slot uint64, pubkey 
 	}
 
 	// 3.出的块的一个字段attestation要包含其他恶意节点的attestation。
-	startEpoch := slotTool.EpochStart(epoch)
-	endEpoch := slotTool.EpochEnd(epoch)
+	startEpoch := common.EpochStart(epoch)
+	endEpoch := common.EpochEnd(epoch)
 	attackerAttestations := make([]*ethpb.Attestation, 0)
 	validatorSet := backend.GetValidatorDataSet()
 
@@ -338,10 +337,7 @@ func (c *CaseV1) BlockAfterSign(ctx plugins.PluginContext, slot uint64, pubkey s
 	if role != types.AttackerRole {
 		return ret
 	}
-	slotTool := common.SlotTool{
-		SlotsPerEpoch: backend.GetSlotsPerEpoch(),
-	}
-	epoch := slotTool.SlotToEpoch(int64(slot))
+	epoch := common.SlotToEpoch(int64(slot))
 
 	duties, err := backend.GetProposeDuties(int(epoch))
 	if err != nil {

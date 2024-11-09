@@ -125,7 +125,6 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 
 			return r
 		}, nil
-
 	case "delayWithSecond":
 		var seconds int
 		if len(params) == 0 {
@@ -196,18 +195,13 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 		if len(params) > 0 {
 			n = params[0]
 		}
-
-		slotsPerEpoch := backend.GetSlotsPerEpoch()
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
-			tool := common.SlotTool{
-				SlotsPerEpoch: slotsPerEpoch,
-			}
 			log.WithFields(log.Fields{
 				"slot":   slot,
 				"action": name,
 			}).Info("do action ")
-			epoch := tool.SlotToEpoch(slot)
-			start := tool.EpochStart(epoch + int64(n))
+			epoch := common.SlotToEpoch(slot)
+			start := common.EpochStart(epoch + int64(n))
 			targetTime := common.TimeToSlot(start)
 			total := targetTime - time.Now().Unix()
 			log.WithFields(log.Fields{
@@ -228,17 +222,13 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 		if len(params) > 0 {
 			n = params[0]
 		}
-		slotsPerEpoch := backend.GetSlotsPerEpoch()
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
-			tool := common.SlotTool{
-				SlotsPerEpoch: slotsPerEpoch,
-			}
 			log.WithFields(log.Fields{
 				"slot":   slot,
 				"action": name,
 			}).Info("do action ")
-			epoch := tool.SlotToEpoch(slot)
-			end := tool.EpochEnd(epoch + int64(n))
+			epoch := common.SlotToEpoch(slot)
+			end := common.EpochEnd(epoch + int64(n))
 			targetTime := common.TimeToSlot(end)
 			total := targetTime - time.Now().Unix()
 			log.WithFields(log.Fields{
@@ -262,15 +252,12 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 		}
 		slotsPerEpoch := backend.GetSlotsPerEpoch()
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
-			tool := common.SlotTool{
-				SlotsPerEpoch: slotsPerEpoch,
-			}
 			log.WithFields(log.Fields{
 				"slot":   slot,
 				"action": name,
 			}).Info("do action ")
-			epoch := tool.SlotToEpoch(slot)
-			start := tool.EpochStart(epoch + int64(n))
+			epoch := common.SlotToEpoch(slot)
+			start := common.EpochStart(epoch + int64(n))
 			start += int64(slotsPerEpoch) / 2
 			targetTime := common.TimeToSlot(start)
 			total := targetTime - time.Now().Unix()
@@ -287,20 +274,15 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			}
 			return r
 		}, nil
-
 	case "delayToEpochEnd":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
-			slotsPerEpoch := backend.GetSlotsPerEpoch()
-			tool := common.SlotTool{
-				SlotsPerEpoch: slotsPerEpoch,
-			}
 			log.WithFields(log.Fields{
 				"slot":   slot,
 				"action": name,
 			}).Info("do action ")
 
-			epoch := tool.SlotToEpoch(slot)
-			end := tool.EpochEnd(epoch)
+			epoch := common.SlotToEpoch(slot)
+			end := common.EpochEnd(epoch)
 			targetTime := common.TimeToSlot(end)
 			total := targetTime - time.Now().Unix()
 			log.WithFields(log.Fields{
@@ -345,16 +327,13 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
 			}
-			tool := common.SlotTool{
-				SlotsPerEpoch: backend.SlotsPerEpoch(),
-			}
-			epoch := tool.SlotToEpoch(slot)
+			epoch := common.SlotToEpoch(slot)
 			last := epoch - 1
 			if last < 0 {
 				last = 0
 			}
-			minSlot := tool.EpochStart(last)
-			maxSlot := tool.EpochEnd(epoch)
+			minSlot := common.EpochStart(last)
+			maxSlot := common.EpochEnd(epoch)
 			log.WithFields(log.Fields{
 				"slot":   slot,
 				"action": name,
@@ -422,6 +401,93 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			r.Result = block
 			return r
 		}, nil
+	case "modifyAttestSource":
+		if len(params) < 1 {
+			log.WithField("action", action).Error("need at least 1 param.")
+			return nil, errors.New("invalid param")
+		}
+		newSourceSlot := params[0]
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			var attestation *ethpb.AttestationData
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": name,
+			}).Info("do action ")
+
+			if len(params) > 0 {
+				attestation = params[0].(*ethpb.AttestationData)
+				if root, err := backend.GetSlotRoot(int64(newSourceSlot)); err == nil {
+					attestation.Source.Root = common.FromHex(root)
+					if r.Result, err = common.AttestationDataToBase64(attestation); err == nil {
+						r.Cmd = types.CMD_UPDATE_STATE
+					}
+				}
+			}
+
+			return r
+		}, nil
+	case "modifyAttestTarget":
+		if len(params) < 1 {
+			log.WithField("action", action).Error("need at least 1 param.")
+			return nil, errors.New("invalid param")
+		}
+		newSourceSlot := params[0]
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			var attestation *ethpb.AttestationData
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": name,
+			}).Info("do action ")
+
+			if len(params) > 0 {
+				attestation = params[0].(*ethpb.AttestationData)
+				if root, err := backend.GetSlotRoot(int64(newSourceSlot)); err == nil {
+					attestation.Target.Root = common.FromHex(root)
+					if r.Result, err = common.AttestationDataToBase64(attestation); err == nil {
+						r.Cmd = types.CMD_UPDATE_STATE
+					}
+				}
+			}
+
+			return r
+		}, nil
+	case "modifyAttestHead":
+		if len(params) < 1 {
+			log.WithField("action", action).Error("need at least 1 param.")
+			return nil, errors.New("invalid param")
+		}
+		newSourceSlot := params[0]
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			var attestation *ethpb.AttestationData
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": name,
+			}).Info("do action ")
+
+			if len(params) > 0 {
+				attestation = params[0].(*ethpb.AttestationData)
+				if root, err := backend.GetSlotRoot(int64(newSourceSlot)); err == nil {
+					attestation.BeaconBlockRoot = common.FromHex(root)
+					if r.Result, err = common.AttestationDataToBase64(attestation); err == nil {
+						r.Cmd = types.CMD_UPDATE_STATE
+					}
+				}
+			}
+			return r
+		}, nil
+
 	case "modifyParentRoot":
 		if len(params) < 1 {
 			// error.
@@ -462,13 +528,9 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 				return r
 			}
 			block := params[0].(*ethpb.SignedBeaconBlockDeneb)
-
-			tool := common.SlotTool{
-				SlotsPerEpoch: backend.SlotsPerEpoch(),
-			}
-			epoch := tool.SlotToEpoch(slot)
-			startEpoch := tool.EpochStart(epoch)
-			endEpoch := tool.EpochEnd(epoch)
+			epoch := common.SlotToEpoch(slot)
+			startEpoch := common.EpochStart(epoch)
+			endEpoch := common.EpochEnd(epoch)
 			attackerAttestations := make([]*ethpb.Attestation, 0)
 			validatorSet := backend.GetValidatorDataSet()
 			log.WithFields(log.Fields{

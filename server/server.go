@@ -230,6 +230,7 @@ func (s *Server) monitorDuties() {
 }
 
 func (s *Server) Start() {
+	s.initTools()
 	// start RPC endpoints
 	err := s.startRPC()
 	if err != nil {
@@ -239,7 +240,6 @@ func (s *Server) Start() {
 	// start collect duties info.
 	go s.monitorDuties()
 	go s.monitorEvent()
-	go s.initTools()
 	go s.HandleEndStrategy()
 	s.feedBacker.Start()
 }
@@ -247,13 +247,17 @@ func (s *Server) Start() {
 func (s *Server) initTools() {
 	init := false
 	for !init {
+		slotPerEpoch, _ := s.beaconClient.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
+		interval, _ := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
 		genesis, err := s.beaconClient.GetGenesis()
-		if err != nil {
-			log.WithError(err).Error("get genesis failed")
+		if slotPerEpoch == 0 || interval == 0 || err != nil {
+			log.WithError(err).Error("initTools get genesis failed, retry")
 			time.Sleep(time.Second)
 			continue
 		} else {
-			common.InitSlotTime(6, genesis.GenesisTime.Unix())
+			common.InitSlotTool(interval, int64(slotPerEpoch), genesis.GenesisTime.Unix())
+			init = true
+			log.WithField("interval", interval).Info("init tool finished")
 		}
 	}
 }
@@ -308,8 +312,8 @@ func (s *Server) GetSlotsPerEpoch() int {
 }
 
 func (s *Server) GetIntervalPerSlot() int {
-	interval, err := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
-	if err != nil {
+	interval, _ := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
+	if interval == 0 {
 		return 12
 	}
 	return interval
