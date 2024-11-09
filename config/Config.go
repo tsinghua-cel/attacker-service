@@ -64,3 +64,7 @@ const (
 	APIBatchItemLimit         = 2000
 	APIBatchResponseSizeLimit = 250 * 1000 * 1000
 )
+
+func GetSafeEpochEndInterval() int64 {
+	return 3
+}

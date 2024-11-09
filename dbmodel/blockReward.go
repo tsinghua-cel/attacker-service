@@ -62,8 +62,8 @@ func (repo *blockRewardRepositoryImpl) GetListBySlotRange(start int64, end int64
 	return list
 }
 
-func InsertBlockReward(reward *BlockReward) error {
-	return NewBlockRewardRepository(orm.NewOrm()).Create(reward)
+func InsertBlockReward(o orm.Ormer, reward *BlockReward) error {
+	return NewBlockRewardRepository(o).Create(reward)
 }
 
 func GetBlockRewardListByEpoch(epoch int64) []*BlockReward {

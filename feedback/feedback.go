@@ -3,6 +3,7 @@ package feedback
 import (
 	"github.com/ethereum/go-ethereum/event"
 	log "github.com/sirupsen/logrus"
+	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"sync"
@@ -58,11 +59,11 @@ func (f *Feedback) loop() {
 		case <-tc.C:
 			f.mux.Lock()
 			for timestamp, pair := range f.historyStrategy {
-				curSlot := f.backend.GetCurSlot()
-				ended := pair.IsEnd(curSlot)
+				safeEpoch := dbmodel.GetMaxEpoch()
+				ended := pair.IsEnd(safeEpoch)
 				log.WithFields(log.Fields{
-					"strategy": pair.origin,
-					"curSlot":  curSlot,
+					"strategy":  pair.origin,
+					"safeEpoch": safeEpoch,
 				}).Info("check strategy end")
 				if ended {
 					ev := StrategyEndEvent{
@@ -74,10 +75,10 @@ func (f *Feedback) loop() {
 					f.feed.Send(ev)
 					delete(f.historyStrategy, timestamp)
 					log.WithFields(log.Fields{
-						"uid":      ev.Uid,
-						"minEpoch": ev.MinEpoch,
-						"maxEpoch": ev.MaxEpoch,
-						"curSlot":  curSlot,
+						"uid":       ev.Uid,
+						"minEpoch":  ev.MinEpoch,
+						"maxEpoch":  ev.MaxEpoch,
+						"safeEpoch": safeEpoch,
 					}).Info("post strategy end event")
 				}
 			}

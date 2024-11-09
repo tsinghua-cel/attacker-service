@@ -6,6 +6,8 @@ import (
 	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
+	"github.com/tsinghua-cel/attacker-service/common"
+	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"os"
 	"strconv"
@@ -44,7 +46,8 @@ func GetRewardsToMysql(gwEndpoint string) error {
 		"latestEpoch": latestEpoch,
 	}).Debug("GetRewardsToMysql")
 
-	for epochNumber <= (latestEpoch - 3) {
+	safeInterval := config.GetSafeEpochEndInterval()
+	for (latestEpoch - epochNumber) >= safeInterval {
 		totalRewards, err := client.GetAllValReward(int(epochNumber))
 		if err != nil {
 			return err
@@ -64,7 +67,38 @@ func GetRewardsToMysql(gwEndpoint string) error {
 			}
 			if err = repo.Create(record); err != nil {
 				o.Rollback()
-				return errors.New("insert failed")
+				return errors.New("insert attest reward failed")
+			}
+		}
+
+		// get block reward for each slot
+		epochStart := common.EpochStart(epochNumber)
+		epochEnd := common.EpochEnd(epochNumber)
+		for slot := epochStart; slot <= epochEnd; slot++ {
+			blockReward, err := client.GetBlockReward(int(slot))
+			if err != nil {
+				continue
+			}
+			{
+				proposerIdx, _ := strconv.ParseInt(blockReward.ProposerIndex, 10, 64)
+				totalAmount, _ := strconv.ParseInt(blockReward.Total, 10, 64)
+				attestationAmount, _ := strconv.ParseInt(blockReward.Attestations, 10, 64)
+				syncAggregateAmount, _ := strconv.ParseInt(blockReward.SyncAggregate, 10, 64)
+				proposerSlashingsAmount, _ := strconv.ParseInt(blockReward.ProposerSlashings, 10, 64)
+				attesterSlashingsAmount, _ := strconv.ParseInt(blockReward.AttesterSlashings, 10, 64)
+				record := &dbmodel.BlockReward{
+					Slot:                   slot,
+					ProposerIndex:          int(proposerIdx),
+					TotalAmount:            totalAmount,
+					AttestationAmount:      attestationAmount,
+					SyncAggregateAmount:    syncAggregateAmount,
+					ProposerSlashingAmount: proposerSlashingsAmount,
+					AttesterSlashingAmount: attesterSlashingsAmount,
+				}
+				if err = dbmodel.InsertBlockReward(o, record); err != nil {
+					o.Rollback()
+					return errors.New("insert block reward failed")
+				}
 			}
 		}
 		epochNumber++
