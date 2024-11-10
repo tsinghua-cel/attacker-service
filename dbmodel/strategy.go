@@ -55,7 +55,12 @@ func (repo *strategyRepositoryImpl) HasByUUID(uuid string) bool {
 func (repo *strategyRepositoryImpl) GetByUUID(uuid string) *Strategy {
 	filters := make([]interface{}, 0)
 	filters = append(filters, "uuid", uuid)
-	return repo.GetListByFilter(filters...)[0]
+	list := repo.GetListByFilter(filters...)
+	if len(list) > 0 {
+		return list[0]
+	} else {
+		return nil
+	}
 }
 
 func (repo *strategyRepositoryImpl) GetListByFilter(filters ...interface{}) []*Strategy {
