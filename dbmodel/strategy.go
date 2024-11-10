@@ -67,7 +67,7 @@ func (repo *strategyRepositoryImpl) GetListByFilter(filters ...interface{}) []*S
 			query = query.Filter(filters[k].(string), filters[k+1])
 		}
 	}
-	query.OrderBy("-epoch").All(&list)
+	query.OrderBy("-id").All(&list)
 	return list
 }
 
