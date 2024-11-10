@@ -10,7 +10,7 @@ import (
 type Strategy struct {
 	ID                   int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                                                                                 //  任务类型id
 	UUID                 string `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`                                                                         //  策略的唯一id
-	Content              string `orm:"column(content)" db:"content" json:"content" form:"content"`                                                             //  策略内容
+	Content              string `orm:"column(content);size(3000)" db:"content" json:"content" form:"content"`                                                  //  策略内容
 	MinEpoch             int64  `orm:"column(min_epoch)" db:"min_epoch" json:"min_epoch" form:"min_epoch"`                                                     //  最小epoch
 	MaxEpoch             int64  `orm:"column(max_epoch)" db:"max_epoch" json:"max_epoch" form:"max_epoch"`                                                     //  最大epoch
 	IsEnd                bool   `orm:"column(is_end)" db:"is_end" json:"is_end" form:"is_end"`                                                                 // 是否结束
