@@ -18,5 +18,7 @@ func DbInit(dbconf config.MysqlConfig) {
 	}
 	orm.RegisterModel(new(AttestReward))
 	orm.RegisterModel(new(ChainReorg))
+	orm.RegisterModel(new(BlockReward))
+	orm.RegisterModel(new(Strategy))
 	orm.RunSyncdb("default", true, true)
 }
