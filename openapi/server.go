@@ -67,7 +67,7 @@ func ginLogrus() gin.HandlerFunc {
 			"path":   c.Request.URL.Path,
 			"query":  c.Request.URL.RawQuery,
 			"ip":     c.ClientIP(),
-		}).Info("request")
+		}).Debug("request")
 		c.Next()
 	}
 }

@@ -437,9 +437,11 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	if strategy.Uid != "" {
 		check = true
 	}
+	log.WithField("uid", strategy.Uid).Debug("goto parse and update strategy")
 
 	if check {
 		if st := dbmodel.GetStrategyByUUID(strategy.Uid); st != nil {
+			log.WithError(errors.New("strategy already exist")).Error("strategy already exist")
 			return errors.New("strategy already exist")
 		}
 	}
