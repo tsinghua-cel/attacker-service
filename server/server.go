@@ -577,6 +577,8 @@ func (s *Server) HandleEndStrategy() {
 				totalImpactCount := 0
 				normalTargetAmount := int64(290680)
 				//normalHeadAmount := int64(156520)
+				finalHonestLoseRate := float64(0.0)
+				finalAttackerLoseRate := float64(0.0)
 				for i := ev.MinEpoch; i <= ev.MaxEpoch; i++ {
 					reorgCount := dbmodel.GetReorgCountByEpoch(i)
 					impactCount := dbmodel.GetImpactValidatorCount(s.maxMaliciousIdx, normalTargetAmount, i)
@@ -585,6 +587,9 @@ func (s *Server) HandleEndStrategy() {
 						"reorg":  reorgCount,
 						"impact": impactCount,
 					}).Debug("strategy feedback")
+					honestLoseRate, attackerLoseRate := calcLoseRate(dbmodel.GetRewardListByEpoch(i), normalTargetAmount, s.maxMaliciousIdx)
+					finalHonestLoseRate += honestLoseRate
+					finalAttackerLoseRate += attackerLoseRate
 					totalReorgCount += reorgCount
 					totalImpactCount += impactCount
 				}
@@ -597,6 +602,8 @@ func (s *Server) HandleEndStrategy() {
 				storeStrategy.ReorgCount = totalReorgCount
 				storeStrategy.ImpactValidatorCount = totalImpactCount
 				storeStrategy.IsEnd = true
+				storeStrategy.HonestLoseRateAvg = finalHonestLoseRate / float64(ev.MaxEpoch-ev.MinEpoch+1)
+				storeStrategy.AttackerLoseRateAvg = finalAttackerLoseRate / float64(ev.MaxEpoch-ev.MinEpoch+1)
 				dbmodel.StrategyUpdate(storeStrategy)
 
 				s.historyStrategy.Add(uid, historyInfo)
@@ -630,4 +637,32 @@ func (s *Server) GetFeedBack(uid string) (types.FeedBackInfo, error) {
 		return types.FeedBackInfo{}, errors.New("strategy not found or not finished")
 	}
 
+}
+
+// calcLoseRate return honestLoseRate and attackerLoseRate.
+func calcLoseRate(rewards []*dbmodel.AttestReward, normalTargetAmount int64, maxMaliciousIdx int) (float64, float64) {
+	honestLoseRate := float64(0.0)
+	honestCount := 0
+	attackerLoseRate := float64(0.0)
+	attackerCount := 0
+	// calc every validator loseRate and get average.
+	// loseRate := (normalTargetAmount - reward.TargetAmount)/normalTargetAmount
+	// and if rewards.ValidatorIndex <= maxMaliciousIdx, it is attacker.
+	for _, reward := range rewards {
+		loseRate := float64(normalTargetAmount-reward.TargetAmount) / float64(normalTargetAmount)
+		if reward.ValidatorIndex <= maxMaliciousIdx {
+			attackerLoseRate += loseRate
+			attackerCount++
+		} else {
+			honestLoseRate += loseRate
+			honestCount++
+		}
+	}
+	if honestCount > 0 {
+		honestLoseRate = honestLoseRate / float64(honestCount)
+	}
+	if attackerCount > 0 {
+		attackerLoseRate = attackerLoseRate / float64(attackerCount)
+	}
+	return honestLoseRate, attackerLoseRate
 }
