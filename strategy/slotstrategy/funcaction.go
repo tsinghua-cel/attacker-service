@@ -145,7 +145,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			log.WithFields(log.Fields{
 				"slot":    slot,
 				"seconds": seconds,
-			}).Info("delayWithSecond")
+			}).Debug("delayWithSecond")
 			time.Sleep(time.Second * time.Duration(seconds))
 			return r
 		}, nil
@@ -163,7 +163,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			log.WithFields(log.Fields{
 				"slot":  slot,
 				"total": total,
-			}).Info("delayToNextSlot")
+			}).Debug("delayToNextSlot")
 			time.Sleep(time.Second * time.Duration(total))
 			return r
 		}, nil
@@ -186,7 +186,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			log.WithFields(log.Fields{
 				"slot":  slot,
 				"total": total,
-			}).Info("delayToAfterNextSlot")
+			}).Debug("delayToAfterNextSlot")
 			time.Sleep(time.Second * time.Duration(total))
 			return r
 		}, nil
@@ -207,7 +207,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			log.WithFields(log.Fields{
 				"slot":  slot,
 				"total": total,
-			}).Info("delayToNextNEpochStart")
+			}).Debug("delayToNextNEpochStart")
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
@@ -235,7 +235,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 				"slot":   slot,
 				"target": end,
 				"total":  total,
-			}).Info("delayToNextNEpochEnd")
+			}).Debug("delayToNextNEpochEnd")
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
@@ -264,7 +264,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			log.WithFields(log.Fields{
 				"slot":  slot,
 				"total": total,
-			}).Info("delayToNextNEpochHalf")
+			}).Debug("delayToNextNEpochHalf")
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
@@ -288,7 +288,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			log.WithFields(log.Fields{
 				"slot":  slot,
 				"total": total,
-			}).Info("delayToEpochEnd")
+			}).Debug("delayToEpochEnd")
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
@@ -315,7 +315,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			log.WithFields(log.Fields{
 				"slot":  slot,
 				"total": total,
-			}).Info("delayHalfEpoch")
+			}).Debug("delayHalfEpoch")
 			time.Sleep(time.Second * time.Duration(total))
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,

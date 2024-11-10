@@ -470,14 +470,14 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 		log.WithFields(log.Fields{
 			"slot":  v.Slot.StrValue(),
 			"level": v.Level,
-		}).Info("internal strategy slot")
+		}).Debug("internal strategy slot")
 		for k, action := range v.Actions {
 			log.WithFields(log.Fields{
 				"slot":       v.Slot.StrValue(),
 				"level":      v.Level,
 				"checkpoint": k,
 				"action":     action.Name(),
-			}).Info("internal strategy action")
+			}).Debug("internal strategy action")
 
 		}
 	}
@@ -502,7 +502,7 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 	log.WithFields(log.Fields{
 		"strategy": s.strategy,
 		"check":    check,
-	}).Info("goto check strategy")
+	}).Debug("goto check strategy")
 
 	dbmodel.InsertNewStrategy(strategy)
 
@@ -567,7 +567,7 @@ func (s *Server) HandleEndStrategy() {
 		case ev := <-ch:
 			log.WithFields(log.Fields{
 				"uid": ev.Uid,
-			}).Info("got strategy end event")
+			}).Debug("got strategy end event")
 			uid := ev.Uid
 			if v, exist := s.historyStrategy.Get(uid); exist {
 				storeStrategy := dbmodel.GetStrategyByUUID(uid)
@@ -584,7 +584,7 @@ func (s *Server) HandleEndStrategy() {
 						"epoch":  i,
 						"reorg":  reorgCount,
 						"impact": impactCount,
-					}).Info("strategy feedback")
+					}).Debug("strategy feedback")
 					totalReorgCount += reorgCount
 					totalImpactCount += impactCount
 				}
@@ -603,7 +603,7 @@ func (s *Server) HandleEndStrategy() {
 				log.WithFields(log.Fields{
 					"uid":  uid,
 					"info": historyInfo,
-				}).Info("update strategy feedback info")
+				}).Debug("update strategy feedback info")
 			}
 		}
 

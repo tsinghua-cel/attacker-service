@@ -225,7 +225,7 @@ func (b *BeaconGwClient) GetNextEpochAttestDuties() ([]types.AttestDuty, error) 
 }
 
 func (b *BeaconGwClient) GetBlockReward(slot int) (types.BlockRewardInfo, error) {
-	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/rewards/%d", b.endpoint, slot))
+	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/rewards/blocks/%d", b.endpoint, slot))
 	var reward = types.BlockRewardInfo{}
 	err = json.Unmarshal(response.Data, &reward)
 	if err != nil {

@@ -39,7 +39,7 @@ func findMaxLevelStrategy(is []*slotstrategy.InternalSlotStrategy, slot int64) (
 		"last.slot": last.Slot.StrValue(),
 		"actions":   last.Actions,
 		"find":      last.Slot.Compare(slot) == 0,
-	}).Info("find max level strategy for slot")
+	}).Debug("find max level strategy for slot")
 	return last, last.Slot.Compare(slot) == 0
 }
 
@@ -53,17 +53,17 @@ func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
 
 		action := st.Actions["AttestBeforeBroadCast"]
 		if action != nil {
-			log.WithField("slot", slot).Info("find action AttestBeforeBroadCast")
+			log.WithField("slot", slot).Debug("find action AttestBeforeBroadCast")
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
 		} else {
-			log.WithField("slot", slot).Info("not find action AttestBeforeBroadCast")
+			log.WithField("slot", slot).Debug("not find action AttestBeforeBroadCast")
 		}
 	}
 	log.WithFields(log.Fields{
 		"cmd":  result.Cmd,
 		"slot": slot,
-	}).Info("exit AttestBeforeBroadCast")
+	}).Debug("exit AttestBeforeBroadCast")
 
 	return result
 }
@@ -83,7 +83,7 @@ func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 	log.WithFields(log.Fields{
 		"cmd":  result.Cmd,
 		"slot": slot,
-	}).Info("exit AttestAfterBroadCast")
+	}).Debug("exit AttestAfterBroadCast")
 
 	return result
 }
@@ -120,7 +120,7 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 	log.WithFields(log.Fields{
 		"cmd":  result.Cmd,
 		"slot": slot,
-	}).Info("exit AttestBeforeSign")
+	}).Debug("exit AttestBeforeSign")
 	return result
 }
 
@@ -155,7 +155,7 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 	log.WithFields(log.Fields{
 		"cmd":  result.Cmd,
 		"slot": slot,
-	}).Info("exit AttestAfterSign")
+	}).Debug("exit AttestAfterSign")
 	return result
 }
 
@@ -190,7 +190,7 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 	log.WithFields(log.Fields{
 		"cmd":  result.Cmd,
 		"slot": slot,
-	}).Info("exit AttestBeforePropose")
+	}).Debug("exit AttestBeforePropose")
 	return result
 }
 
@@ -226,7 +226,7 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 	log.WithFields(log.Fields{
 		"cmd":  result.Cmd,
 		"slot": slot,
-	}).Info("exit AttestAfterPropose")
+	}).Debug("exit AttestAfterPropose")
 
 	return result
 }
