@@ -3,6 +3,7 @@ package openapi
 import (
 	"github.com/gin-gonic/gin"
 	log "github.com/sirupsen/logrus"
+	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"net/http"
@@ -197,4 +198,16 @@ func (api apiHandler) GetFeedBack(c *gin.Context) {
 		return
 	}
 	c.JSON(200, feedback)
+}
+
+// @Summary Get chain base info
+// @Description get chain base info
+// @ID get-chain-base-info
+// @Accept  json
+// @Produce  json
+// @Success 200 {object} types.ChainBaseInfo
+// @Router /chain-base-info [get]
+func (api apiHandler) ChainBaseInfo(c *gin.Context) {
+	info := common.GetChainBaseInfo()
+	c.JSON(200, info)
 }

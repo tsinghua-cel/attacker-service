@@ -308,6 +308,9 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			}).Info("do action ")
 
 			seconds := backend.GetIntervalPerSlot()
+			if seconds == 0 {
+				seconds = 12 // default 12 seconds
+			}
 			total := (seconds) * (slotsPerEpoch / 2)
 			log.WithFields(log.Fields{
 				"slot":  slot,

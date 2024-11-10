@@ -1,5 +1,7 @@
 package common
 
+import "github.com/tsinghua-cel/attacker-service/types"
+
 type slotTimeTool struct {
 	SecondsPerSlot int
 	SlotsPerEpoch  int64
@@ -8,7 +10,8 @@ type slotTimeTool struct {
 
 var (
 	// SlotTimeTool is a global slot time tool
-	tool *slotTimeTool
+	tool     *slotTimeTool
+	baseInfo *types.ChainBaseInfo
 )
 
 func InitSlotTool(secondsPerSlot int, slotsPerEpoch int64, genesisTime int64) {
@@ -16,6 +19,13 @@ func InitSlotTool(secondsPerSlot int, slotsPerEpoch int64, genesisTime int64) {
 		tool = &slotTimeTool{
 			SecondsPerSlot: secondsPerSlot,
 			SlotsPerEpoch:  slotsPerEpoch,
+			GenesisTime:    genesisTime,
+		}
+	}
+	if baseInfo == nil {
+		baseInfo = &types.ChainBaseInfo{
+			SecondsPerSlot: secondsPerSlot,
+			SlotsPerEpoch:  int(slotsPerEpoch),
 			GenesisTime:    genesisTime,
 		}
 	}
@@ -35,4 +45,8 @@ func EpochStart(epoch int64) int64 {
 
 func TimeToSlot(slot int64) int64 {
 	return tool.GenesisTime + int64(slot*int64(tool.SecondsPerSlot))
+}
+
+func GetChainBaseInfo() types.ChainBaseInfo {
+	return *baseInfo
 }

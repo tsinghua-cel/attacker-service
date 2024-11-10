@@ -132,6 +132,9 @@ func (c *CaseV1) BlockDelayForReceiveBlock(ctx plugins.PluginContext, slot uint6
 
 	epochSlots := backend.GetSlotsPerEpoch()
 	seconds := backend.GetIntervalPerSlot()
+	if seconds == 0 {
+		seconds = 12 // default value.
+	}
 	delay := (epochSlots - int(slot%uint64(epochSlots))) * seconds
 	time.Sleep(time.Second * time.Duration(delay))
 	key := fmt.Sprintf("delay_%d_%d", slot, valIdx)
@@ -182,6 +185,9 @@ func (c *CaseV1) BlockBeforeBroadCast(ctx plugins.PluginContext, slot uint64) pl
 	}
 	// 当前是最后一个出块的恶意节点，进行延时
 	seconds := backend.GetIntervalPerSlot()
+	if seconds == 0 {
+		seconds = 12 // default value.
+	}
 	n2delay := 12 * seconds
 	total := n2delay
 	time.Sleep(time.Second * time.Duration(total))

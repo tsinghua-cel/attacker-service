@@ -313,9 +313,6 @@ func (s *Server) GetSlotsPerEpoch() int {
 
 func (s *Server) GetIntervalPerSlot() int {
 	interval, _ := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
-	if interval == 0 {
-		return 12
-	}
 	return interval
 }
 
