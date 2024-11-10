@@ -73,12 +73,12 @@ func (api apiHandler) UpdateStrategy(c *gin.Context) {
 	err := c.ShouldBindJSON(&req) // 解析req参数
 	if err != nil {
 		log.WithError(err).Error("UpdateStrategy ctx.ShouldBindJSON error")
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, err.Error())
 	}
 	err = api.backend.UpdateStrategy(&req)
 	if err != nil {
 		log.WithError(err).Error("UpdateStrategy backend.UpdateStrategy error")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, err.Error())
 	} else {
 		c.JSON(http.StatusOK, "ok")
 	}
