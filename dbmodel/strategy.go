@@ -3,6 +3,7 @@ package dbmodel
 import (
 	"encoding/json"
 	"github.com/astaxie/beego/orm"
+	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
 )
 
@@ -85,7 +86,9 @@ func InsertNewStrategy(st *types.Strategy) {
 		ReorgCount:           0,
 		ImpactValidatorCount: 0,
 	}
-	NewStrategyRepository(orm.NewOrm()).Create(data)
+	if err := NewStrategyRepository(orm.NewOrm()).Create(data); err != nil {
+		log.WithError(err).Error("failed to insert new strategy")
+	}
 }
 
 func GetStrategyByUUID(uuid string) *Strategy {

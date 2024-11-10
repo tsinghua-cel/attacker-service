@@ -230,7 +230,7 @@ func (s *Server) monitorDuties() {
 }
 
 func (s *Server) Start() {
-	s.initTools()
+	//s.initTools()
 	// start RPC endpoints
 	err := s.startRPC()
 	if err != nil {
