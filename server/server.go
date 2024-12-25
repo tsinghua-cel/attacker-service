@@ -16,7 +16,6 @@ import (
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/feedback"
 	"github.com/tsinghua-cel/attacker-service/openapi"
-	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
 	"github.com/tsinghua-cel/attacker-service/strategy"
@@ -57,13 +56,13 @@ func (n *Server) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
 	return n.beaconClient.GetLatestBeaconHeader()
 }
 
-func NewServer(conf *config.Config, plugin plugins.AttackerPlugin, maxMaliciousIdx int) *Server {
+func NewServer(conf *config.Config, maxMaliciousIdx int) *Server {
 	s := &Server{}
 	s.maxMaliciousIdx = maxMaliciousIdx
 	s.cache = lru.New(10000)
 	s.historyStrategy = lru.New(10000)
 	s.config = conf
-	s.rpcAPIs = apis.GetAPIs(s, plugin)
+	s.rpcAPIs = apis.GetAPIs(s)
 	client, err := ethclient.Dial(conf.ExecuteRpc)
 	if err != nil {
 		panic(fmt.Sprintf("dial execute failed with err:%v", err))

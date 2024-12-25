@@ -4,20 +4,18 @@ import (
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
-	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 )
 
 // AttestAPI offers and API for attestation operations.
 type AttestAPI struct {
-	b      Backend
-	plugin plugins.AttackerPlugin
+	b Backend
 }
 
 // NewAttestAPI creates a new tx pool service that gives information about the transaction pool.
-func NewAttestAPI(b Backend, plugin plugins.AttackerPlugin) *AttestAPI {
-	return &AttestAPI{b, plugin}
+func NewAttestAPI(b Backend) *AttestAPI {
+	return &AttestAPI{b}
 }
 
 func findMaxLevelStrategy(is []*slotstrategy.InternalSlotStrategy, slot int64) (*slotstrategy.InternalSlotStrategy, bool) {

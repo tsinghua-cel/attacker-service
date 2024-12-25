@@ -5,7 +5,6 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/cache/lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
-	"github.com/tsinghua-cel/attacker-service/plugins"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"time"
 )
@@ -18,13 +17,12 @@ var (
 
 // BlockAPI offers and API for block operations.
 type BlockAPI struct {
-	b      Backend
-	plugin plugins.AttackerPlugin
+	b Backend
 }
 
 // NewBlockAPI creates a new tx pool service that gives information about the transaction pool.
-func NewBlockAPI(b Backend, plugin plugins.AttackerPlugin) *BlockAPI {
-	return &BlockAPI{b, plugin}
+func NewBlockAPI(b Backend) *BlockAPI {
+	return &BlockAPI{b}
 }
 
 func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot string) types.AttackerResponse {

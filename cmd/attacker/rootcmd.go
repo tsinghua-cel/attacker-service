@@ -7,7 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tsinghua-cel/attacker-service/cmd/attacker/testcases"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/docs"
@@ -89,7 +88,7 @@ func initConfig() {
 
 func runNode() {
 	dbmodel.DbInit(config.GetConfig().DbConfig)
-	rpcServer := server.NewServer(config.GetConfig(), testcases.NewCaseV1(), maxHackValIdx)
+	rpcServer := server.NewServer(config.GetConfig(), maxHackValIdx)
 	rpcServer.Start()
 
 	go getRewardBackgroud()

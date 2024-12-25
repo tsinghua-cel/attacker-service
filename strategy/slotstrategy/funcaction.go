@@ -54,23 +54,39 @@ func getCmdFromName(name string) types.AttackerCommand {
 	}
 }
 
-func ParseActionName(action string) (string, []int) {
-	strs := strings.Split(action, ":")
-	params := make([]int, 0)
-	if len(strs) > 1 {
-		for _, v := range strs[1:] {
-			val, err := strconv.Atoi(v)
-			if err != nil {
-				continue
-			}
-			params = append(params, val)
-		}
-	}
-	return strs[0], params
+type ActionStructure struct {
+	Name   string
+	Params []int
 }
 
-func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, error) {
-	name, params := ParseActionName(action)
+func ParseActionName(actions string) []ActionStructure {
+	actionList := make([]ActionStructure, 0)
+	actionArray := strings.Split(actions, "#")
+	for _, action := range actionArray {
+		strs := strings.Split(action, ":")
+		params := make([]int, 0)
+		if len(strs) > 1 {
+			for _, v := range strs[1:] {
+				val, err := strconv.Atoi(v)
+				if err != nil {
+					continue
+				}
+				params = append(params, val)
+			}
+		}
+		actionList = append(actionList, ActionStructure{
+			Name:   strs[0],
+			Params: params,
+		})
+	}
+	return actionList
+}
+
+func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, error) {
+	actionList := ParseActionName(actions)
+	// todo: support multiple actions
+	name := actionList[0].Name
+	params := actionList[0].Params
 	switch name {
 	case "null", "return", "continue", "abort", "skip", "exit":
 		cmd := getCmdFromName(name)
@@ -383,11 +399,22 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 
 				attsForInclusion := types.ProposerAtts(make([]*ethpb.Attestation, 0))
 				for _, ass := range attsByDataRoot {
-					as, err := attaggregation.Aggregate(ass)
+					assi := make([]ethpb.Att, 0, len(ass))
+					for _, a := range ass {
+						assi = append(assi, a)
+					}
+
+					as, err := attaggregation.Aggregate(assi)
 					if err != nil {
 						continue
 					}
-					attsForInclusion = append(attsForInclusion, as...)
+					for _, a := range as {
+						if att, ok := a.(*ethpb.Attestation); ok {
+							attsForInclusion = append(attsForInclusion, att)
+						} else {
+							log.Error("pack attestation failed with aggregated att type assert failed")
+						}
+					}
 				}
 				deduped, _ := attsForInclusion.Dedup()
 				sorted, err := deduped.SortByProfitability()
@@ -406,7 +433,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 		}, nil
 	case "modifyAttestSource":
 		if len(params) < 1 {
-			log.WithField("action", action).Error("need at least 1 param.")
+			log.WithField("action", actions).Error("need at least 1 param.")
 			return nil, errors.New("invalid param")
 		}
 		newSourceSlot := params[0]
@@ -435,7 +462,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 		}, nil
 	case "modifyAttestTarget":
 		if len(params) < 1 {
-			log.WithField("action", action).Error("need at least 1 param.")
+			log.WithField("action", actions).Error("need at least 1 param.")
 			return nil, errors.New("invalid param")
 		}
 		newSourceSlot := params[0]
@@ -464,7 +491,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 		}, nil
 	case "modifyAttestHead":
 		if len(params) < 1 {
-			log.WithField("action", action).Error("need at least 1 param.")
+			log.WithField("action", actions).Error("need at least 1 param.")
 			return nil, errors.New("invalid param")
 		}
 		newSourceSlot := params[0]
@@ -494,7 +521,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 	case "modifyParentRoot":
 		if len(params) < 1 {
 			// error.
-			log.WithField("action", action).Error("need at least 1 param.")
+			log.WithField("action", actions).Error("need at least 1 param.")
 			return nil, errors.New("invalid param")
 		}
 		newSlot := params[0]
@@ -515,87 +542,6 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 			}
 
 			r.Result = newRoot
-			return r
-		}, nil
-	case "rePackAttestation":
-		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
-			r := plugins.PluginResponse{
-				Cmd: types.CMD_NULL,
-			}
-			log.WithFields(log.Fields{
-				"slot":   slot,
-				"action": name,
-			}).Info("do action ")
-
-			if len(params) == 0 {
-				return r
-			}
-			block := params[0].(*ethpb.SignedBeaconBlockDeneb)
-			epoch := common.SlotToEpoch(slot)
-			startEpoch := common.EpochStart(epoch)
-			endEpoch := common.EpochEnd(epoch)
-			attackerAttestations := make([]*ethpb.Attestation, 0)
-			validatorSet := backend.GetValidatorDataSet()
-			log.WithFields(log.Fields{
-				"slot": slot,
-			}).Info("rePackAttestation")
-			for i := startEpoch; i <= endEpoch; i++ {
-				allSlotAttest := backend.GetAttestSet(uint64(i))
-				if allSlotAttest == nil {
-					continue
-				}
-
-				for publicKey, att := range allSlotAttest.Attestations {
-					val := validatorSet.GetValidatorByPubkey(publicKey)
-					if val == nil {
-						log.WithField("pubkey", publicKey).Debug("validator not found")
-						continue
-					}
-					valRole := backend.GetValidatorRole(int(i), int(val.Index))
-					if val != nil && valRole == types.AttackerRole {
-						log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
-						attackerAttestations = append(attackerAttestations, att)
-					}
-					//log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
-					//attackerAttestations = append(attackerAttestations, att)
-				}
-			}
-
-			allAtt := append(block.Block.Body.Attestations, attackerAttestations...)
-			{
-				// Remove duplicates from both aggregated/unaggregated attestations. This
-				// prevents inefficient aggregates being created.
-				atts, _ := types.ProposerAtts(allAtt).Dedup()
-				attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
-				for _, att := range atts {
-					attDataRoot, err := att.Data.HashTreeRoot()
-					if err != nil {
-						continue
-					}
-					attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
-				}
-
-				attsForInclusion := types.ProposerAtts(make([]*ethpb.Attestation, 0))
-				for _, ass := range attsByDataRoot {
-					as, err := attaggregation.Aggregate(ass)
-					if err != nil {
-						continue
-					}
-					attsForInclusion = append(attsForInclusion, as...)
-				}
-				deduped, _ := attsForInclusion.Dedup()
-				sorted, err := deduped.SortByProfitability()
-				if err != nil {
-					log.WithError(err).Error("sort attestation failed")
-				} else {
-					atts = sorted.LimitToMaxAttestations()
-				}
-				allAtt = atts
-			}
-
-			block.Block.Body.Attestations = allAtt
-
-			r.Result = block
 			return r
 		}, nil
 	default:

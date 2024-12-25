@@ -20,19 +20,19 @@ type Backend interface {
 	types.CacheBackend
 }
 
-func GetAPIs(apiBackend Backend, plugin plugins.AttackerPlugin) []rpc.API {
+func GetAPIs(apiBackend Backend) []rpc.API {
 	return []rpc.API{
 		{
 			Namespace: "admin",
-			Service:   NewAdminAPI(apiBackend, plugin),
+			Service:   NewAdminAPI(apiBackend),
 		},
 		{
 			Namespace: "block",
-			Service:   NewBlockAPI(apiBackend, plugin),
+			Service:   NewBlockAPI(apiBackend),
 		},
 		{
 			Namespace: "attest",
-			Service:   NewAttestAPI(apiBackend, plugin),
+			Service:   NewAttestAPI(apiBackend),
 		},
 	}
 }

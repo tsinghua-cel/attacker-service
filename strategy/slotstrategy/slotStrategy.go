@@ -43,15 +43,15 @@ func ParseToInternalSlotStrategy(backend types.ServiceBackend, strategy []types.
 			is[i].Slot = FunctionSlot{calcFunc: calc, value: s.Slot}
 		}
 
-		for point, action := range s.Actions {
+		for point, actions := range s.Actions {
 			if types.CheckActionPointExist(point) == false {
 				return nil, errors.New(fmt.Sprintf("action point %s not exist", point))
 			}
-			actionDo, err := GetFunctionAction(backend, action)
+			actionDo, err := GetFunctionAction(backend, actions)
 			if err != nil {
 				return nil, err
 			}
-			is[i].Actions[point] = FunctionAction{doFunc: actionDo, name: action}
+			is[i].Actions[point] = FunctionAction{doFunc: actionDo, name: actions}
 		}
 	}
 	//log.Printf("parsed internal slot strategy is %v\n", is)
