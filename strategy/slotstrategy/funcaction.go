@@ -125,7 +125,7 @@ func GetFunctionAction(backend types.ServiceBackend, action string) (ActionDo, e
 
 			return r
 		}, nil
-	case "delayWithSecond":
+	case "delayWithSecond", "delayWithDuration":
 		var seconds int
 		if len(params) == 0 {
 			seconds = rand.Intn(10)
