@@ -87,14 +87,26 @@ func (b *BeaconGwClient) getBeaconConfig() (map[string]interface{}, error) {
 
 func (b *BeaconGwClient) GetBeaconConfig() map[string]string {
 	if len(b.config) == 0 {
-		config, err := b.getBeaconConfig()
+		config, err := b.GetSpec()
 		if err != nil {
 			// todo: add log
 			return nil
 		}
 		b.config = make(map[string]string)
 		for key, v := range config {
-			b.config[key] = v.(string)
+			switch v.(type) {
+			case int:
+				b.config[key] = strconv.Itoa(v.(int))
+			case int64:
+				b.config[key] = strconv.FormatInt(v.(int64), 10)
+			case float64:
+				b.config[key] = strconv.FormatFloat(v.(float64), 'f', -1, 64)
+			case string:
+				b.config[key] = v.(string)
+			default:
+				log.Warnf("unknown beacon config key %s type %T", key, v)
+			}
+
 		}
 	}
 	return b.config
@@ -327,6 +339,24 @@ func (b *BeaconGwClient) GetCapellaBlockBySlot(slot uint64) (*capella.SignedBeac
 		return nil, err
 	}
 	return res.Data.Capella, nil
+}
+
+func (b *BeaconGwClient) GetSpec() (map[string]any, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.SpecProvider).Spec(context.Background(), &api.SpecOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+	})
+	if err != nil {
+		log.WithError(err).Error("get genesis failed")
+		return nil, err
+	}
+	return res.Data, nil
 }
 
 func (b *BeaconGwClient) GetGenesis() (*apiv1.Genesis, error) {
