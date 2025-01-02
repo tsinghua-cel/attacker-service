@@ -12,6 +12,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/docs"
 	"github.com/tsinghua-cel/attacker-service/reward"
 	"github.com/tsinghua-cel/attacker-service/server"
+	"github.com/tsinghua-cel/attacker-service/types"
 	"time"
 
 	"os"
@@ -21,7 +22,10 @@ import (
 var logLevel string
 var logPath string
 var maxHackValIdx int
+var minHackValIdx int
+var timePerStrategyRun int
 var configPath string
+var strategies string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -49,7 +53,10 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "debug", "log level")
 	RootCmd.PersistentFlags().StringVar(&logPath, "logpath", "", "log path")
 	RootCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file path")
+	RootCmd.PersistentFlags().StringVar(&strategies, "strategy", "", "choose the strategy to generate, split multi strategies by comma")
+	RootCmd.PersistentFlags().IntVar(&timePerStrategyRun, "duration-per-strategy-run", 30, "time per strategy run (only when set multi strategies), unit: minute")
 	RootCmd.PersistentFlags().IntVar(&maxHackValIdx, "max-hack-idx", -1, "max malicious validator index")
+	RootCmd.PersistentFlags().IntVar(&minHackValIdx, "min-hack-idx", 0, "min malicious validator index")
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -87,9 +94,14 @@ func initConfig() {
 }
 
 func runNode() {
-	dbmodel.DbInit(config.GetConfig().DbConfig)
-	rpcServer := server.NewServer(config.GetConfig(), maxHackValIdx)
-	rpcServer.Start()
+	dbmodel.DbInit(config.GetConfig().DbConnect)
+	bunnyFinder := server.NewServer(config.GetConfig(), types.StrategyGeneratorParam{
+		Strategy:            strategies,
+		DurationPerStrategy: int64(timePerStrategyRun),
+		MinMaliciousIdx:     minHackValIdx,
+		MaxMaliciousIdx:     maxHackValIdx,
+	})
+	bunnyFinder.Start()
 
 	go getRewardBackgroud()
 

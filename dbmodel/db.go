@@ -5,12 +5,11 @@ import (
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
 	log "github.com/sirupsen/logrus"
-	"github.com/tsinghua-cel/attacker-service/config"
 )
 
-func DbInit(dbconf config.MysqlConfig) {
+func DbInit(connect string) {
 	// Set up database
-	datasource := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=utf8", dbconf.User, dbconf.Passwd, dbconf.Host, dbconf.Port, dbconf.DbName)
+	datasource := fmt.Sprintf("%s?charset=utf8", connect)
 	orm.RegisterDriver("mysql", orm.DRMySQL)
 	err := orm.RegisterDataBase("default", "mysql", datasource)
 	if err != nil {

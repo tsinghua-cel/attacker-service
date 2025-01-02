@@ -12,7 +12,6 @@ import (
 // Backend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 type Backend interface {
-	SomeNeedBackend() bool
 	GetInternalSlotStrategy() []*slotstrategy.InternalSlotStrategy
 	types.ExecuteBackend
 	types.BeaconBackend

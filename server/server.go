@@ -15,10 +15,10 @@ import (
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/feedback"
+	"github.com/tsinghua-cel/attacker-service/generator"
 	"github.com/tsinghua-cel/attacker-service/openapi"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
-	"github.com/tsinghua-cel/attacker-service/strategy"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"math/big"
@@ -28,13 +28,14 @@ import (
 )
 
 type Server struct {
-	config       *config.Config
-	rpcAPIs      []rpc.API   // List of APIs currently provided by the node
-	http         *httpServer //
-	strategy     *types.Strategy
-	internal     []*slotstrategy.InternalSlotStrategy
-	execClient   *ethclient.Client
-	beaconClient *beaconapi.BeaconGwClient
+	config            *config.Config
+	rpcAPIs           []rpc.API   // List of APIs currently provided by the node
+	http              *httpServer //
+	strategy          *types.Strategy
+	internal          []*slotstrategy.InternalSlotStrategy
+	execClient        *ethclient.Client
+	beaconClient      *beaconapi.BeaconGwClient
+	strategyGenerator *generator.Generator
 
 	validatorSetInfo *types.ValidatorDataSet
 	mux              sync.Mutex
@@ -45,6 +46,7 @@ type Server struct {
 
 	feedBacker      *feedback.Feedback
 	historyStrategy *lru.Cache
+	minMaliciousIdx int
 	maxMaliciousIdx int
 }
 
@@ -56,9 +58,10 @@ func (n *Server) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
 	return n.beaconClient.GetLatestBeaconHeader()
 }
 
-func NewServer(conf *config.Config, maxMaliciousIdx int) *Server {
+func NewServer(conf *config.Config, param types.StrategyGeneratorParam) *Server {
 	s := &Server{}
-	s.maxMaliciousIdx = maxMaliciousIdx
+	s.minMaliciousIdx = param.MinMaliciousIdx
+	s.maxMaliciousIdx = param.MaxMaliciousIdx
 	s.cache = lru.New(10000)
 	s.historyStrategy = lru.New(10000)
 	s.config = conf
@@ -70,10 +73,11 @@ func NewServer(conf *config.Config, maxMaliciousIdx int) *Server {
 	s.execClient = client
 	s.beaconClient = beaconapi.NewBeaconGwClient(conf.BeaconRpc)
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
-	s.strategy = strategy.ParseStrategy(s, conf.Strategy)
+	s.openApi = openapi.NewOpenAPI(s, conf)
+	s.strategyGenerator = generator.NewGenerator(s, param)
+
 	s.validatorSetInfo = types.NewValidatorSet()
 	s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
-	s.openApi = openapi.NewOpenAPI(s, conf)
 	s.hotdata = make(map[string]interface{})
 	s.feedBacker = feedback.NewFeedback(s)
 	return s
@@ -94,7 +98,7 @@ func (n *Server) startRPC() error {
 	}
 
 	initHttp := func(server *httpServer, port int) error {
-		if err := server.setListenAddr(n.config.HttpHost, port); err != nil {
+		if err := server.setListenAddr("0.0.0.0", port); err != nil {
 			return err
 		}
 		if err := server.enableRPC(n.rpcAPIs, httpConfig{
@@ -236,6 +240,8 @@ func (s *Server) Start() {
 		s.stopRPC()
 	}
 	s.openApi.Start()
+	// start strategy generator
+	s.strategyGenerator.Start()
 	// start collect duties info.
 	go s.monitorDuties()
 	go s.monitorEvent()
@@ -265,10 +271,7 @@ func (s *Server) stopRPC() {
 	s.http.stop()
 }
 
-// implement backend
-func (s *Server) SomeNeedBackend() bool {
-	return true
-}
+// implement service backend
 
 func (s *Server) GetBlockHeight() (uint64, error) {
 	return s.execClient.BlockNumber(context.Background())
