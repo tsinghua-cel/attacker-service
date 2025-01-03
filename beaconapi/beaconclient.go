@@ -96,6 +96,12 @@ func (b *BeaconGwClient) GetBeaconConfig() map[string]string {
 		b.config = make(map[string]string)
 		for key, v := range config {
 			switch v.(type) {
+			case time.Duration:
+				b.config[key] = strconv.FormatFloat(v.(time.Duration).Seconds(), 'f', -1, 64)
+			case time.Time:
+				b.config[key] = strconv.FormatInt(v.(time.Time).Unix(), 10)
+			case []uint8:
+				b.config[key] = fmt.Sprintf("0x%#x", v.([]uint8))
 			case int:
 				b.config[key] = strconv.Itoa(v.(int))
 			case uint64:
