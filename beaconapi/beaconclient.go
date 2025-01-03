@@ -10,6 +10,7 @@ import (
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/attestantio/go-eth2-client/spec/capella"
 	"github.com/attestantio/go-eth2-client/spec/deneb"
+	"github.com/attestantio/go-eth2-client/spec/phase0"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
@@ -97,12 +98,18 @@ func (b *BeaconGwClient) GetBeaconConfig() map[string]string {
 			switch v.(type) {
 			case int:
 				b.config[key] = strconv.Itoa(v.(int))
+			case uint64:
+				b.config[key] = strconv.FormatUint(v.(uint64), 10)
 			case int64:
 				b.config[key] = strconv.FormatInt(v.(int64), 10)
 			case float64:
 				b.config[key] = strconv.FormatFloat(v.(float64), 'f', -1, 64)
 			case string:
 				b.config[key] = v.(string)
+			case phase0.Version:
+				b.config[key] = fmt.Sprintf("%#x", v.(phase0.Version))
+			case phase0.DomainType:
+				b.config[key] = fmt.Sprintf("%#x", v.(phase0.DomainType))
 			default:
 				log.Warnf("unknown beacon config key %s type %T", key, v)
 			}
