@@ -34,7 +34,7 @@ func NewGenerator(backend types.ServiceBackend, param types.StrategyGeneratorPar
 	for k, v := range allStrategy {
 		if added["all"] || added[k] {
 			log.WithField("strategy", k).Info("add strategy")
-			strategies = append(strategies, v.Name())
+			addedStrategies = append(addedStrategies, v)
 		}
 	}
 	return &Generator{
@@ -58,6 +58,7 @@ func (g *Generator) runGenerator() {
 
 	if len(filtered) == 0 {
 		g.logger.Error("no strategy to run")
+		return
 	}
 
 	if len(filtered) > 1 {
