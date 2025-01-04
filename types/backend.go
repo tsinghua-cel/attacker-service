@@ -46,7 +46,7 @@ type CacheBackend interface {
 type StrategyBackend interface {
 	// update strategy
 	GetStrategy() *Strategy
-	UpdateStrategy(*Strategy) error
+	UpdateStrategy(Strategy) error
 	GetFeedBack(uid string) (FeedBackInfo, error)
 }
 

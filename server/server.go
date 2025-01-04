@@ -434,7 +434,7 @@ func (s *Server) dumpDuties(epoch int64) error {
 }
 
 // UpdateStrategy only update strategy slots and actions, not update validators.
-func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
+func (s *Server) UpdateStrategy(strategy types.Strategy) error {
 	check := false
 	if strategy.Uid != "" {
 		check = true
@@ -506,7 +506,7 @@ func (s *Server) UpdateStrategy(strategy *types.Strategy) error {
 		"check":    check,
 	}).Debug("goto check strategy")
 
-	dbmodel.InsertNewStrategy(strategy)
+	dbmodel.InsertNewStrategy(&strategy)
 
 	if check {
 		s.historyStrategy.Add(strategy.Uid, HistoryStrategy{

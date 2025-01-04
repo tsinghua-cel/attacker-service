@@ -11,7 +11,7 @@ type attackerInc struct {
 }
 
 func (a attackerInc) UpdateStrategy(strategy types.Strategy) error {
-	return a.backend.UpdateStrategy(&strategy)
+	return a.backend.UpdateStrategy(strategy)
 }
 
 func (a attackerInc) GetStrategyFeedback(uid string) (types.FeedBackInfo, error) {

@@ -26,7 +26,7 @@ func NewFeedback(backend types.CacheBackend) *Feedback {
 	}
 }
 
-func (f *Feedback) AddNewStrategy(uid string, origin *types.Strategy, parsed []*slotstrategy.InternalSlotStrategy) {
+func (f *Feedback) AddNewStrategy(uid string, origin types.Strategy, parsed []*slotstrategy.InternalSlotStrategy) {
 	f.mux.Lock()
 	defer f.mux.Unlock()
 

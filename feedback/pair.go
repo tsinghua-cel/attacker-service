@@ -12,7 +12,7 @@ import (
 
 type pairStrategy struct {
 	uid      string
-	origin   *types.Strategy
+	origin   types.Strategy
 	parsed   []*slotstrategy.InternalSlotStrategy
 	maxEpoch atomic.Value
 	minEpoch atomic.Value

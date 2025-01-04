@@ -75,7 +75,7 @@ func (api apiHandler) UpdateStrategy(c *gin.Context) {
 		log.WithError(err).Error("UpdateStrategy ctx.ShouldBindJSON error")
 		c.JSON(http.StatusBadRequest, err.Error())
 	}
-	err = api.backend.UpdateStrategy(&req)
+	err = api.backend.UpdateStrategy(req)
 	if err != nil {
 		log.WithError(err).Error("UpdateStrategy backend.UpdateStrategy error")
 		c.JSON(http.StatusInternalServerError, err.Error())
