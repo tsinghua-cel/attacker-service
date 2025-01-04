@@ -48,16 +48,16 @@ func GetRewardsToMysql(gwEndpoint string) error {
 
 	safeInterval := config.GetSafeEpochEndInterval()
 	for (latestEpoch - epochNumber) >= safeInterval {
-		totalRewards, err := client.GetAllValReward(int(epochNumber))
+		info, err := client.GetAllValReward(int(epochNumber))
 		if err != nil {
 			return err
 		}
 
-		for _, totalReward := range totalRewards {
-			valIdx, _ := strconv.ParseInt(totalReward.ValidatorIndex, 10, 64)
-			headAmount, _ := strconv.ParseInt(totalReward.Head, 10, 64)
-			targetAmount, _ := strconv.ParseInt(totalReward.Target, 10, 64)
-			sourceAmount, _ := strconv.ParseInt(totalReward.Source, 10, 64)
+		for _, totalReward := range info.TotalRewards {
+			valIdx := totalReward.ValidatorIndex
+			headAmount := int64(totalReward.Head)
+			targetAmount := int64(totalReward.Target)
+			sourceAmount := int64(totalReward.Source)
 			record := &dbmodel.AttestReward{
 				Epoch:          epochNumber,
 				ValidatorIndex: int(valIdx),
@@ -80,20 +80,21 @@ func GetRewardsToMysql(gwEndpoint string) error {
 				continue
 			}
 			{
-				proposerIdx, _ := strconv.ParseInt(blockReward.ProposerIndex, 10, 64)
-				totalAmount, _ := strconv.ParseInt(blockReward.Total, 10, 64)
-				attestationAmount, _ := strconv.ParseInt(blockReward.Attestations, 10, 64)
-				syncAggregateAmount, _ := strconv.ParseInt(blockReward.SyncAggregate, 10, 64)
-				proposerSlashingsAmount, _ := strconv.ParseInt(blockReward.ProposerSlashings, 10, 64)
-				attesterSlashingsAmount, _ := strconv.ParseInt(blockReward.AttesterSlashings, 10, 64)
+
+				proposerIdx := blockReward.ProposerIndex
+				totalAmount := blockReward.Total
+				attestationAmount := blockReward.Attestations
+				syncAggregateAmount := blockReward.SyncAggregate
+				proposerSlashingsAmount := blockReward.ProposerSlashings
+				attesterSlashingsAmount := blockReward.AttesterSlashings
 				record := &dbmodel.BlockReward{
 					Slot:                   slot,
 					ProposerIndex:          int(proposerIdx),
-					TotalAmount:            totalAmount,
-					AttestationAmount:      attestationAmount,
-					SyncAggregateAmount:    syncAggregateAmount,
-					ProposerSlashingAmount: proposerSlashingsAmount,
-					AttesterSlashingAmount: attesterSlashingsAmount,
+					TotalAmount:            int64(totalAmount),
+					AttestationAmount:      int64(attestationAmount),
+					SyncAggregateAmount:    int64(syncAggregateAmount),
+					ProposerSlashingAmount: int64(proposerSlashingsAmount),
+					AttesterSlashingAmount: int64(attesterSlashingsAmount),
 				}
 				if err = dbmodel.InsertBlockReward(o, record); err != nil {
 					o.Rollback()
@@ -145,12 +146,24 @@ func GetRewards(gwEndpoint string, output string) error {
 	epochNumber := int64(0)
 
 	for epochNumber <= (latestEpoch - 2) {
-		totalRewards, err := client.GetAllValReward(int(epochNumber))
+		info, err := client.GetAllValReward(int(epochNumber))
 		if err != nil {
 			return err
 		}
-		for _, totalReward := range totalRewards {
-			writer.Write([]string{strconv.FormatInt(epochNumber, 10), totalReward.ValidatorIndex, totalReward.Head, totalReward.Target, totalReward.Source, totalReward.InclusionDelay, totalReward.Inactivity})
+		for _, totalReward := range info.TotalRewards {
+			inclusionDelay := int64(0)
+			if totalReward.InclusionDelay != nil {
+				inclusionDelay = int64(*totalReward.InclusionDelay)
+			}
+			writer.Write([]string{
+				strconv.FormatInt(epochNumber, 10),
+				strconv.FormatInt(int64(totalReward.ValidatorIndex), 10),
+				strconv.FormatInt(int64(totalReward.Head), 10),
+				strconv.FormatInt(int64(totalReward.Target), 10),
+				strconv.FormatInt(int64(totalReward.Source), 10),
+				strconv.FormatInt(inclusionDelay, 10),
+				strconv.FormatInt(int64(totalReward.Inactivity), 10),
+			})
 		}
 
 		epochNumber++

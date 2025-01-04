@@ -36,6 +36,10 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			return
 		case <-ticker.C:
 			slot := attacker.GetCurSlot()
+			log.WithFields(log.Fields{
+				"slot": slot,
+				"name": o.Name(),
+			}).Info("check strategy")
 			epoch := common.SlotToEpoch(int64(slot))
 			if epoch == latestEpoch {
 				continue

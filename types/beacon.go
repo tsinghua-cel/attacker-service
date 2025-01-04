@@ -63,10 +63,10 @@ type ReorgEvent struct {
 }
 
 type BlockRewardInfo struct {
-	ProposerIndex     string `json:"proposer_index"`
-	Total             string `json:"total"`
-	Attestations      string `json:"attestations"`
-	SyncAggregate     string `json:"sync_aggregate"`
-	ProposerSlashings string `json:"proposer_slashings"`
-	AttesterSlashings string `json:"attester_slashings"`
+	ProposerIndex     uint64 `json:"proposer_index"`
+	Total             uint64 `json:"total"`
+	Attestations      uint64 `json:"attestations"`
+	SyncAggregate     uint64 `json:"sync_aggregate"`
+	ProposerSlashings uint64 `json:"proposer_slashings"`
+	AttesterSlashings uint64 `json:"attester_slashings"`
 }

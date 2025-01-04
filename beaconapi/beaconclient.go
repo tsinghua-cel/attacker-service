@@ -2,9 +2,8 @@ package beaconapi
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/astaxie/beego/httplib"
 	eth2client "github.com/attestantio/go-eth2-client"
 	"github.com/attestantio/go-eth2-client/api"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
@@ -45,52 +44,11 @@ func (b *BeaconGwClient) GetIntConfig(key string) (int, error) {
 	}
 }
 
-func (b *BeaconGwClient) doGet(url string) (types.BeaconResponse, error) {
-	resp, err := httplib.Get(url).Response()
-	if err != nil {
-		return types.BeaconResponse{}, err
-	}
-	defer resp.Body.Close()
-
-	var response types.BeaconResponse
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.WithError(err).Error("Error decoding response")
-	}
-	return response, nil
-}
-
-func (b *BeaconGwClient) doPost(url string, data []byte) (types.BeaconResponse, error) {
-	resp, err := httplib.Post(url).Body(data).Response()
-	if err != nil {
-		return types.BeaconResponse{}, err
-	}
-	defer resp.Body.Close()
-
-	var response types.BeaconResponse
-	err = json.NewDecoder(resp.Body).Decode(&response)
-	if err != nil {
-		log.WithError(err).Error("Error decoding response")
-	}
-	return response, nil
-}
-
-func (b *BeaconGwClient) getBeaconConfig() (map[string]interface{}, error) {
-	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/config/spec", b.endpoint))
-
-	config := make(map[string]interface{})
-	err = json.Unmarshal(response.Data, &config)
-	if err != nil {
-		log.WithError(err).Error("unmarshal config data failed")
-	}
-	return config, nil
-}
-
 func (b *BeaconGwClient) GetBeaconConfig() map[string]string {
 	if len(b.config) == 0 {
 		config, err := b.GetSpec()
 		if err != nil {
-			// todo: add log
+			log.WithError(err).Error("get beacon spec failed")
 			return nil
 		}
 		b.config = make(map[string]string)
@@ -125,76 +83,154 @@ func (b *BeaconGwClient) GetBeaconConfig() map[string]string {
 	return b.config
 }
 
-func (b *BeaconGwClient) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
-	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/headers", b.endpoint))
-	var headers = make([]types.BeaconHeaderInfo, 0)
-	err = json.Unmarshal(response.Data, &headers)
+func (b *BeaconGwClient) getLatestBeaconHeader() (*apiv1.BeaconBlockHeader, error) {
+	service, err := b.getService()
 	if err != nil {
-		// todo: add log.
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.BeaconBlockHeadersProvider).BeaconBlockHeader(context.Background(), &api.BeaconBlockHeaderOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		Block: "head",
+	})
+	if err != nil {
+		log.WithError(err).Error("get latest beacon header failed")
+		return nil, err
+	}
+	return res.Data, nil
+}
+
+func (b *BeaconGwClient) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
+	h, err := b.getLatestBeaconHeader()
+	if err != nil {
 		return types.BeaconHeaderInfo{}, err
 	}
+	header := types.BeaconHeaderInfo{
+		Root:      h.Root.String(),
+		Canonical: h.Canonical,
+	}
+	header.Header.Signature = h.Header.Signature.String()
+	header.Header.Message.Slot = strconv.FormatInt(int64(h.Header.Message.Slot), 10)
+	header.Header.Message.ProposerIndex = strconv.FormatInt(int64(h.Header.Message.ProposerIndex), 10)
+	header.Header.Message.ParentRoot = h.Header.Message.ParentRoot.String()
+	header.Header.Message.StateRoot = h.Header.Message.StateRoot.String()
+	header.Header.Message.BodyRoot = h.Header.Message.BodyRoot.String()
+	return header, nil
+}
 
-	return headers[0], nil
+func (b *BeaconGwClient) getAllValReward(epoch int) (*apiv1.AttestationRewards, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.AttestationRewardsProvider).AttestationRewards(context.Background(), &api.AttestationRewardsOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		Epoch: phase0.Epoch(epoch),
+	})
+	if err != nil {
+		log.WithError(err).Error("get attestation reward failed")
+		return nil, err
+	}
+
+	return res.Data, nil
 }
 
 // default grpc-gateway port is 3500
-func (b *BeaconGwClient) GetAllValReward(epoch int) ([]types.TotalReward, error) {
-	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, epoch)
-	response, err := b.doPost(url, []byte("[]"))
-	var rewardInfo types.RewardInfo
-	err = json.Unmarshal(response.Data, &rewardInfo)
+func (b *BeaconGwClient) GetAllValReward(epoch int) (*apiv1.AttestationRewards, error) {
+	info, err := b.getAllValReward(epoch)
 	if err != nil {
-		log.WithError(err).Error("unmarshal reward data failed")
 		return nil, err
 	}
-	return rewardInfo.TotalRewards, err
+	return info, err
 }
 
-func (b *BeaconGwClient) GetValReward(epoch int, valIdxs []int) (types.BeaconResponse, error) {
-	url := fmt.Sprintf("http://%s/eth/v1/beacon/rewards/attestations/%d", b.endpoint, epoch)
-	vals := make([]string, len(valIdxs))
-	for i := 0; i < len(valIdxs); i++ {
-		vals[i] = strconv.FormatInt(int64(valIdxs[i]), 10)
-	}
-	d, err := json.Marshal(vals)
+func (b *BeaconGwClient) getProposerDuties(epoch int) ([]*apiv1.ProposerDuty, error) {
+	service, err := b.getService()
 	if err != nil {
-		log.WithError(err).Error("get reward failed when marshal vals")
-		return types.BeaconResponse{}, err
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
 	}
-	response, err := b.doPost(url, d)
-	return response, err
+	res, err := service.(eth2client.ProposerDutiesProvider).ProposerDuties(context.Background(), &api.ProposerDutiesOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		Epoch: phase0.Epoch(epoch),
+	})
+	if err != nil {
+		log.WithError(err).Error("get attestation reward failed")
+		return nil, err
+	}
+
+	return res.Data, nil
 }
 
 // /eth/v1/validator/duties/proposer/:epoch
 func (b *BeaconGwClient) GetProposerDuties(epoch int) ([]types.ProposerDuty, error) {
-	url := fmt.Sprintf("http://%s/eth/v1/validator/duties/proposer/%d", b.endpoint, epoch)
 	var duties = make([]types.ProposerDuty, 0)
-
-	response, err := b.doGet(url)
-	err = json.Unmarshal(response.Data, &duties)
+	res, err := b.getProposerDuties(epoch)
 	if err != nil {
-		return []types.ProposerDuty{}, err
+		return duties, err
+	}
+	for _, duty := range res {
+		duties = append(duties, types.ProposerDuty{
+			Pubkey:         duty.PubKey.String(),
+			Slot:           strconv.FormatInt(int64(duty.Slot), 10),
+			ValidatorIndex: strconv.FormatInt(int64(duty.ValidatorIndex), 10),
+		})
 	}
 
 	return duties, err
 }
 
+func (b *BeaconGwClient) getAttesterDuties(epoch int, vals []int) ([]*apiv1.AttesterDuty, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	indices := make([]phase0.ValidatorIndex, len(vals))
+	for _, val := range vals {
+		indices = append(indices, phase0.ValidatorIndex(val))
+	}
+	res, err := service.(eth2client.AttesterDutiesProvider).AttesterDuties(context.Background(), &api.AttesterDutiesOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		Epoch:   phase0.Epoch(epoch),
+		Indices: indices,
+	})
+	if err != nil {
+		log.WithError(err).Error("get attester duties failed")
+		return nil, err
+	}
+
+	return res.Data, nil
+}
+
 // POST /eth/v1/validator/duties/attester/:epoch
 func (b *BeaconGwClient) GetAttesterDuties(epoch int, vals []int) ([]types.AttestDuty, error) {
-	url := fmt.Sprintf("http://%s/eth/v1/validator/duties/attester/%d", b.endpoint, epoch)
-	param := make([]string, len(vals))
-	for i := 0; i < len(vals); i++ {
-		param[i] = strconv.FormatInt(int64(vals[i]), 10)
-	}
-	paramData, _ := json.Marshal(param)
-	var duties = make([]types.AttestDuty, 0)
-
-	response, err := b.doPost(url, paramData)
-	err = json.Unmarshal(response.Data, &duties)
+	res, err := b.getAttesterDuties(epoch, vals)
 	if err != nil {
-		return []types.AttestDuty{}, err
+		return nil, err
 	}
-	return duties, err
+	duties := make([]types.AttestDuty, 0)
+	for _, duty := range res {
+		duties = append(duties, types.AttestDuty{
+			Slot:                    strconv.FormatInt(int64(duty.Slot), 10),
+			Pubkey:                  duty.PubKey.String(),
+			ValidatorIndex:          strconv.FormatInt(int64(duty.ValidatorIndex), 10),
+			CommitteeIndex:          strconv.FormatInt(int64(duty.CommitteeIndex), 10),
+			CommitteeLength:         strconv.FormatInt(int64(duty.CommitteeLength), 10),
+			CommitteesAtSlot:        strconv.FormatInt(int64(duty.CommitteesAtSlot), 10),
+			ValidatorCommitteeIndex: strconv.FormatInt(int64(duty.ValidatorCommitteeIndex), 10),
+		})
+	}
+	return duties, nil
 }
 
 func (b *BeaconGwClient) GetNextEpochProposerDuties() ([]types.ProposerDuty, error) {
@@ -249,26 +285,73 @@ func (b *BeaconGwClient) GetNextEpochAttestDuties() ([]types.AttestDuty, error) 
 	return b.GetAttesterDuties(epoch+1, vals)
 }
 
+func (b *BeaconGwClient) getBlockReward(slot int) (*apiv1.BlockRewards, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.BlockRewardsProvider).BlockRewards(context.Background(), &api.BlockRewardsOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		Block: fmt.Sprintf("%d", slot),
+	})
+	if err != nil {
+		log.WithError(err).Error("get block reward failed")
+		return nil, err
+	}
+	return res.Data, nil
+}
+
 func (b *BeaconGwClient) GetBlockReward(slot int) (types.BlockRewardInfo, error) {
-	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/rewards/blocks/%d", b.endpoint, slot))
-	var reward = types.BlockRewardInfo{}
-	err = json.Unmarshal(response.Data, &reward)
+	res, err := b.getBlockReward(slot)
 	if err != nil {
 		return types.BlockRewardInfo{}, err
 	}
+	if res == nil {
+		return types.BlockRewardInfo{}, errors.New("block reward not found")
+	}
+	reward := types.BlockRewardInfo{
+		ProposerIndex:     uint64(res.ProposerIndex),
+		Total:             uint64(res.Total),
+		Attestations:      uint64(res.Attestations),
+		SyncAggregate:     uint64(res.SyncAggregate),
+		ProposerSlashings: uint64(res.ProposerSlashings),
+		AttesterSlashings: uint64(res.AttesterSlashings),
+	}
+
 	return reward, nil
 }
 
-func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
-	response, err := b.doGet(fmt.Sprintf("http://%s/eth/v1/beacon/states/%d/root", b.endpoint, slot))
-	var rootInfo = types.SlotStateRoot{}
-	err = json.Unmarshal(response.Data, &rootInfo)
+func (b *BeaconGwClient) getSlotRoot(slot int64) (*phase0.Root, error) {
+	service, err := b.getService()
 	if err != nil {
-		// todo: add log.
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.BeaconBlockRootProvider).BeaconBlockRoot(context.Background(), &api.BeaconBlockRootOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		Block: fmt.Sprintf("%d", slot),
+	})
+	if err != nil {
+		log.WithError(err).Error("getSlotRoot failed")
+		return nil, err
+	}
+	return res.Data, nil
+}
+
+func (b *BeaconGwClient) GetSlotRoot(slot int64) (string, error) {
+	root, err := b.getSlotRoot(slot)
+	if err != nil {
 		return "", err
 	}
-
-	return rootInfo.Root, nil
+	if root == nil {
+		return "0x", nil
+	}
+	return root.String(), nil
 }
 
 func (b *BeaconGwClient) getService() (eth2client.Service, error) {
