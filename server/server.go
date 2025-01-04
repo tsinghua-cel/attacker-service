@@ -75,6 +75,11 @@ func NewServer(conf *config.Config, param types.StrategyGeneratorParam) *Server 
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
 	s.openApi = openapi.NewOpenAPI(s, conf)
 	s.strategyGenerator = generator.NewGenerator(s, param)
+	s.strategy = &types.Strategy{
+		Slots:      make([]types.SlotStrategy, 0),
+		Validators: make([]types.ValidatorStrategy, 0),
+	}
+	s.internal = make([]*slotstrategy.InternalSlotStrategy, 0)
 
 	s.validatorSetInfo = types.NewValidatorSet()
 	s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
