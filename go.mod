@@ -8,7 +8,7 @@ require (
 	github.com/BurntSushi/toml v1.3.2
 	github.com/Microsoft/go-winio v0.6.1
 	github.com/astaxie/beego v1.12.3
-	github.com/attestantio/go-eth2-client v0.22.0
+	github.com/attestantio/go-eth2-client v0.0.2
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	github.com/deckarep/golang-set/v2 v2.6.0
 	github.com/ethereum/go-ethereum v1.13.5
@@ -156,4 +156,4 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-replace github.com/attestantio/go-eth2-client => github.com/xueqianLu/go-eth2-client v0.0.1
+replace github.com/attestantio/go-eth2-client => github.com/xueqianLu/go-eth2-client v0.0.2
