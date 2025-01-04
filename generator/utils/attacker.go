@@ -3,6 +3,7 @@ package utils
 import (
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/types"
+	"strconv"
 )
 
 type attackerInc struct {
@@ -22,7 +23,13 @@ func (a attackerInc) GetChainBaseInfo() types.ChainBaseInfo {
 }
 
 func (a attackerInc) GetCurSlot() int64 {
-	return a.backend.GetCurSlot()
+	h, err := a.backend.GetLatestBeaconHeader()
+	if err != nil {
+		return a.backend.GetCurSlot()
+	} else {
+		slot, _ := strconv.ParseInt(h.Header.Message.Slot, 10, 64)
+		return slot
+	}
 }
 
 func (a attackerInc) GetEpochDuties(epoch int64) ([]types.ProposerDuty, error) {
