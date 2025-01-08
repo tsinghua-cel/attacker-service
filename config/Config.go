@@ -37,11 +37,11 @@ func GetConfig() *Config {
 }
 
 var (
-	DefaultCors    = []string{"localhost"} // Default cors domain for the apis
-	DefaultVhosts  = []string{"localhost"} // Default virtual hosts for the apis
-	DefaultOrigins = []string{"localhost"} // Default origins for the apis
-	DefaultPrefix  = ""                    // Default prefix for the apis
-	DefaultModules = []string{}            // enable all module.
+	DefaultCors    = []string{"*"} // Default cors domain for the apis
+	DefaultVhosts  = []string{"*"} // Default virtual hosts for the apis
+	DefaultOrigins = []string{"*"} // Default origins for the apis
+	DefaultPrefix  = ""            // Default prefix for the apis
+	DefaultModules = []string{}    // enable all module.
 	//DefaultModules = []string{"time", "block", "attest"}
 )
 
