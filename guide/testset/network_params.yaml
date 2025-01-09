@@ -1,0 +1,33 @@
+participants:
+  - el_type: besu
+    cl_type: prysm
+    cl_image: "tscel/bf.beacon:v5.2.0"
+    vc_image: "tscel/bf.validator:v5.2.0"
+    validator_count: 86
+    count: 1
+    cl_extra_env_vars: {"ATTACKER_SERVICE_URL":"http://bunnyfinder:19000"}
+    vc_extra_env_vars: {"ATTACKER_SERVICE_URL":"http://bunnyfinder:19000"}
+
+  - el_type: geth
+    cl_type: lighthouse
+    validator_count: 85
+  - el_type: nethermind
+    cl_type: teku
+    validator_count: 85
+
+mev_type: null
+
+network_params:
+  deneb_fork_epoch: 1
+  seconds_per_slot: 3
+  num_validator_keys_per_node: 32
+
+additional_services:
+  - bunnyfinder
+
+bunnyfinder_params:
+  image: 'tscel/bunnyfinder:latest'
+  strategy: 'random'
+  dbconnect: 'eth:12345678@tcp(172.17.0.1:3306)/eth'
+  max_malicious_idx: "85"
+  duration_per_strategy: "30"

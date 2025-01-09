@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  mysql:
+    container_name: "ethmysql"
+    image: "mysql:latest"
+    environment:
+      - MYSQL_ROOT_PASSWORD=12345678
+    restart: always
+    privileged: true
+    ports:
+      - "3306:3306"
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./data/mysql/data:/var/lib/mysql
+      - ./config/mysql/conf/my.cnf:/etc/my.cnf
+      - ./config/mysql/init:/docker-entrypoint-initdb.d/
+    networks:
+      - meta
+
+
+networks:
+  meta:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.99.0.0/16
