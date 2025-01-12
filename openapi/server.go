@@ -54,6 +54,10 @@ func (s *OpenAPI) startHttp(port int) {
 		v1.GET("/curslot", apiHandler{backend: s.backend}.GetCurSlot)
 		v1.GET("/chain-base-info", apiHandler{backend: s.backend}.ChainBaseInfo)
 	}
+	ui := router.Group("/ui")
+	{
+		ui.GET("/home", uiHandler{backend: s.backend}.Home)
+	}
 	log.WithField("swagger", fmt.Sprintf("http://%s/swagger/index.html", docs.SwaggerInfo.Host)).Info("swagger docs url")
 
 	router.Run(fmt.Sprintf(":%d", port))

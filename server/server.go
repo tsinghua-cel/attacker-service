@@ -256,6 +256,10 @@ func (s *Server) Start() {
 
 func (s *Server) initTools() {
 	init := false
+	//{
+	//	init = true
+	//	common.InitSlotTool(3, int64(32), time.Now().Unix())
+	//}
 	for !init {
 		slotPerEpoch, _ := s.beaconClient.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
 		interval, _ := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)

@@ -1,0 +1,89 @@
+package views
+
+templ MakeStrategy(title string, dash DashboardInfo, t1 []StrategyWithReorgCount, t2 []StrategyWithHonestLose, t3 []StrategyWithGreatHonestLose) {
+<!DOCTYPE html>
+  <html lang="en">
+  // This should go into Make HTML Headers
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{ title }</title>
+    // add bootstrap css
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <style>
+            .dashboard {
+                margin: 20px;
+                padding: 20px;
+                background-color: #f8f9fa;
+                border-radius: 8px;
+            }
+
+            .strategy-section {
+                margin: 20px;
+                padding: 20px;
+                background-color: white;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            }
+
+            .table {
+                width: 100%;
+                margin-bottom: 1rem;
+            }
+
+            .table th {
+                background-color: #f1f3f5;
+                color: #495057;
+            }
+
+            .strategy-content {
+                max-width: 300px;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                cursor: pointer;
+            }
+
+            .strategy-content:hover {
+                white-space: normal;
+                overflow: visible;
+                background-color: #f8f9fa;
+                position: relative;
+                z-index: 1000;
+            }
+
+            .footer {
+                text-align: center;
+                padding: 20px;
+                background-color: #f8f9fa;
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+            }
+
+            .section-title {
+                color: #343a40;
+                margin-bottom: 15px;
+                font-size: 1.2rem;
+                font-weight: bold;
+            }
+        </style>
+  </head>
+
+  <body class="body">
+    <div class="container">
+
+    @MakeDashboard(dash)
+
+    @MakeStrategyWithReorgCount(t1)
+    @MakeStrategyWithHonestLose(t2)
+    @MakeStrategyWithGreatHonestLose(t3)
+
+    @MakeFooter()
+    <div style="margin-bottom: 70px;"></div>
+    </div>
+  </body>
+
+  </html>
+}

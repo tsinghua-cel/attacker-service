@@ -8,7 +8,7 @@ import (
 type StrategyResult struct {
 	ID                   int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                                                                                 //  任务类型id
 	UUID                 string `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`                                                                         //  策略的唯一id
-	ReorgCount           int    `orm:"column(rerog_count)" db:"rerog_count" json:"rerog_count" form:"rerog_count"`                                             // 重组次数
+	ReorgCount           int    `orm:"column(reorg_count)" db:"reorg_count" json:"reorg_count" form:"reorg_count"`                                             // 重组次数
 	ImpactValidatorCount int    `orm:"column(impact_validator_count)" db:"impact_validator_count" json:"impact_validator_count" form:"impact_validator_count"` // 影响验证者数量
 }
 

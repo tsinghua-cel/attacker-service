@@ -14,7 +14,7 @@ type Strategy struct {
 	MinEpoch             int64   `orm:"column(min_epoch)" db:"min_epoch" json:"min_epoch" form:"min_epoch"`                                                     //  最小epoch
 	MaxEpoch             int64   `orm:"column(max_epoch)" db:"max_epoch" json:"max_epoch" form:"max_epoch"`                                                     //  最大epoch
 	IsEnd                bool    `orm:"column(is_end)" db:"is_end" json:"is_end" form:"is_end"`                                                                 // 是否结束
-	ReorgCount           int     `orm:"column(rerog_count)" db:"rerog_count" json:"rerog_count" form:"rerog_count"`                                             // 重组次数
+	ReorgCount           int     `orm:"column(reorg_count)" db:"reorg_count" json:"reorg_count" form:"reorg_count"`                                             // 重组次数
 	ImpactValidatorCount int     `orm:"column(impact_validator_count)" db:"impact_validator_count" json:"impact_validator_count" form:"impact_validator_count"` // 影响验证者数量
 	HonestLoseRateAvg    float64 `orm:"column(honest_lose_rate_avg)" db:"honest_lose_rate_avg" json:"honest_lose_rate_avg" form:"honest_lose_rate_avg"`         // 诚实验证者平均损失率
 	AttackerLoseRateAvg  float64 `orm:"column(attacker_lose_rate_avg)" db:"attacker_lose_rate_avg" json:"attacker_lose_rate_avg" form:"attacker_lose_rate_avg"` // 攻击者平均损失率

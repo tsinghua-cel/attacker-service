@@ -10,7 +10,7 @@ AppName := attacker
 
 default: attacker
 
-all: attacker reward
+all: attacker reward docker
 
 BUILD_FLAGS = -tags netgo -ldflags "\
 	-X github.com/tsinghua-cel/attacker-service/versions.AppName=${AppName} \
@@ -35,4 +35,4 @@ docs:
 clean:
 	rm -fr build/*
 docker:
-	docker build -t attacker:${TAG} .
+	docker build -t bunnyfinder:${TAG} .

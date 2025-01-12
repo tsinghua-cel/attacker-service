@@ -1,0 +1,23 @@
+package views
+
+templ MakeDashboard(dash DashboardInfo) {
+    <div class="dashboard">
+            <h2 class="section-title">System Status</h2>
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                <tr>
+                    <th>Current Slot</th>
+                    <th>Executed Strategy Count</th>
+                    <th>Latest Block</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>{ dash.CurSlot }</td>
+                    <td>{ dash.StrategyCount }</td>
+                    <td>{ dash.LatestBlockHeight }</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+}
