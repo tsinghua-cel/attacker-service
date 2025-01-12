@@ -19,11 +19,18 @@ type uiHandler struct {
 
 func (api uiHandler) Home(c *gin.Context) {
 	limit := 10
-	dash := views.DashboardInfo{
-		CurSlot:           "100",
-		StrategyCount:     "98",
-		LatestBlockHeight: "90",
+	dash := views.DashboardInfo{}
+	curSlot := api.backend.GetCurSlot()
+	stCount := dbmodel.GetStrategyCount()
+	latest, err := api.backend.GetLatestBeaconHeader()
+	if err != nil {
+		log.WithError(err).Error("Could not get latest beacon header")
+	} else {
+		dash.LatestBlockHeight = latest.Header.Message.Slot
 	}
+	dash.CurSlot = strconv.FormatInt(int64(curSlot), 10)
+	dash.StrategyCount = strconv.FormatInt(stCount, 10)
+
 	t1 := make([]views.StrategyWithReorgCount, 0)
 	{
 		list := dbmodel.GetStrategyListByReorgCount(limit)

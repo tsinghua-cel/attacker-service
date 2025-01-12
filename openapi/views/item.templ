@@ -3,6 +3,7 @@ package views
 templ MakeStrategyWithReorgCount(items []StrategyWithReorgCount) {
     <div class="strategy-section">
         <h2 class="section-title">Strategy Reorg Analysis</h2>
+        <div class="table-container">
         <table class="table table-bordered table-hover">
             <thead>
             <tr>
@@ -21,6 +22,7 @@ templ MakeStrategyWithReorgCount(items []StrategyWithReorgCount) {
                             }
                         </tbody>
         </table>
+        </div>
     </div>
 }
 
@@ -28,6 +30,7 @@ templ MakeStrategyWithReorgCount(items []StrategyWithReorgCount) {
 templ MakeStrategyWithHonestLose(items []StrategyWithHonestLose) {
     <div class="strategy-section">
             <h2 class="section-title">Honest Lost Rate Analysis</h2>
+            <div class="table-container">
             <table class="table table-bordered table-hover">
                 <thead>
                 <tr>
@@ -46,6 +49,7 @@ templ MakeStrategyWithHonestLose(items []StrategyWithHonestLose) {
                     }
                 </tbody>
             </table>
+            </div>
         </div>
 }
 
@@ -54,6 +58,7 @@ templ MakeStrategyWithHonestLose(items []StrategyWithHonestLose) {
 templ MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) {
     <div class="strategy-section">
         <h2 class="section-title">Comprehensive Lost Ratio Analysis</h2>
+        <div class="table-container">
         <table class="table table-bordered table-hover">
             <thead>
             <tr>
@@ -76,5 +81,6 @@ templ MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) {
             }
             </tbody>
         </table>
+        </div>
     </div>
 }
