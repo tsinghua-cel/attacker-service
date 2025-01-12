@@ -121,7 +121,7 @@ func (n *Server) startRPC() error {
 
 	// Set up HTTP.
 	// Configure legacy unauthenticated HTTP.
-	if err := initHttp(n.http, n.config.HttpPort); err != nil {
+	if err := initHttp(n.http, n.config.RpcPort); err != nil {
 		return err
 	}
 

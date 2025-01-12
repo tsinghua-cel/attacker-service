@@ -8,6 +8,7 @@ import (
 
 type Config struct {
 	HttpPort   int    `json:"http_port" toml:"http_port"`
+	RpcPort    int    `json:"rpc_port" toml:"rpc_port"`
 	ExecuteRpc string `json:"execute_rpc" toml:"execute_rpc"`
 	BeaconRpc  string `json:"beacon_rpc" toml:"beacon_rpc"`
 	DbConnect  string `json:"dbconnect" toml:"dbconnect"`

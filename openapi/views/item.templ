@@ -2,7 +2,7 @@ package views
 
 templ MakeStrategyWithReorgCount(items []StrategyWithReorgCount) {
     <div class="strategy-section">
-        <h2 class="section-title">Strategy Reorg Statistics</h2>
+        <h2 class="section-title">Strategy Reorg Analysis</h2>
         <table class="table table-bordered table-hover">
             <thead>
             <tr>
@@ -27,7 +27,7 @@ templ MakeStrategyWithReorgCount(items []StrategyWithReorgCount) {
 
 templ MakeStrategyWithHonestLose(items []StrategyWithHonestLose) {
     <div class="strategy-section">
-            <h2 class="section-title">Honest Lose Rate Analysis</h2>
+            <h2 class="section-title">Honest Lost Rate Analysis</h2>
             <table class="table table-bordered table-hover">
                 <thead>
                 <tr>
@@ -53,13 +53,14 @@ templ MakeStrategyWithHonestLose(items []StrategyWithHonestLose) {
 
 templ MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) {
     <div class="strategy-section">
-        <h2 class="section-title">Comprehensive Loss Rate Analysis</h2>
+        <h2 class="section-title">Comprehensive Lost Ratio Analysis</h2>
         <table class="table table-bordered table-hover">
             <thead>
             <tr>
                 <th width="20%">Strategy Id</th>
-                <th width="15%">Honest Lose Rate Avg</th>
-                <th width="15%">Malicious Lose Rate Avg</th>
+                <th width="10%">Ratio</th>
+                <th width="10%">Honest Lose Rate Avg</th>
+                <th width="10%">Malicious Lose Rate Avg</th>
                 <th width="50%">Strategy Content</th>
             </tr>
             </thead>
@@ -67,6 +68,7 @@ templ MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) {
             for _, item := range items {
                 <tr>
                     <td>{ item.StrategyId }</td>
+                    <td>{ item.Ratio }</td>
                     <td>{ item.HonestLoseRateAvg }</td>
                     <td>{ item.MaliciousLoseRateAvg }</td>
                     <td class="strategy-content">{ item.StrategyContent }</td>

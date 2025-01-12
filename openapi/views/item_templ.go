@@ -23,7 +23,7 @@ func MakeStrategyWithReorgCount(items []StrategyWithReorgCount) templ.Component 
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"strategy-section\"><h2 class=\"section-title\">Strategy Reorg Statistics</h2><table class=\"table table-bordered table-hover\"><thead><tr><th width=\"20%\">Strategy Id</th><th width=\"15%\">Reorg Count</th><th width=\"65%\">Strategy Content</th></tr></thead> <tbody>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"strategy-section\"><h2 class=\"section-title\">Strategy Reorg Analysis</h2><table class=\"table table-bordered table-hover\"><thead><tr><th width=\"20%\">Strategy Id</th><th width=\"15%\">Reorg Count</th><th width=\"65%\">Strategy Content</th></tr></thead> <tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -96,7 +96,7 @@ func MakeStrategyWithHonestLose(items []StrategyWithHonestLose) templ.Component 
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"strategy-section\"><h2 class=\"section-title\">Honest Lose Rate Analysis</h2><table class=\"table table-bordered table-hover\"><thead><tr><th width=\"20%\">Strategy Id</th><th width=\"15%\">Honest Lose Rate Avg</th><th width=\"65%\">Strategy Content</th></tr></thead> <tbody>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"strategy-section\"><h2 class=\"section-title\">Honest Lost Rate Analysis</h2><table class=\"table table-bordered table-hover\"><thead><tr><th width=\"20%\">Strategy Id</th><th width=\"15%\">Honest Lose Rate Avg</th><th width=\"65%\">Strategy Content</th></tr></thead> <tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -169,7 +169,7 @@ func MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) templ.
 			templ_7745c5c3_Var9 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"strategy-section\"><h2 class=\"section-title\">Comprehensive Loss Rate Analysis</h2><table class=\"table table-bordered table-hover\"><thead><tr><th width=\"20%\">Strategy Id</th><th width=\"15%\">Honest Lose Rate Avg</th><th width=\"15%\">Malicious Lose Rate Avg</th><th width=\"50%\">Strategy Content</th></tr></thead> <tbody>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"strategy-section\"><h2 class=\"section-title\">Comprehensive Lost Ratio Analysis</h2><table class=\"table table-bordered table-hover\"><thead><tr><th width=\"20%\">Strategy Id</th><th width=\"10%\">Ratio</th><th width=\"10%\">Honest Lose Rate Avg</th><th width=\"10%\">Malicious Lose Rate Avg</th><th width=\"50%\">Strategy Content</th></tr></thead> <tbody>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -181,7 +181,7 @@ func MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) templ.
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(item.StrategyId)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 68, Col: 41}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 69, Col: 41}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -192,9 +192,9 @@ func MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) templ.
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var11 string
-			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(item.HonestLoseRateAvg)
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(item.Ratio)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 69, Col: 48}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 70, Col: 36}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -205,11 +205,24 @@ func MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) templ.
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var12 string
-			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(item.MaliciousLoseRateAvg)
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(item.HonestLoseRateAvg)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 70, Col: 51}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 71, Col: 48}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</td><td>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var13 string
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(item.MaliciousLoseRateAvg)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 72, Col: 51}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -217,12 +230,12 @@ func MakeStrategyWithGreatHonestLose(items []StrategyWithGreatHonestLose) templ.
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var13 string
-			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(item.StrategyContent)
+			var templ_7745c5c3_Var14 string
+			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(item.StrategyContent)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 71, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `openapi/views/item.templ`, Line: 73, Col: 71}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

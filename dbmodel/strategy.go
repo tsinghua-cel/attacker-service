@@ -2,6 +2,7 @@ package dbmodel
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
@@ -29,6 +30,8 @@ type StrategyRepository interface {
 	Update(st *Strategy) error
 	GetByUUID(uuid string) *Strategy
 	GetListByFilter(filters ...interface{}) []*Strategy
+	GetSortedList(limit int, order string) []*Strategy
+	GetCount() int64
 }
 
 type strategyRepositoryImpl struct {
@@ -66,6 +69,27 @@ func (repo *strategyRepositoryImpl) GetByUUID(uuid string) *Strategy {
 	}
 }
 
+func (repo *strategyRepositoryImpl) GetCount() int64 {
+	query := repo.o.QueryTable(new(Strategy).TableName())
+	count, err := query.Filter("is_end", true).Count()
+	if err != nil {
+		log.WithError(err).Error("failed to get finished strategy count")
+		return 0
+	}
+	return count
+}
+
+func (repo *strategyRepositoryImpl) GetSortedList(limit int, order string) []*Strategy {
+	list := make([]*Strategy, 0)
+	query := repo.o.QueryTable(new(Strategy).TableName())
+	_, err := query.OrderBy(order).Limit(limit).All(&list)
+	if err != nil {
+		log.WithError(err).Error("failed to get strategy list")
+		return nil
+	}
+	return list
+}
+
 func (repo *strategyRepositoryImpl) GetListByFilter(filters ...interface{}) []*Strategy {
 	list := make([]*Strategy, 0)
 	query := repo.o.QueryTable(new(Strategy).TableName())
@@ -99,4 +123,32 @@ func GetStrategyByUUID(uuid string) *Strategy {
 
 func StrategyUpdate(st *Strategy) {
 	NewStrategyRepository(orm.NewOrm()).Update(st)
+}
+
+func GetStrategyCount() int64 {
+	return NewStrategyRepository(orm.NewOrm()).GetCount()
+}
+
+func GetStrategyListByReorgCount(limit int) []*Strategy {
+	// get strategy list by reorg count desc.
+	return NewStrategyRepository(orm.NewOrm()).GetSortedList(limit, "-reorg_count")
+}
+
+func GetStrategyListByHonestLoseRateAvg(limit int) []*Strategy {
+	// get strategy list by honest lose rate avg desc.
+	return NewStrategyRepository(orm.NewOrm()).GetSortedList(limit, "-honest_lose_rate_avg")
+}
+
+func GetStrategyListByGreatLostRatio(limit int) []*Strategy {
+	// get strategy list by great honest lose rate avg desc.
+	// get strategy list order by honest_lost_rate_avg/attacker_lost_rate_avg
+	norm := orm.NewOrm()
+	list := make([]*Strategy, 0)
+	sql := fmt.Sprintf("SELECT * FROM t_strategy WHERE attacker_lose_rate_avg != 0  ORDER BY (honest_lose_rate_avg / attacker_lose_rate_avg) DESC limit %d", limit)
+	_, err := norm.Raw(sql).QueryRows(&list)
+	if err != nil {
+		log.WithError(err).Error("failed to get strategy list")
+		return nil
+	}
+	return list
 }

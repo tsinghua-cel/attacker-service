@@ -30,7 +30,7 @@ func NewOpenAPI(backend types.ServiceBackend, conf *config.Config) *OpenAPI {
 }
 
 func (s *OpenAPI) Start() {
-	go s.startHttp(s.conf.HttpPort + 1)
+	go s.startHttp(s.conf.HttpPort)
 }
 
 func (s *OpenAPI) startHttp(port int) {

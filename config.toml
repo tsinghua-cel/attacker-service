@@ -1,6 +1,7 @@
-http_port = 12000 # rpc port, rest api port is http_port+1.
+rpc_port = 12000 # rpc server port
+http_port = 12001 # rest api port
 execute_rpc = "http://13.41.176.56:11000"
 beacon_rpc = "13.41.176.56:14000"
 reward_file = "/root/reward.csv"
 swag_host = "13.41.176.56:12100"
-dbconnect = "127.0.0.1:3306@tcp(dex:RFnnKHRar5xk7TEF)/dex" # host:port@tcp(user:password)/dbname
+dbconnect = "eth:12345678@tcp(127.0.0.1:3306)/eth" # host:port@tcp(user:password)/dbname

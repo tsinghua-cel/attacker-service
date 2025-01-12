@@ -18,6 +18,7 @@ type StrategyWithHonestLose struct {
 type StrategyWithGreatHonestLose struct {
 	HonestLoseRateAvg    string `json:"honest_lose"`
 	MaliciousLoseRateAvg string `json:"malicious_lose"`
+	Ratio                string `json:"ratio"`
 	StrategyId           string `json:"strategy_id"`
 	StrategyContent      string `json:"strategy_content"`
 }
