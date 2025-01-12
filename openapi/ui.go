@@ -48,7 +48,7 @@ func (api uiHandler) Home(c *gin.Context) {
 	{
 		list := dbmodel.GetStrategyListByHonestLoseRateAvg(limit)
 		for _, s := range list {
-			rate := strconv.FormatFloat(s.HonestLoseRateAvg*100, 'f', -1, 64)
+			rate := strconv.FormatFloat(s.HonestLoseRateAvg*100, 'f', 4, 64)
 			t2 = append(t2, views.StrategyWithHonestLose{
 				StrategyId:        s.UUID,
 				HonestLoseRateAvg: fmt.Sprintf("%s%%", rate),
@@ -60,10 +60,10 @@ func (api uiHandler) Home(c *gin.Context) {
 	{
 		list := dbmodel.GetStrategyListByGreatLostRatio(limit)
 		for _, s := range list {
-			rate1 := strconv.FormatFloat(s.HonestLoseRateAvg*100, 'f', -1, 64)
-			rate2 := strconv.FormatFloat(s.AttackerLoseRateAvg*100, 'f', -1, 64)
+			rate1 := strconv.FormatFloat(s.HonestLoseRateAvg*100, 'f', 4, 64)
+			rate2 := strconv.FormatFloat(s.AttackerLoseRateAvg*100, 'f', 4, 64)
 			ratio := s.HonestLoseRateAvg / s.AttackerLoseRateAvg
-			rate_ratio := strconv.FormatFloat(ratio*100, 'f', -1, 64)
+			rate_ratio := strconv.FormatFloat(ratio*100, 'f', 4, 64)
 			t3 = append(t3, views.StrategyWithGreatHonestLose{
 				StrategyId:           s.UUID,
 				HonestLoseRateAvg:    fmt.Sprintf("%s%%", rate1),
