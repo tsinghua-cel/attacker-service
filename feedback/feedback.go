@@ -64,7 +64,7 @@ func (f *Feedback) loop() {
 				log.WithFields(log.Fields{
 					"strategy":  pair.origin,
 					"safeEpoch": safeEpoch,
-				}).Info("check strategy end")
+				}).Debug("check strategy end")
 				if ended {
 					ev := StrategyEndEvent{
 						Uid:      pair.uid,
@@ -79,7 +79,7 @@ func (f *Feedback) loop() {
 						"minEpoch":  ev.MinEpoch,
 						"maxEpoch":  ev.MaxEpoch,
 						"safeEpoch": safeEpoch,
-					}).Info("post strategy end event")
+					}).Debug("post strategy end event")
 				}
 			}
 			f.mux.Unlock()

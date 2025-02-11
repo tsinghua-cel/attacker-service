@@ -9,16 +9,16 @@ import (
 )
 
 type Strategy struct {
-	ID                   int64   `orm:"column(id)" db:"id" json:"id" form:"id"`                                                                                 //  任务类型id
-	UUID                 string  `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`                                                                         //  策略的唯一id
-	Content              string  `orm:"column(content);size(3000)" db:"content" json:"content" form:"content"`                                                  //  策略内容
-	MinEpoch             int64   `orm:"column(min_epoch)" db:"min_epoch" json:"min_epoch" form:"min_epoch"`                                                     //  最小epoch
-	MaxEpoch             int64   `orm:"column(max_epoch)" db:"max_epoch" json:"max_epoch" form:"max_epoch"`                                                     //  最大epoch
-	IsEnd                bool    `orm:"column(is_end)" db:"is_end" json:"is_end" form:"is_end"`                                                                 // 是否结束
-	ReorgCount           int     `orm:"column(reorg_count)" db:"reorg_count" json:"reorg_count" form:"reorg_count"`                                             // 重组次数
-	ImpactValidatorCount int     `orm:"column(impact_validator_count)" db:"impact_validator_count" json:"impact_validator_count" form:"impact_validator_count"` // 影响验证者数量
-	HonestLoseRateAvg    float64 `orm:"column(honest_lose_rate_avg)" db:"honest_lose_rate_avg" json:"honest_lose_rate_avg" form:"honest_lose_rate_avg"`         // 诚实验证者平均损失率
-	AttackerLoseRateAvg  float64 `orm:"column(attacker_lose_rate_avg)" db:"attacker_lose_rate_avg" json:"attacker_lose_rate_avg" form:"attacker_lose_rate_avg"` // 攻击者平均损失率
+	BaseModel
+	UUID                 string  `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`
+	Content              string  `orm:"column(content);size(3000)" db:"content" json:"content" form:"content"`
+	MinEpoch             int64   `orm:"column(min_epoch)" db:"min_epoch" json:"min_epoch" form:"min_epoch"`
+	MaxEpoch             int64   `orm:"column(max_epoch)" db:"max_epoch" json:"max_epoch" form:"max_epoch"`
+	IsEnd                bool    `orm:"column(is_end)" db:"is_end" json:"is_end" form:"is_end"`
+	ReorgCount           int     `orm:"column(reorg_count)" db:"reorg_count" json:"reorg_count" form:"reorg_count"`
+	ImpactValidatorCount int     `orm:"column(impact_validator_count)" db:"impact_validator_count" json:"impact_validator_count" form:"impact_validator_count"`
+	HonestLoseRateAvg    float64 `orm:"column(honest_lose_rate_avg)" db:"honest_lose_rate_avg" json:"honest_lose_rate_avg" form:"honest_lose_rate_avg"`
+	AttackerLoseRateAvg  float64 `orm:"column(attacker_lose_rate_avg)" db:"attacker_lose_rate_avg" json:"attacker_lose_rate_avg" form:"attacker_lose_rate_avg"`
 }
 
 func (Strategy) TableName() string {
@@ -42,12 +42,14 @@ func NewStrategyRepository(o orm.Ormer) StrategyRepository {
 	return &strategyRepositoryImpl{o}
 }
 
-func (repo *strategyRepositoryImpl) Create(reward *Strategy) error {
-	_, err := repo.o.Insert(reward)
+func (repo *strategyRepositoryImpl) Create(st *Strategy) error {
+	st.BeforeInsert()
+	_, err := repo.o.Insert(st)
 	return err
 }
 
 func (repo *strategyRepositoryImpl) Update(st *Strategy) error {
+	st.BeforeUpdate()
 	_, err := repo.o.Update(st)
 	return err
 }
@@ -71,6 +73,7 @@ func (repo *strategyRepositoryImpl) GetByUUID(uuid string) *Strategy {
 
 func (repo *strategyRepositoryImpl) GetCount() int64 {
 	query := repo.o.QueryTable(new(Strategy).TableName())
+	query = ProjectFilter(query)
 	count, err := query.Filter("is_end", true).Count()
 	if err != nil {
 		log.WithError(err).Error("failed to get finished strategy count")
@@ -82,6 +85,7 @@ func (repo *strategyRepositoryImpl) GetCount() int64 {
 func (repo *strategyRepositoryImpl) GetSortedList(limit int, order string) []*Strategy {
 	list := make([]*Strategy, 0)
 	query := repo.o.QueryTable(new(Strategy).TableName())
+	query = ProjectFilter(query)
 	_, err := query.OrderBy(order).Limit(limit).All(&list)
 	if err != nil {
 		log.WithError(err).Error("failed to get strategy list")
@@ -93,6 +97,7 @@ func (repo *strategyRepositoryImpl) GetSortedList(limit int, order string) []*St
 func (repo *strategyRepositoryImpl) GetListByFilter(filters ...interface{}) []*Strategy {
 	list := make([]*Strategy, 0)
 	query := repo.o.QueryTable(new(Strategy).TableName())
+	query = ProjectFilter(query)
 	if len(filters) > 0 {
 		l := len(filters)
 		for k := 0; k < l; k += 2 {
@@ -144,7 +149,7 @@ func GetStrategyListByGreatLostRatio(limit int) []*Strategy {
 	// get strategy list order by honest_lost_rate_avg/attacker_lost_rate_avg
 	norm := orm.NewOrm()
 	list := make([]*Strategy, 0)
-	sql := fmt.Sprintf("SELECT * FROM t_strategy WHERE attacker_lose_rate_avg != 0  ORDER BY (honest_lose_rate_avg / attacker_lose_rate_avg) DESC limit %d", limit)
+	sql := fmt.Sprintf("SELECT * FROM t_strategy WHERE attacker_lose_rate_avg != 0 and %s ORDER BY (honest_lose_rate_avg / attacker_lose_rate_avg) DESC limit %d", ProjectFilterString(), limit)
 	_, err := norm.Raw(sql).QueryRows(&list)
 	if err != nil {
 		log.WithError(err).Error("failed to get strategy list")

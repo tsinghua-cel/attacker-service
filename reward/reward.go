@@ -3,6 +3,7 @@ package reward
 import (
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
@@ -67,7 +68,7 @@ func GetRewardsToMysql(gwEndpoint string) error {
 			}
 			if err = repo.Create(record); err != nil {
 				o.Rollback()
-				return errors.New("insert attest reward failed")
+				return errors.New(fmt.Sprintf("insert attest reward failed:%s", err.Error()))
 			}
 		}
 
@@ -98,7 +99,7 @@ func GetRewardsToMysql(gwEndpoint string) error {
 				}
 				if err = dbmodel.InsertBlockReward(o, record); err != nil {
 					o.Rollback()
-					return errors.New("insert block reward failed")
+					return errors.New(fmt.Sprintf("insert block reward failed:%s", err.Error()))
 				}
 			}
 		}

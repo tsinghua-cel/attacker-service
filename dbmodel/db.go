@@ -4,10 +4,16 @@ import (
 	"fmt"
 	"github.com/astaxie/beego/orm"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 )
 
+var (
+	projectID string
+)
+
 func DbInit(connect string) {
+	projectID = uuid.NewString()
 	// Set up database
 	datasource := fmt.Sprintf("%s?charset=utf8", connect)
 	orm.RegisterDriver("mysql", orm.DRMySQL)
@@ -19,5 +25,12 @@ func DbInit(connect string) {
 	orm.RegisterModel(new(ChainReorg))
 	orm.RegisterModel(new(BlockReward))
 	orm.RegisterModel(new(Strategy))
-	orm.RunSyncdb("default", true, true)
+	orm.RunSyncdb("default", false, true)
+
+	// Create project
+	if err = NewProject(); err != nil {
+		log.WithError(err).Fatal("failed to create project")
+	} else {
+		log.WithField("id", projectID).Info("new project created")
+	}
 }

@@ -616,6 +616,7 @@ func (s *Server) HandleEndStrategy() {
 				storeStrategy.HonestLoseRateAvg = finalHonestLoseRate / float64(ev.MaxEpoch-ev.MinEpoch+1)
 				storeStrategy.AttackerLoseRateAvg = finalAttackerLoseRate / float64(ev.MaxEpoch-ev.MinEpoch+1)
 				dbmodel.StrategyUpdate(storeStrategy)
+				dbmodel.AddStrategyCount(1)
 
 				s.historyStrategy.Add(uid, historyInfo)
 				log.WithFields(log.Fields{

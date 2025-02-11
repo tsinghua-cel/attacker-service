@@ -7,7 +7,7 @@ import (
 )
 
 type ChainReorg struct {
-	ID                    int64  `orm:"column(id)" db:"id" json:"id" form:"id"`                                                                                         //  任务类型id
+	BaseModel
 	Epoch                 int64  `orm:"column(epoch)" db:"epoch" json:"epoch" form:"epoch"`                                                                             // epoch
 	Slot                  int64  `orm:"column(slot)" db:"slot" json:"slot" form:"slot"`                                                                                 // slot
 	Depth                 int    `orm:"column(depth)" db:"depth" json:"depth" form:"depth"`                                                                             // depth
@@ -37,6 +37,7 @@ func NewChainReorgRepository(o orm.Ormer) ChainReorgRepository {
 }
 
 func (repo *chainReorgRepositoryImpl) Create(reorg *ChainReorg) error {
+	reorg.BeforeInsert()
 	_, err := repo.o.Insert(reorg)
 	return err
 }
@@ -44,6 +45,7 @@ func (repo *chainReorgRepositoryImpl) Create(reorg *ChainReorg) error {
 func (repo *chainReorgRepositoryImpl) GetListByFilter(filters ...interface{}) []*ChainReorg {
 	list := make([]*ChainReorg, 0)
 	query := repo.o.QueryTable(new(ChainReorg).TableName())
+	query = ProjectFilter(query)
 	if len(filters) > 0 {
 		l := len(filters)
 		for k := 0; k < l; k += 2 {
@@ -79,7 +81,7 @@ func GetReorgListByEpoch(epoch int64) []*ChainReorg {
 func GetReorgCountByEpoch(epoch int64) int {
 	// select count(1) from t_chain_reorg where epoch = epoch;
 	var count int
-	sql := fmt.Sprintf("select count(1) from %s where epoch = ?", new(ChainReorg).TableName())
+	sql := fmt.Sprintf("select count(1) from %s where epoch = ? and %s ", new(ChainReorg).TableName(), ProjectFilterString())
 	orm.NewOrm().Raw(sql, epoch).QueryRow(&count)
 	return count
 }
