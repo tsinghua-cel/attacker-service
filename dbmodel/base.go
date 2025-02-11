@@ -1,6 +1,7 @@
 package dbmodel
 
 import (
+	"fmt"
 	"github.com/astaxie/beego/orm"
 	"time"
 )
@@ -27,5 +28,5 @@ func ProjectFilter(query orm.QuerySeter) orm.QuerySeter {
 }
 
 func ProjectFilterString() string {
-	return "project_id = " + projectID
+	return fmt.Sprintf("project_id = \"%s\"", projectID)
 }

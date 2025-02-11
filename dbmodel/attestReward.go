@@ -77,12 +77,12 @@ func GetRewardByValidatorAndEpoch(epoch int64, index int) *AttestReward {
 }
 
 func GetMaxEpoch() int64 {
-	var max int64
-	sql := fmt.Sprintf("select max(epoch) from %s where %s ", new(AttestReward).TableName(), ProjectFilterString())
-	if err := orm.NewOrm().Raw(sql).QueryRow(&max); err == orm.ErrNoRows {
+	var maxEpoch int64
+	sql := fmt.Sprintf("select max(epoch) as max_epoch from %s where %s ", new(AttestReward).TableName(), ProjectFilterString())
+	if err := orm.NewOrm().Raw(sql).QueryRow(&maxEpoch); err == orm.ErrNoRows {
 		return -1
 	}
-	return max
+	return maxEpoch
 }
 
 func GetImpactValidatorCount(maxHackValIdx int, normalTargetAmount int64, epoch int64) int {
