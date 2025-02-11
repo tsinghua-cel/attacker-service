@@ -7,13 +7,14 @@ import (
 )
 
 type Config struct {
-	HttpPort   int    `json:"http_port" toml:"http_port"`
-	RpcPort    int    `json:"rpc_port" toml:"rpc_port"`
-	ExecuteRpc string `json:"execute_rpc" toml:"execute_rpc"`
-	BeaconRpc  string `json:"beacon_rpc" toml:"beacon_rpc"`
-	DbConnect  string `json:"dbconnect" toml:"dbconnect"`
-	SwagHost   string `json:"swag_host" toml:"swag_host"`
-	RewardFile string `json:"reward_file" toml:"reward_file"`
+	HttpPort        int    `json:"http_port" toml:"http_port"`
+	RpcPort         int    `json:"rpc_port" toml:"rpc_port"`
+	ExecuteRpc      string `json:"execute_rpc" toml:"execute_rpc"`
+	BeaconRpc       string `json:"beacon_rpc" toml:"beacon_rpc"`
+	HonestBeaconRpc string `json:"honest_beacon_rpc" toml:"honest_beacon_rpc"`
+	DbConnect       string `json:"dbconnect" toml:"dbconnect"`
+	SwagHost        string `json:"swag_host" toml:"swag_host"`
+	RewardFile      string `json:"reward_file" toml:"reward_file"`
 }
 
 var _cfg *Config = nil

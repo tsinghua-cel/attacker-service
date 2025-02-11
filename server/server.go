@@ -35,6 +35,7 @@ type Server struct {
 	internal          []*slotstrategy.InternalSlotStrategy
 	execClient        *ethclient.Client
 	beaconClient      *beaconapi.BeaconGwClient
+	honestBeacon      *beaconapi.BeaconGwClient
 	strategyGenerator *generator.Generator
 
 	validatorSetInfo *types.ValidatorDataSet
@@ -72,6 +73,7 @@ func NewServer(conf *config.Config, param types.StrategyGeneratorParam) *Server 
 	}
 	s.execClient = client
 	s.beaconClient = beaconapi.NewBeaconGwClient(conf.BeaconRpc)
+	s.honestBeacon = beaconapi.NewBeaconGwClient(conf.HonestBeaconRpc)
 	s.http = newHTTPServer(log.WithField("module", "server"), rpc.DefaultHTTPTimeouts)
 	s.openApi = openapi.NewOpenAPI(s, conf)
 	s.strategyGenerator = generator.NewGenerator(s, param)
@@ -137,14 +139,18 @@ func (n *Server) startRPC() error {
 func (s *Server) monitorEvent() {
 	ticker := time.NewTicker(time.Minute * 2)
 	defer ticker.Stop()
+	totalReorgDepth := uint64(0)
 
 	handler := func(ch chan *apiv1.ChainReorgEvent) {
 		for {
 			select {
 			case reorg := <-ch:
 				log.WithFields(log.Fields{
-					"slot": reorg.Slot,
+					"slot":            reorg.Slot,
+					"depth":           reorg.Depth,
+					"totalReorgDepth": totalReorgDepth,
 				}).Info("reorg event")
+				totalReorgDepth += reorg.Depth
 				ev := types.ReorgEvent{
 					Epoch:        int64(reorg.Epoch),
 					Slot:         int64(reorg.Slot),
@@ -152,11 +158,11 @@ func (s *Server) monitorEvent() {
 					OldHeadState: reorg.OldHeadState.String(),
 					NewHeadState: reorg.NewHeadState.String(),
 				}
-				if oldHeader, err := s.beaconClient.GetBlockHeaderById(reorg.OldHeadBlock.String()); err == nil {
+				if oldHeader, err := s.honestBeacon.GetBlockHeaderById(reorg.OldHeadBlock.String()); err == nil {
 					ev.OldBlockSlot = int64(oldHeader.Header.Message.Slot)
 					ev.OldBlockProposerIndex = int64(oldHeader.Header.Message.ProposerIndex)
 				}
-				if newHeader, err := s.beaconClient.GetBlockHeaderById(reorg.NewHeadBlock.String()); err == nil {
+				if newHeader, err := s.honestBeacon.GetBlockHeaderById(reorg.NewHeadBlock.String()); err == nil {
 					ev.NewBlockSlot = int64(newHeader.Header.Message.Slot)
 					ev.NewBlockProposerIndex = int64(newHeader.Header.Message.ProposerIndex)
 				}
@@ -168,7 +174,7 @@ func (s *Server) monitorEvent() {
 	for {
 		select {
 		case <-ticker.C:
-			eventCh := s.beaconClient.MonitorReorgEvent()
+			eventCh := s.honestBeacon.MonitorReorgEvent()
 			if eventCh != nil {
 				go handler(eventCh)
 				ticker.Reset(time.Hour * 256)
@@ -194,7 +200,7 @@ func (s *Server) monitorDuties() {
 		select {
 
 		case <-dutyTicker.C:
-			header, err := s.beaconClient.GetLatestBeaconHeader()
+			header, err := s.honestBeacon.GetLatestBeaconHeader()
 			if err != nil {
 				log.WithError(err).Debug("duty ticker get latest beacon header failed")
 				continue
@@ -215,7 +221,7 @@ func (s *Server) monitorDuties() {
 			}
 
 		case <-ticker.C:
-			curDuties, err := s.beaconClient.GetCurrentEpochAttestDuties()
+			curDuties, err := s.honestBeacon.GetCurrentEpochAttestDuties()
 			if err != nil {
 				continue
 			}
@@ -224,7 +230,7 @@ func (s *Server) monitorDuties() {
 					s.validatorSetInfo.AddValidator(idx, duty.Pubkey)
 				}
 			}
-			nextDuties, _ := s.beaconClient.GetNextEpochAttestDuties()
+			nextDuties, _ := s.honestBeacon.GetNextEpochAttestDuties()
 			for _, duty := range nextDuties {
 				if idx, err := strconv.Atoi(duty.ValidatorIndex); err == nil {
 					s.validatorSetInfo.AddValidator(idx, duty.Pubkey)
@@ -261,9 +267,9 @@ func (s *Server) initTools() {
 	//	common.InitSlotTool(3, int64(32), time.Now().Unix())
 	//}
 	for !init {
-		slotPerEpoch, _ := s.beaconClient.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
-		interval, _ := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
-		genesis, err := s.beaconClient.GetGenesis()
+		slotPerEpoch, _ := s.honestBeacon.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
+		interval, _ := s.honestBeacon.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
+		genesis, err := s.honestBeacon.GetGenesis()
 		if slotPerEpoch == 0 || interval == 0 || err != nil {
 			log.WithError(err).Error("initTools get genesis failed, retry")
 			time.Sleep(time.Second)
@@ -307,15 +313,15 @@ func (s *Server) GetValidatorRoleByPubkey(slot int, pubkey string) types.RoleTyp
 }
 
 func (s *Server) GetCurrentEpochProposeDuties() ([]types.ProposerDuty, error) {
-	return s.beaconClient.GetCurrentEpochProposerDuties()
+	return s.honestBeacon.GetCurrentEpochProposerDuties()
 }
 
 func (s *Server) GetCurrentEpochAttestDuties() ([]types.AttestDuty, error) {
-	return s.beaconClient.GetCurrentEpochAttestDuties()
+	return s.honestBeacon.GetCurrentEpochAttestDuties()
 }
 
 func (s *Server) GetSlotsPerEpoch() int {
-	count, err := s.beaconClient.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
+	count, err := s.honestBeacon.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
 	if err != nil {
 		return 6
 	}
@@ -323,7 +329,7 @@ func (s *Server) GetSlotsPerEpoch() int {
 }
 
 func (s *Server) GetIntervalPerSlot() int {
-	interval, _ := s.beaconClient.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
+	interval, _ := s.honestBeacon.GetIntConfig(beaconapi.SECONDS_PER_SLOT)
 	return interval
 }
 
@@ -379,7 +385,7 @@ func (s *Server) GetValidatorDataSet() *types.ValidatorDataSet {
 func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
 	epochPerSlot := uint64(s.GetSlotsPerEpoch())
 	epoch := slot / epochPerSlot
-	duties, err := s.beaconClient.GetProposerDuties(int(epoch))
+	duties, err := s.honestBeacon.GetProposerDuties(int(epoch))
 	if err != nil {
 		return 0, err
 	}
@@ -394,7 +400,7 @@ func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
 }
 
 func (s *Server) GetProposeDuties(epoch int) ([]types.ProposerDuty, error) {
-	return s.beaconClient.GetProposerDuties(epoch)
+	return s.honestBeacon.GetProposerDuties(epoch)
 }
 
 func (s *Server) SlotsPerEpoch() int {
@@ -437,7 +443,7 @@ func (s *Server) dumpDuties(epoch int64) error {
 			"epoch":     epoch,
 			"slot":      duty.Slot,
 			"validator": duty.ValidatorIndex,
-		}).Info("epoch duty")
+		}).Debug("epoch duty")
 	}
 	return nil
 }
