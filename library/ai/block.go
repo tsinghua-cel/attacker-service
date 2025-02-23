@@ -61,25 +61,32 @@ func firstStrategy() (types.Strategy, error) {
 	if agent == nil {
 		return types.Strategy{}, errors.New("agent is nil")
 	}
-	content, err := agent.Ask(prompt)
-	if err != nil {
-		log.WithError(err).Error("agent.Ask() failed")
-		return types.Strategy{}, err
+	for i := 0; i < 10; i++ {
+		if i > 0 {
+			time.Sleep(3 * time.Second)
+		}
+		content, err := agent.Ask(prompt)
+		if err != nil {
+			log.WithError(err).Error("agent.Ask() failed, retry")
+			continue
+		}
+		jsonStr := getJson(content)
+		if len(jsonStr) == 0 {
+			log.WithField("content", content).Error("getJson() failed")
+		} else {
+			log.WithField("jsonStr", jsonStr).Info("strategy content")
+		}
+		var s types.Strategy
+		if err = json.Unmarshal([]byte(jsonStr), &s.Slots); err != nil {
+			log.WithField("jsonstr", jsonStr).WithError(err).Error("json.Unmarshal() failed, retry")
+			continue
+		}
+		s.Uid = uuid.NewString()
+		log.WithField("strategy", s).Debug("first strategy success")
+		return s, nil
+
 	}
-	jsonStr := getJson(content)
-	if len(jsonStr) == 0 {
-		log.WithField("content", content).Error("getJson() failed")
-	} else {
-		log.WithField("jsonStr", jsonStr).Info("strategy content")
-	}
-	var s types.Strategy
-	if err = json.Unmarshal([]byte(jsonStr), &s.Slots); err != nil {
-		log.WithField("jsonstr", jsonStr).WithError(err).Error("json.Unmarshal() failed")
-		return types.Strategy{}, err
-	}
-	s.Uid = uuid.NewString()
-	log.WithField("strategy", s).Debug("first strategy success")
-	return s, nil
+	return types.Strategy{}, errors.New("first strategy failed")
 }
 
 func newStrategy(feedback string) (types.Strategy, error) {
