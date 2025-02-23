@@ -141,7 +141,32 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 
 			return r
 		}, nil
-	case "delayWithSecond", "delayWithDuration":
+	case "delayWithDuration":
+		var duration int
+		if len(params) == 0 {
+			duration = rand.Intn(10)
+		} else {
+			duration = params[0]
+		}
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": name,
+			}).Debug("do action ")
+			seconds := duration * (4 * common.GetChainBaseInfo().SecondsPerSlot)
+
+			log.WithFields(log.Fields{
+				"slot":     slot,
+				"duration": duration,
+			}).Debug("delayWithDuration")
+			time.Sleep(time.Second * time.Duration(seconds))
+			return r
+		}, nil
+
+	case "delayWithSecond":
 		var seconds int
 		if len(params) == 0 {
 			seconds = rand.Intn(10)

@@ -2,6 +2,7 @@ package library
 
 import (
 	"context"
+	aiattack "github.com/tsinghua-cel/attacker-service/library/ai"
 	"github.com/tsinghua-cel/attacker-service/library/confuse"
 	"github.com/tsinghua-cel/attacker-service/library/exante"
 	"github.com/tsinghua-cel/attacker-service/library/ext_exante"
@@ -52,6 +53,8 @@ func Init() {
 	register(&ext_staircase.Instance{})
 	register(&ext_unrealized.Instance{})
 	register(&ext_withholding.Instance{})
+
+	register(&aiattack.Instance{})
 
 }
 

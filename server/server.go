@@ -611,8 +611,8 @@ func (s *Server) HandleEndStrategy() {
 					totalImpactCount += impactCount
 				}
 				historyInfo.FeedBackInfo = &types.FeedBackInfo{
-					ReorgCount:           totalReorgCount,
-					ImpactValidatorCount: totalImpactCount,
+					HonestLoseRate:   finalHonestLoseRate,
+					AttackerLoseRate: finalAttackerLoseRate,
 				}
 				storeStrategy.MinEpoch = ev.MinEpoch
 				storeStrategy.MaxEpoch = ev.MaxEpoch
@@ -647,8 +647,8 @@ func (s *Server) GetFeedBack(uid string) (types.FeedBackInfo, error) {
 	}
 	if st := dbmodel.GetStrategyByUUID(uid); st != nil && st.IsEnd {
 		return types.FeedBackInfo{
-			st.ReorgCount,
-			st.ImpactValidatorCount,
+			st.HonestLoseRateAvg,
+			st.AttackerLoseRateAvg,
 		}, nil
 
 	} else {

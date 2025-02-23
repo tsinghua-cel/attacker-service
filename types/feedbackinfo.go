@@ -1,8 +1,8 @@
 package types
 
 type FeedBackInfo struct {
-	ReorgCount           int
-	ImpactValidatorCount int
+	HonestLoseRate   float64
+	AttackerLoseRate float64
 }
 
 type FeedBack struct {
@@ -11,5 +11,5 @@ type FeedBack struct {
 }
 
 type FeedBacker interface {
-	WaitFeedback(uid string, ch chan FeedBack)
+	GetFeedBack(uid string) (FeedBackInfo, error)
 }
