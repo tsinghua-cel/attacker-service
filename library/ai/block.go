@@ -34,8 +34,8 @@ func initAgent(ctx context.Context) {
 	param.Key = os.Getenv("OPENAI_API_KEY")
 	param.Model = os.Getenv("LLM_MODEL")
 	log.WithFields(log.Fields{
-		"param":  param,
-		"prompt": prompt,
+		"param": param,
+		//"prompt": prompt,
 	}).Info("initAgent")
 
 	engine := ai.GetAI("openai", param.Key, param.Url)
