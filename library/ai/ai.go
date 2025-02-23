@@ -54,6 +54,7 @@ func (o *Instance) waitFeedback(ctx context.Context, attacker types.AttackerInc,
 }
 
 func (o *Instance) run(ctx context.Context, params types.LibraryParams, feedbacker types.FeedBacker) {
+	o.ctx = ctx
 	log.WithField("name", o.Name()).Info("start to run strategy")
 	logger := log.WithField("name", o.Name())
 	o.once.Do(o.init)
