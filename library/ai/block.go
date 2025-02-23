@@ -48,13 +48,13 @@ func initAgent(ctx context.Context) {
 }
 
 func getJson(content string) string {
+	content = strings.Replace(content, "```json", "", -1)
+	content = strings.Replace(content, "```", "", -1)
 	content = strings.Replace(content, "\n", "", -1)
-	re := regexp.MustCompile("```json(.*?)```")
-	jsonStr := re.FindStringSubmatch(content)
-	if len(jsonStr) > 1 {
-		return jsonStr[1]
-	}
-	return ""
+	content = strings.TrimSpace(content)
+	re := regexp.MustCompile("\\[.*\\]")
+	jsonStr := re.FindString(content)
+	return jsonStr
 }
 
 func firstStrategy() (types.Strategy, error) {
