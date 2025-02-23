@@ -55,6 +55,7 @@ func firstStrategy() (types.Strategy, error) {
 		log.WithError(err).Error("agent.Ask() failed")
 		return types.Strategy{}, err
 	}
+	log.WithField("content", content).Info("strategy content")
 	re := regexp.MustCompile(`\[.*\]`)
 	jsonStr := re.FindString(content)
 	var s types.Strategy
@@ -80,6 +81,7 @@ func newStrategy(feedback string) (types.Strategy, error) {
 			log.WithError(err).Error("agent.Ask() failed retry")
 			continue
 		}
+		log.WithField("content", content).Info("strategy content")
 		re := regexp.MustCompile(`\[.*\]`)
 		jsonStr := re.FindString(content)
 		var s types.Strategy
