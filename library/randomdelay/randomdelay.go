@@ -42,17 +42,11 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 					return
 				}
 				o.mux.Lock()
-				if s, exist := o.strategies[info.Uid]; exist {
+				if _, exist := o.strategies[info.Uid]; exist {
 					log.WithFields(log.Fields{
 						"uid":  info.Uid,
 						"info": info.Info,
-					}).Info("get feedback")
-					if info.Info.ReorgCount > 0 || info.Info.ImpactValidatorCount > 0 {
-						log.WithFields(log.Fields{
-							"uid":      info.Uid,
-							"strategy": s.String(),
-						}).Info("feedback have good impact, please save it")
-					}
+					}).Debug("get feedback")
 					// todo: update strategy with feedback.
 				}
 				o.mux.Unlock()
@@ -107,12 +101,6 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						"epoch":    epoch + 1,
 						"strategy": strategy.Uid,
 					}).Info("update strategy successfully")
-					if feedbacker != nil {
-						o.mux.Lock()
-						o.strategies[strategy.Uid] = strategy
-						o.mux.Unlock()
-						feedbacker.WaitFeedback(strategy.Uid, feedbackCh)
-					}
 				}
 			}
 		}
