@@ -31,3 +31,6 @@ bunnyfinder_params:
   dbconnect: 'eth:12345678@tcp(172.17.0.1:3306)/eth'
   max_malicious_idx: "85"
   duration_per_strategy: "30"
+  openai_key: ""
+  openai_base_url: ""
+  llm_model: ""
