@@ -11,6 +11,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/types"
 	"os"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -46,6 +47,16 @@ func initAgent(ctx context.Context) {
 	}
 }
 
+func getJson(content string) string {
+	content = strings.Replace(content, "\n", "", -1)
+	re := regexp.MustCompile("```json(.*?)```")
+	jsonStr := re.FindStringSubmatch(content)
+	if len(jsonStr) > 1 {
+		return jsonStr[1]
+	}
+	return ""
+}
+
 func firstStrategy() (types.Strategy, error) {
 	if agent == nil {
 		return types.Strategy{}, errors.New("agent is nil")
@@ -55,9 +66,12 @@ func firstStrategy() (types.Strategy, error) {
 		log.WithError(err).Error("agent.Ask() failed")
 		return types.Strategy{}, err
 	}
-	log.WithField("content", content).Info("strategy content")
-	re := regexp.MustCompile(`\[.*\]`)
-	jsonStr := re.FindString(content)
+	jsonStr := getJson(content)
+	if len(jsonStr) == 0 {
+		log.WithField("content", content).Error("getJson() failed")
+	} else {
+		log.WithField("jsonStr", jsonStr).Info("strategy content")
+	}
 	var s types.Strategy
 	if err = json.Unmarshal([]byte(jsonStr), &s.Slots); err != nil {
 		log.WithField("jsonstr", jsonStr).WithError(err).Error("json.Unmarshal() failed")
@@ -81,9 +95,12 @@ func newStrategy(feedback string) (types.Strategy, error) {
 			log.WithError(err).Error("agent.Ask() failed retry")
 			continue
 		}
-		log.WithField("content", content).Info("strategy content")
-		re := regexp.MustCompile(`\[.*\]`)
-		jsonStr := re.FindString(content)
+		jsonStr := getJson(content)
+		if len(jsonStr) == 0 {
+			log.WithField("content", content).Error("getJson() failed")
+		} else {
+			log.WithField("jsonStr", jsonStr).Info("strategy content")
+		}
 		var s types.Strategy
 		if err = json.Unmarshal([]byte(jsonStr), &s.Slots); err != nil {
 			log.WithField("jsonstr", jsonStr).WithError(err).Error("json.Unmarshal() failed retry")
