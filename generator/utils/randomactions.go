@@ -42,7 +42,11 @@ func (a ActionPoint) SpecialActions() []string {
 func (a ActionPoint) FullActions() []string {
 	normalActions := []string{
 		"return",
-		"delayWithSecond:[time]",
+		"delayWithDuration:[time]",
+	}
+	switch a {
+	case "BlockGetNewParentRoot", "AttestBeforeSign":
+		return a.SpecialActions()
 	}
 	normalActions = append(normalActions, a.SpecialActions()...)
 	return normalActions
@@ -69,11 +73,8 @@ var (
 	beforePoint = []ActionPoint{
 		AttestBeforeBroadCast,
 		AttestBeforeSign,
-		AttestBeforePropose,
-		BlockDelayForReceiveBlock,
 		BlockBeforeBroadCast,
 		BlockBeforeSign,
-		BlockBeforePropose,
 		BlockGetNewParentRoot,
 	}
 )
