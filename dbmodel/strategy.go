@@ -11,6 +11,7 @@ import (
 type Strategy struct {
 	BaseModel
 	UUID                 string  `orm:"column(uuid)" db:"uuid" json:"uuid" form:"uuid"`
+	Category             string  `orm:"column(category);size(100)" db:"category" json:"category" form:"category"`
 	Content              string  `orm:"column(content);size(3000)" db:"content" json:"content" form:"content"`
 	MinEpoch             int64   `orm:"column(min_epoch)" db:"min_epoch" json:"min_epoch" form:"min_epoch"`
 	MaxEpoch             int64   `orm:"column(max_epoch)" db:"max_epoch" json:"max_epoch" form:"max_epoch"`
@@ -116,6 +117,7 @@ func InsertNewStrategy(st *types.Strategy) {
 		IsEnd:                false,
 		ReorgCount:           0,
 		ImpactValidatorCount: 0,
+		Category:             st.Category,
 	}
 	if err := NewStrategyRepository(orm.NewOrm()).Create(data); err != nil {
 		log.WithError(err).Error("failed to insert new strategy")

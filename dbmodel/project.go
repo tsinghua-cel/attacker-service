@@ -7,7 +7,8 @@ import (
 
 type Project struct {
 	BaseModel
-	StrategyCount int `orm:"column(strategy_count)" db:"strategy_count" json:"strategy_count" form:"strategy_count"` // strategy count
+	StrategyCategory string `orm:"column(strategy_category)" db:"strategy_category" json:"strategy_category" form:"strategy_category"` // strategy category
+	StrategyCount    int    `orm:"column(strategy_count)" db:"strategy_count" json:"strategy_count" form:"strategy_count"`             // strategy count
 }
 
 func (Project) TableName() string {
@@ -77,6 +78,17 @@ func AddStrategyCount(strategyCount int) error {
 	}
 
 	p.StrategyCount += strategyCount
+
+	return UpdateProject(p)
+}
+
+func SetProjectStrategyCategory(strategyCategory string) error {
+	p, err := GetProjectById(projectID)
+	if err != nil {
+		return err
+	}
+
+	p.StrategyCategory = strategyCategory
 
 	return UpdateProject(p)
 }

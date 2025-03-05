@@ -30,3 +30,31 @@ func ProjectFilter(query orm.QuerySeter) orm.QuerySeter {
 func ProjectFilterString() string {
 	return fmt.Sprintf("project_id = \"%s\"", projectID)
 }
+
+func DoWithTransaction(f func(o orm.Ormer) error) error {
+	o := orm.NewOrm()
+	if err := o.Begin(); err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	defer func() {
+		if p := recover(); p != nil {
+			_ = o.Rollback()
+			panic(p)
+		} else if err := recover(); err != nil {
+			_ = o.Rollback()
+		}
+	}()
+
+	err := f(o)
+	if err != nil {
+		_ = o.Rollback()
+		return err
+	}
+
+	if err := o.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}

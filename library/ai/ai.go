@@ -74,6 +74,7 @@ func (o *Instance) run(ctx context.Context, params types.LibraryParams, feedback
 			logger.Info("stop to run strategy")
 			return
 		default:
+			strategy.Category = o.Name()
 			if err = attacker.UpdateStrategy(strategy); err != nil {
 				logger.WithField("strategy", strategy).WithError(err).Error("failed to update strategy")
 			} else {

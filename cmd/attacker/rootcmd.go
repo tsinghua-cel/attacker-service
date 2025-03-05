@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/tsinghua-cel/attacker-service/collection"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/docs"
@@ -101,6 +102,7 @@ func runNode() {
 		MinMaliciousIdx:     minHackValIdx,
 		MaxMaliciousIdx:     maxHackValIdx,
 	})
+	_ = dbmodel.SetProjectStrategyCategory(strategies)
 	bunnyFinder.Start()
 
 	go getRewardBackgroud()
@@ -163,11 +165,9 @@ func getRewardBackgroud() {
 			log.WithFields(log.Fields{
 				"beacon": config.GetConfig().BeaconRpc,
 			}).Debug("goto get reward")
-			err := reward.GetRewardsToMysql(config.GetConfig().BeaconRpc)
-			//err := reward.GetRewards(config.GetConfig().BeaconRpc, config.GetConfig().RewardFile)
-			if err != nil {
-				log.WithError(err).Error("collect reward failed")
-			}
+			collection.GetRewardsToMysql(config.GetConfig().HonestBeaconRpc)
+			collection.GetAttestDutyToMysql(config.GetConfig().HonestBeaconRpc)
+			collection.GetBlockDutyToMysql(config.GetConfig().HonestBeaconRpc)
 			reward.GetRewards(config.GetConfig().BeaconRpc, config.GetConfig().RewardFile)
 		}
 	}
