@@ -26,6 +26,8 @@ func DbInit(connect string) {
 	orm.RegisterModel(new(BlockReward))
 	orm.RegisterModel(new(Strategy))
 	orm.RegisterModel(new(Project))
+	orm.RegisterModel(new(AttestDuty))
+	orm.RegisterModel(new(BlockDuty))
 	orm.RunSyncdb("default", false, true)
 
 	// Create project
