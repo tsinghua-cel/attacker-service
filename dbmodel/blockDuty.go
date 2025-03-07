@@ -44,7 +44,7 @@ func (repo *blockDutyRepositoryImpl) GetSortedList(limit int, order string) []*B
 	query = ProjectFilter(query)
 	_, err := query.OrderBy(order).Limit(limit).All(&list)
 	if err != nil {
-		log.WithError(err).Error("failed to get strategy list")
+		log.WithError(err).Error("failed to get block duty sorted list")
 		return nil
 	}
 	return list

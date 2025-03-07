@@ -31,6 +31,11 @@ func DbInit(connect string) {
 	if err != nil {
 		log.WithError(err).Fatal("failed to connect to database")
 	}
+
+	// Configure connection pool
+	orm.SetMaxIdleConns("default", 10)
+	orm.SetMaxOpenConns("default", 100)
+
 	orm.RegisterModel(new(AttestReward))
 	orm.RegisterModel(new(ChainReorg))
 	orm.RegisterModel(new(BlockReward))
@@ -38,7 +43,7 @@ func DbInit(connect string) {
 	orm.RegisterModel(new(Project))
 	orm.RegisterModel(new(AttestDuty))
 	orm.RegisterModel(new(BlockDuty))
-	orm.RunSyncdb("default", false, true)
+	orm.RunSyncdb("default", false, false)
 
 	// Create project
 	if err = NewProject(); err != nil {

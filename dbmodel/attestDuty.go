@@ -44,7 +44,7 @@ func (repo *attestDutyRepositoryImpl) GetSortedList(limit int, order string) []*
 	query = ProjectFilter(query)
 	_, err := query.OrderBy(order).Limit(limit).All(&list)
 	if err != nil {
-		log.WithError(err).Error("failed to get strategy list")
+		log.WithError(err).Error("failed to get attest duty sorted list")
 		return nil
 	}
 	return list

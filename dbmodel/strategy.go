@@ -89,7 +89,7 @@ func (repo *strategyRepositoryImpl) GetSortedList(limit int, order string) []*St
 	query = ProjectFilter(query)
 	_, err := query.OrderBy(order).Limit(limit).All(&list)
 	if err != nil {
-		log.WithError(err).Error("failed to get strategy list")
+		log.WithError(err).Error("failed to get sorted strategy list")
 		return nil
 	}
 	return list
@@ -154,7 +154,7 @@ func GetStrategyListByGreatLostRatio(limit int) []*Strategy {
 	sql := fmt.Sprintf("SELECT * FROM t_strategy WHERE attacker_lose_rate_avg != 0 and %s ORDER BY (honest_lose_rate_avg / attacker_lose_rate_avg) DESC limit %d", ProjectFilterString(), limit)
 	_, err := norm.Raw(sql).QueryRows(&list)
 	if err != nil {
-		log.WithError(err).Error("failed to get strategy list")
+		log.WithError(err).Error("failed to get GetStrategyListByGreatLostRatio")
 		return nil
 	}
 	return list

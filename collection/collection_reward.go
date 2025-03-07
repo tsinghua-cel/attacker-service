@@ -20,7 +20,7 @@ var (
 
 func getOrm() orm.Ormer {
 	once.Do(func() {
-		localorm = dbmodel.GetOrmInstance()
+		localorm = orm.NewOrm()
 	})
 	return localorm
 }
