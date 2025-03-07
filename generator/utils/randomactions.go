@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"github.com/tsinghua-cel/attacker-service/common"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -62,8 +61,7 @@ func (a ActionPoint) RandomAction(slot int) string {
 		}
 		action = strings.Replace(action, "[slot]", strconv.FormatInt(int64(rparam), 10), -1)
 	} else {
-		base := common.GetChainBaseInfo()
-		rparam := (rand.Intn(10) + 3) * base.SecondsPerSlot
+		rparam := rand.Intn(10) + 3
 		action = strings.Replace(action, "[time]", strconv.Itoa(rparam), -1)
 	}
 	return action
