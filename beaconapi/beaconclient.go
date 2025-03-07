@@ -7,9 +7,11 @@ import (
 	eth2client "github.com/attestantio/go-eth2-client"
 	"github.com/attestantio/go-eth2-client/api"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
+	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/capella"
 	"github.com/attestantio/go-eth2-client/spec/deneb"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	lru "github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
@@ -21,17 +23,23 @@ const (
 	SECONDS_PER_SLOT = "SECONDS_PER_SLOT"
 )
 
+var (
+	validatorListCacheKey = "validator_list"
+)
+
 type BeaconGwClient struct {
 	endpoint string
 	config   map[string]string
 	service  eth2client.Service
+	cache    *lru.Cache
 }
 
 func NewBeaconGwClient(endpoint string) *BeaconGwClient {
-
+	cache, _ := lru.New(100)
 	return &BeaconGwClient{
 		endpoint: endpoint,
 		config:   make(map[string]string),
+		cache:    cache,
 	}
 }
 
@@ -99,6 +107,55 @@ func (b *BeaconGwClient) getLatestBeaconHeader() (*apiv1.BeaconBlockHeader, erro
 		log.WithError(err).Error("get latest beacon header failed")
 		return nil, err
 	}
+	return res.Data, nil
+}
+
+func (b *BeaconGwClient) GetValidatorsList() ([]*phase0.Validator, error) {
+	if v, ok := b.cache.Get(validatorListCacheKey); ok {
+		return v.([]*phase0.Validator), nil
+	}
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.BeaconStateProvider).BeaconState(context.Background(), &api.BeaconStateOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		State: "head",
+	})
+	if err != nil {
+		log.WithError(err).Error("get attestation reward failed")
+		return nil, err
+	}
+	vals, err := res.Data.Validators()
+	if err != nil {
+		log.WithError(err).Error("get validators failed")
+		return nil, err
+	}
+	b.cache.Add(validatorListCacheKey, vals)
+
+	return vals, nil
+}
+
+func (b *BeaconGwClient) GetLatestValidators() (*spec.VersionedBeaconState, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.BeaconStateProvider).BeaconState(context.Background(), &api.BeaconStateOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		State: "head",
+	})
+	if err != nil {
+		log.WithError(err).Error("get attestation reward failed")
+		return nil, err
+	}
+
 	return res.Data, nil
 }
 
@@ -196,6 +253,18 @@ func (b *BeaconGwClient) getAttesterDuties(epoch int, vals []int) ([]*apiv1.Atte
 	indices := make([]phase0.ValidatorIndex, len(vals))
 	for _, val := range vals {
 		indices = append(indices, phase0.ValidatorIndex(val))
+	}
+	if len(indices) == 0 {
+		// get validators list
+		valList, err := b.GetValidatorsList()
+		if err != nil {
+			log.WithError(err).Error("get validators failed")
+			return nil, err
+		}
+		indices = make([]phase0.ValidatorIndex, len(valList))
+		for i, _ := range valList {
+			indices[i] = phase0.ValidatorIndex(i)
+		}
 	}
 	res, err := service.(eth2client.AttesterDutiesProvider).AttesterDuties(context.Background(), &api.AttesterDutiesOpts{
 		Common: api.CommonOpts{

@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/collection"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
@@ -162,6 +163,7 @@ func getCollectionBackground() {
 	defer headerTicker.Stop()
 	dutyTicker := time.NewTicker(time.Minute)
 	defer dutyTicker.Stop()
+	client := beaconapi.NewBeaconGwClient(config.GetConfig().HonestBeaconRpc)
 
 	for {
 		select {
@@ -169,12 +171,12 @@ func getCollectionBackground() {
 			log.WithFields(log.Fields{
 				"beacon": config.GetConfig().BeaconRpc,
 			}).Debug("goto get attest reward")
-			collection.GetRewardsToMysql(config.GetConfig().HonestBeaconRpc)
+			collection.GetRewardsToMysql(client)
 		case <-headerTicker.C:
-			collection.UpdateProjectSlot(config.GetConfig().HonestBeaconRpc)
+			collection.UpdateProjectSlot(client)
 		case <-dutyTicker.C:
-			collection.GetAttestDutyToMysql(config.GetConfig().HonestBeaconRpc)
-			collection.GetBlockDutyToMysql(config.GetConfig().HonestBeaconRpc)
+			collection.GetAttestDutyToMysql(client)
+			collection.GetBlockDutyToMysql(client)
 		}
 	}
 }

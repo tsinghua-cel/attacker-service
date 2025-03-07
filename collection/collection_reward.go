@@ -23,8 +23,7 @@ func getOrm() orm.Ormer {
 	return localorm
 }
 
-func GetRewardsToMysql(gwEndpoint string) error {
-	client := beaconapi.NewBeaconGwClient(gwEndpoint)
+func GetRewardsToMysql(client *beaconapi.BeaconGwClient) error {
 	slots_per_epoch, err := client.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
 	if err != nil {
 		log.WithError(err).Error("GetRewardsToMysql get chain config failed")

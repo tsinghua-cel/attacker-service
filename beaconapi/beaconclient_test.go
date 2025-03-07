@@ -17,15 +17,21 @@ func TestGetValidators(t *testing.T) {
 	fmt.Printf("get validators %v\n", pubks)
 }
 
-func TestGetReward(t *testing.T) {
-	endpoint := "52.221.177.10:33500" // grpc gateway endpoint
-	valIdxs := []int{1, 2, 3, 4, 5}
+func TestGetGenesisState(t *testing.T) {
+	endpoint := "http://18.168.16.120:32946"
 	client := NewBeaconGwClient(endpoint)
-	res, err := client.GetValReward(1, valIdxs)
+	state, err := client.GetLatestValidators()
 	if err != nil {
-		t.Fatalf("get reward failed err:%s", err)
+		t.Fatalf("get genesis failed err:%v", err)
 	}
-	fmt.Printf("get specific reward res:%s\n", res)
+	vals, err := state.Validators()
+	if err != nil {
+		t.Fatalf("get validators failed err:%v", err)
+	}
+	fmt.Printf("get validators %d\n", len(vals))
+	for idx, val := range vals {
+		fmt.Printf("get validator [%d]:%s\n", idx, val.String())
+	}
 }
 
 func TestGetAllReward(t *testing.T) {
@@ -35,7 +41,7 @@ func TestGetAllReward(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get reward failed err:%s", err)
 	}
-	fmt.Printf("get all reward res:%s\n", res)
+	fmt.Printf("get all reward res:%v\n", res)
 }
 
 func TestGetConfig(t *testing.T) {

@@ -6,8 +6,7 @@ import (
 	"strconv"
 )
 
-func UpdateProjectSlot(gwEndpoint string) error {
-	client := beaconapi.NewBeaconGwClient(gwEndpoint)
+func UpdateProjectSlot(client *beaconapi.BeaconGwClient) error {
 	latestHeader, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		return err

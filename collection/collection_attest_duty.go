@@ -7,8 +7,7 @@ import (
 	"strconv"
 )
 
-func GetAttestDutyToMysql(gwEndpoint string) error {
-	client := beaconapi.NewBeaconGwClient(gwEndpoint)
+func GetAttestDutyToMysql(client *beaconapi.BeaconGwClient) error {
 	slots_per_epoch, err := client.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
 	if err != nil {
 		log.WithError(err).Error("GetRewardsToMysql get chain config failed")
