@@ -69,6 +69,20 @@ func InsertBlockReward(o orm.Ormer, reward *BlockReward) error {
 	return NewBlockRewardRepository(o).Create(reward)
 }
 
+func InsertBlockRewardList(o orm.Ormer, rewards []*BlockReward) error {
+	var err = DoWithTransaction(o, func(o orm.Ormer) error {
+		repo := NewBlockRewardRepository(o)
+		for _, reward := range rewards {
+			if err := repo.Create(reward); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
+}
+
 func GetBlockRewardListByEpoch(epoch int64) []*BlockReward {
 	start := common.EpochStart(epoch)
 	end := common.EpochEnd(epoch)

@@ -96,3 +96,17 @@ func GetImpactValidatorCount(maxHackValIdx int, normalTargetAmount int64, epoch 
 	GetOrmInstance().Raw(sql, epoch, normalTargetAmount, maxHackValIdx).QueryRow(&countHacked)
 	return countNormal + countHacked
 }
+
+func InsertAttestRewardList(o orm.Ormer, rewards []*AttestReward) error {
+	var err = DoWithTransaction(o, func(o orm.Ormer) error {
+		repo := NewAttestRewardRepository(o)
+		for _, reward := range rewards {
+			if err := repo.Create(reward); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	return err
+}

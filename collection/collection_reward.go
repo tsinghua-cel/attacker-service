@@ -1,8 +1,6 @@
 package collection
 
 import (
-	"errors"
-	"fmt"
 	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
@@ -47,16 +45,13 @@ func GetRewardsToMysql(gwEndpoint string) error {
 	}
 	o := getOrm()
 
-	//  开始事务
-	if err = o.Begin(); err != nil {
-		log.WithError(err).Error("GetRewardsToMysql orm begin failed")
-		return err
-	}
-	repo := dbmodel.NewAttestRewardRepository(o)
 	log.WithFields(log.Fields{
 		"epochNumber": epochNumber,
 		"latestEpoch": latestEpoch,
 	}).Debug("GetRewardsToMysql")
+
+	var attRewardInfo = make([]*dbmodel.AttestReward, 0)
+	var blkRewardInfo = make([]*dbmodel.BlockReward, 0)
 
 	safeInterval := config.GetSafeEpochEndInterval()
 	for (latestEpoch - epochNumber) >= safeInterval {
@@ -64,7 +59,6 @@ func GetRewardsToMysql(gwEndpoint string) error {
 		if err != nil {
 			return err
 		}
-
 		for _, totalReward := range info.TotalRewards {
 			valIdx := totalReward.ValidatorIndex
 			headAmount := int64(totalReward.Head)
@@ -77,10 +71,7 @@ func GetRewardsToMysql(gwEndpoint string) error {
 				TargetAmount:   targetAmount,
 				SourceAmount:   sourceAmount,
 			}
-			if err = repo.Create(record); err != nil {
-				o.Rollback()
-				return errors.New(fmt.Sprintf("insert attest reward failed:%s", err.Error()))
-			}
+			attRewardInfo = append(attRewardInfo, record)
 		}
 
 		// get block reward for each slot
@@ -108,16 +99,18 @@ func GetRewardsToMysql(gwEndpoint string) error {
 					ProposerSlashingAmount: int64(proposerSlashingsAmount),
 					AttesterSlashingAmount: int64(attesterSlashingsAmount),
 				}
-				if err = dbmodel.InsertBlockReward(o, record); err != nil {
-					o.Rollback()
-					return errors.New(fmt.Sprintf("insert block reward failed:%s", err.Error()))
-				}
+				blkRewardInfo = append(blkRewardInfo, record)
 			}
 		}
 		epochNumber++
 	}
-	if err = o.Commit(); err != nil {
-		return errors.New("commit failed")
+	if err := dbmodel.InsertBlockRewardList(o, blkRewardInfo); err != nil {
+		log.WithError(err).Error("GetRewardsToMysql insert block rewards failed")
+		//return err
+	}
+	if err := dbmodel.InsertAttestRewardList(o, attRewardInfo); err != nil {
+		log.WithError(err).Error("GetRewardsToMysql insert attester rewards failed")
+		//return err
 	}
 	return nil
 }
