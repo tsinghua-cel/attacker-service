@@ -26,7 +26,7 @@ func GetRewardsToMysql(gwEndpoint string) error {
 	latestSlot, _ := strconv.ParseInt(latestHeader.Header.Message.Slot, 10, 64)
 	latestEpoch := latestSlot / int64(slots_per_epoch)
 
-	curMaxEpoch := dbmodel.GetMaxEpoch()
+	curMaxEpoch := dbmodel.GetMaxRewardedEpoch()
 	epochNumber := curMaxEpoch + 1
 	if curMaxEpoch < 0 {
 		epochNumber = 0

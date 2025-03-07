@@ -59,7 +59,7 @@ func (f *Feedback) loop() {
 		case <-tc.C:
 			f.mux.Lock()
 			for timestamp, pair := range f.historyStrategy {
-				safeEpoch := dbmodel.GetMaxEpoch()
+				safeEpoch := dbmodel.GetMaxRewardedEpoch()
 				ended := pair.IsEnd(safeEpoch)
 				log.WithFields(log.Fields{
 					"strategy":  pair.origin,

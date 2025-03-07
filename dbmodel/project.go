@@ -5,10 +5,15 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
+var (
+	latestSlot int64 = -1
+)
+
 type Project struct {
 	BaseModel
 	StrategyCategory string `orm:"column(strategy_category)" db:"strategy_category" json:"strategy_category" form:"strategy_category"` // strategy category
 	StrategyCount    int    `orm:"column(strategy_count)" db:"strategy_count" json:"strategy_count" form:"strategy_count"`             // strategy count
+	LatestSlot       int64  `orm:"column(latest_slot)" db:"latest_slot" json:"latest_slot" form:"latest_slot"`                         // latest slot
 }
 
 func (Project) TableName() string {
@@ -100,4 +105,17 @@ func GetProjectById(id string) (*Project, error) {
 	}
 
 	return list[0], nil
+}
+
+func UpdateProjectLatestSlot(slot int64) error {
+	if slot <= latestSlot {
+		return nil
+	}
+	p, err := GetProjectById(projectID)
+	if err != nil {
+		return err
+	}
+
+	p.LatestSlot = slot
+	return UpdateProject(p)
 }

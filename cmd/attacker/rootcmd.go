@@ -11,7 +11,6 @@ import (
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/docs"
-	"github.com/tsinghua-cel/attacker-service/reward"
 	"github.com/tsinghua-cel/attacker-service/server"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"time"
@@ -105,7 +104,7 @@ func runNode() {
 	_ = dbmodel.SetProjectStrategyCategory(strategies)
 	bunnyFinder.Start()
 
-	go getRewardBackgroud()
+	go getCollectionBackground()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -156,19 +155,26 @@ func localFilesystemLogger(logPath string) {
 	log.AddHook(lfHook)
 }
 
-func getRewardBackgroud() {
-	ticker := time.NewTicker(time.Minute)
-	defer ticker.Stop()
+func getCollectionBackground() {
+	rewardTicker := time.NewTicker(time.Minute * 2)
+	defer rewardTicker.Stop()
+	headerTicker := time.NewTicker(time.Second * 30)
+	defer headerTicker.Stop()
+	dutyTicker := time.NewTicker(time.Minute)
+	defer dutyTicker.Stop()
+
 	for {
 		select {
-		case <-ticker.C:
+		case <-rewardTicker.C:
 			log.WithFields(log.Fields{
 				"beacon": config.GetConfig().BeaconRpc,
-			}).Debug("goto get reward")
+			}).Debug("goto get attest reward")
 			collection.GetRewardsToMysql(config.GetConfig().HonestBeaconRpc)
+		case <-headerTicker.C:
+			collection.UpdateProjectSlot(config.GetConfig().HonestBeaconRpc)
+		case <-dutyTicker.C:
 			collection.GetAttestDutyToMysql(config.GetConfig().HonestBeaconRpc)
 			collection.GetBlockDutyToMysql(config.GetConfig().HonestBeaconRpc)
-			reward.GetRewards(config.GetConfig().BeaconRpc, config.GetConfig().RewardFile)
 		}
 	}
 }
