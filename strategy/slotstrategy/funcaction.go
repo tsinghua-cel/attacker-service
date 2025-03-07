@@ -156,13 +156,13 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 				"slot":   slot,
 				"action": name,
 			}).Debug("do action ")
-			seconds := duration * (4 * common.GetChainBaseInfo().SecondsPerSlot)
+			seconds := time.Duration(duration) * 4 * time.Second
 
 			log.WithFields(log.Fields{
 				"slot":     slot,
 				"duration": duration,
 			}).Debug("delayWithDuration")
-			time.Sleep(time.Second * time.Duration(seconds))
+			time.Sleep(seconds)
 			return r
 		}, nil
 

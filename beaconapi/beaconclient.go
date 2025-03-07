@@ -126,7 +126,7 @@ func (b *BeaconGwClient) GetValidatorsList() ([]*phase0.Validator, error) {
 		State: "head",
 	})
 	if err != nil {
-		log.WithError(err).Error("get attestation reward failed")
+		log.WithError(err).Error("get beacon state failed")
 		return nil, err
 	}
 	vals, err := res.Data.Validators()
@@ -152,7 +152,7 @@ func (b *BeaconGwClient) GetLatestValidators() (*spec.VersionedBeaconState, erro
 		State: "head",
 	})
 	if err != nil {
-		log.WithError(err).Error("get attestation reward failed")
+		log.WithError(err).Error("get beacon state failed")
 		return nil, err
 	}
 
@@ -190,7 +190,7 @@ func (b *BeaconGwClient) getAllValReward(epoch int) (*apiv1.AttestationRewards, 
 		Epoch: phase0.Epoch(epoch),
 	})
 	if err != nil {
-		log.WithError(err).Error("get attestation reward failed")
+		log.WithError(err).Error("get val reward failed")
 		return nil, err
 	}
 
@@ -219,7 +219,7 @@ func (b *BeaconGwClient) getProposerDuties(epoch int) ([]*apiv1.ProposerDuty, er
 		Epoch: phase0.Epoch(epoch),
 	})
 	if err != nil {
-		log.WithError(err).Error("get attestation reward failed")
+		log.WithError(err).Error("get proposer duties failed")
 		return nil, err
 	}
 
