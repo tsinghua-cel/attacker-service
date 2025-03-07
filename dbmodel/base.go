@@ -31,8 +31,7 @@ func ProjectFilterString() string {
 	return fmt.Sprintf("project_id = \"%s\"", projectID)
 }
 
-func DoWithTransaction(f func(o orm.Ormer) error) error {
-	o := GetOrmInstance()
+func DoWithTransaction(o orm.Ormer, f func(o orm.Ormer) error) error {
 	if err := o.Begin(); err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}

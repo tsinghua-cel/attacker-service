@@ -38,7 +38,9 @@ func GetBlockDutyToMysql(gwEndpoint string) error {
 		return nil
 	}
 
-	if err := dbmodel.InsertNewBlockDuties(epochNumber, duties); err != nil {
+	o := getOrm()
+
+	if err := dbmodel.InsertNewBlockDuties(o, epochNumber, duties); err != nil {
 		log.WithError(err).Error("GetBlockDutyToMysql insert proposer duties failed")
 		return err
 	}

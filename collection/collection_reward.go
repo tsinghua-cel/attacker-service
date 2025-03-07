@@ -3,13 +3,27 @@ package collection
 import (
 	"errors"
 	"fmt"
+	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"strconv"
+	"sync"
 )
+
+var (
+	once     sync.Once
+	localorm orm.Ormer
+)
+
+func getOrm() orm.Ormer {
+	once.Do(func() {
+		localorm = dbmodel.GetOrmInstance()
+	})
+	return localorm
+}
 
 func GetRewardsToMysql(gwEndpoint string) error {
 	client := beaconapi.NewBeaconGwClient(gwEndpoint)
@@ -31,7 +45,7 @@ func GetRewardsToMysql(gwEndpoint string) error {
 	if curMaxEpoch < 0 {
 		epochNumber = 0
 	}
-	o := dbmodel.GetOrmInstance()
+	o := getOrm()
 
 	//  开始事务
 	if err = o.Begin(); err != nil {

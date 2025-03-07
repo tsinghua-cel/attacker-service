@@ -64,8 +64,8 @@ func (repo *blockDutyRepositoryImpl) GetListByFilter(filters ...interface{}) []*
 	return list
 }
 
-func InsertNewBlockDuties(epoch int64, st []types.ProposerDuty) error {
-	var err = DoWithTransaction(func(o orm.Ormer) error {
+func InsertNewBlockDuties(o orm.Ormer, epoch int64, st []types.ProposerDuty) error {
+	var err = DoWithTransaction(o, func(o orm.Ormer) error {
 		repo := NewBlockDutyRepository(o)
 		for _, s := range st {
 			slot, _ := strconv.ParseInt(s.Slot, 10, 64)

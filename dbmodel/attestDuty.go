@@ -64,8 +64,8 @@ func (repo *attestDutyRepositoryImpl) GetListByFilter(filters ...interface{}) []
 	return list
 }
 
-func InsertNewAttestDuties(epoch int64, st []types.AttestDuty) error {
-	var err = DoWithTransaction(func(o orm.Ormer) error {
+func InsertNewAttestDuties(o orm.Ormer, epoch int64, st []types.AttestDuty) error {
+	var err = DoWithTransaction(o, func(o orm.Ormer) error {
 		repo := NewAttestDutyRepository(o)
 		for _, s := range st {
 			slot, _ := strconv.ParseInt(s.Slot, 10, 64)

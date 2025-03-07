@@ -37,8 +37,9 @@ func GetAttestDutyToMysql(gwEndpoint string) error {
 		log.WithField("epoch", epochNumber).Info("no attester duties")
 		return nil
 	}
+	o := getOrm()
 
-	if err := dbmodel.InsertNewAttestDuties(epochNumber, duties); err != nil {
+	if err := dbmodel.InsertNewAttestDuties(o, epochNumber, duties); err != nil {
 		log.WithError(err).Error("GetAttestDutyToMysql insert attester duties failed")
 		return err
 	}
