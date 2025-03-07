@@ -72,5 +72,5 @@ func InsertBlockReward(o orm.Ormer, reward *BlockReward) error {
 func GetBlockRewardListByEpoch(epoch int64) []*BlockReward {
 	start := common.EpochStart(epoch)
 	end := common.EpochEnd(epoch)
-	return NewBlockRewardRepository(orm.NewOrm()).GetListBySlotRange(start, end)
+	return NewBlockRewardRepository(GetOrmInstance()).GetListBySlotRange(start, end)
 }

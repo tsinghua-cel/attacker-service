@@ -86,25 +86,25 @@ func InsertNewBlockDuties(epoch int64, st []types.ProposerDuty) error {
 }
 
 func GetBlockDuties(epoch int64) []*BlockDuty {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewBlockDutyRepository(o)
 	return repo.GetListByFilter("epoch", epoch)
 }
 
 func GetBlockDutiesWithValidatorAndEpoch(epoch, validator int64) []*BlockDuty {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewBlockDutyRepository(o)
 	return repo.GetListByFilter("epoch", epoch, "validator", validator)
 }
 
 func GetBlockDutiesWithValidator(validator int64) []*BlockDuty {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewBlockDutyRepository(o)
 	return repo.GetListByFilter("validator", validator)
 }
 
 func GetMaxBlockDutyEpoch() int64 {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewBlockDutyRepository(o)
 	list := repo.GetSortedList(1, "-epoch")
 	if len(list) == 0 {

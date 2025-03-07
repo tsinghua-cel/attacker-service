@@ -86,25 +86,25 @@ func InsertNewAttestDuties(epoch int64, st []types.AttestDuty) error {
 }
 
 func GetAttestDuties(epoch int64) []*AttestDuty {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewAttestDutyRepository(o)
 	return repo.GetListByFilter("epoch", epoch)
 }
 
 func GetAttestDutiesWithValidatorAndEpoch(epoch, validator int64) []*AttestDuty {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewAttestDutyRepository(o)
 	return repo.GetListByFilter("epoch", epoch, "validator", validator)
 }
 
 func GetAttestDutiesWithValidator(validator int64) []*AttestDuty {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewAttestDutyRepository(o)
 	return repo.GetListByFilter("validator", validator)
 }
 
 func GetMaxAttestDutyEpoch() int64 {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	repo := NewAttestDutyRepository(o)
 	list := repo.GetSortedList(1, "-epoch")
 	if len(list) == 0 {

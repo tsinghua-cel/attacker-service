@@ -55,13 +55,13 @@ func (repo *attestRewardRepositoryImpl) GetListByFilter(filters ...interface{}) 
 func GetRewardListByEpoch(epoch int64) []*AttestReward {
 	filters := make([]interface{}, 0)
 	filters = append(filters, "epoch", epoch)
-	return NewAttestRewardRepository(orm.NewOrm()).GetListByFilter(filters...)
+	return NewAttestRewardRepository(GetOrmInstance()).GetListByFilter(filters...)
 }
 
 func GetRewardListByValidatorIndex(index int) []*AttestReward {
 	filters := make([]interface{}, 0)
 	filters = append(filters, "validator_index", index)
-	return NewAttestRewardRepository(orm.NewOrm()).GetListByFilter(filters...)
+	return NewAttestRewardRepository(GetOrmInstance()).GetListByFilter(filters...)
 }
 
 func GetRewardByValidatorAndEpoch(epoch int64, index int) *AttestReward {
@@ -69,7 +69,7 @@ func GetRewardByValidatorAndEpoch(epoch int64, index int) *AttestReward {
 	filters = append(filters, "epoch", epoch)
 	filters = append(filters, "validator_index", index)
 
-	list := NewAttestRewardRepository(orm.NewOrm()).GetListByFilter(filters...)
+	list := NewAttestRewardRepository(GetOrmInstance()).GetListByFilter(filters...)
 	if len(list) >= 0 {
 		return list[0]
 	}
@@ -79,7 +79,7 @@ func GetRewardByValidatorAndEpoch(epoch int64, index int) *AttestReward {
 func GetMaxEpoch() int64 {
 	var maxEpoch int64
 	sql := fmt.Sprintf("select max(epoch) as max_epoch from %s where %s ", new(AttestReward).TableName(), ProjectFilterString())
-	if err := orm.NewOrm().Raw(sql).QueryRow(&maxEpoch); err == orm.ErrNoRows {
+	if err := GetOrmInstance().Raw(sql).QueryRow(&maxEpoch); err == orm.ErrNoRows {
 		return -1
 	}
 	return maxEpoch
@@ -89,10 +89,10 @@ func GetImpactValidatorCount(maxHackValIdx int, normalTargetAmount int64, epoch 
 	// impact normal validator count
 	var countNormal int
 	sql := fmt.Sprintf("select count(1) from %s where epoch = ? and target_amount < ? and validator_index > ? and %s ", new(AttestReward).TableName(), ProjectFilterString())
-	orm.NewOrm().Raw(sql, epoch, normalTargetAmount, maxHackValIdx).QueryRow(&countNormal)
+	GetOrmInstance().Raw(sql, epoch, normalTargetAmount, maxHackValIdx).QueryRow(&countNormal)
 
 	var countHacked int
 	sql = fmt.Sprintf("select count(1) from %s where epoch = ? and target_amount >= ? and validator_index <= ? and %s ", new(AttestReward).TableName(), ProjectFilterString())
-	orm.NewOrm().Raw(sql, epoch, normalTargetAmount, maxHackValIdx).QueryRow(&countHacked)
+	GetOrmInstance().Raw(sql, epoch, normalTargetAmount, maxHackValIdx).QueryRow(&countHacked)
 	return countNormal + countHacked
 }

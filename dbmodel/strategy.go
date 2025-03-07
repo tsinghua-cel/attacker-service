@@ -119,37 +119,37 @@ func InsertNewStrategy(st *types.Strategy) {
 		ImpactValidatorCount: 0,
 		Category:             st.Category,
 	}
-	if err := NewStrategyRepository(orm.NewOrm()).Create(data); err != nil {
+	if err := NewStrategyRepository(GetOrmInstance()).Create(data); err != nil {
 		log.WithError(err).Error("failed to insert new strategy")
 	}
 }
 
 func GetStrategyByUUID(uuid string) *Strategy {
-	return NewStrategyRepository(orm.NewOrm()).GetByUUID(uuid)
+	return NewStrategyRepository(GetOrmInstance()).GetByUUID(uuid)
 }
 
 func StrategyUpdate(st *Strategy) {
-	NewStrategyRepository(orm.NewOrm()).Update(st)
+	NewStrategyRepository(GetOrmInstance()).Update(st)
 }
 
 func GetStrategyCount() int64 {
-	return NewStrategyRepository(orm.NewOrm()).GetCount()
+	return NewStrategyRepository(GetOrmInstance()).GetCount()
 }
 
 func GetStrategyListByReorgCount(limit int) []*Strategy {
 	// get strategy list by reorg count desc.
-	return NewStrategyRepository(orm.NewOrm()).GetSortedList(limit, "-reorg_count")
+	return NewStrategyRepository(GetOrmInstance()).GetSortedList(limit, "-reorg_count")
 }
 
 func GetStrategyListByHonestLoseRateAvg(limit int) []*Strategy {
 	// get strategy list by honest lose rate avg desc.
-	return NewStrategyRepository(orm.NewOrm()).GetSortedList(limit, "-honest_lose_rate_avg")
+	return NewStrategyRepository(GetOrmInstance()).GetSortedList(limit, "-honest_lose_rate_avg")
 }
 
 func GetStrategyListByGreatLostRatio(limit int) []*Strategy {
 	// get strategy list by great honest lose rate avg desc.
 	// get strategy list order by honest_lost_rate_avg/attacker_lost_rate_avg
-	norm := orm.NewOrm()
+	norm := GetOrmInstance()
 	list := make([]*Strategy, 0)
 	sql := fmt.Sprintf("SELECT * FROM t_strategy WHERE attacker_lose_rate_avg != 0 and %s ORDER BY (honest_lose_rate_avg / attacker_lose_rate_avg) DESC limit %d", ProjectFilterString(), limit)
 	_, err := norm.Raw(sql).QueryRows(&list)

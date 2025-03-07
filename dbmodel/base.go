@@ -32,7 +32,7 @@ func ProjectFilterString() string {
 }
 
 func DoWithTransaction(f func(o orm.Ormer) error) error {
-	o := orm.NewOrm()
+	o := GetOrmInstance()
 	if err := o.Begin(); err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}

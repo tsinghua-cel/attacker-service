@@ -56,7 +56,7 @@ func (repo *projectRepositoryImpl) GetListByFilter(filters ...interface{}) []*Pr
 }
 
 func GetProjectList() []*Project {
-	return NewProjectRepository(orm.NewOrm()).GetListByFilter()
+	return NewProjectRepository(GetOrmInstance()).GetListByFilter()
 }
 
 func NewProject() error {
@@ -64,11 +64,11 @@ func NewProject() error {
 		BaseModel:     BaseModel{},
 		StrategyCount: 0,
 	}
-	return NewProjectRepository(orm.NewOrm()).Create(project)
+	return NewProjectRepository(GetOrmInstance()).Create(project)
 }
 
 func UpdateProject(project *Project) error {
-	return NewProjectRepository(orm.NewOrm()).Update(project)
+	return NewProjectRepository(GetOrmInstance()).Update(project)
 }
 
 func AddStrategyCount(strategyCount int) error {
@@ -94,7 +94,7 @@ func SetProjectStrategyCategory(strategyCategory string) error {
 }
 
 func GetProjectById(id string) (*Project, error) {
-	list := NewProjectRepository(orm.NewOrm()).GetListByFilter("project_id", id)
+	list := NewProjectRepository(GetOrmInstance()).GetListByFilter("project_id", id)
 	if len(list) == 0 {
 		return nil, errors.New("project not found")
 	}

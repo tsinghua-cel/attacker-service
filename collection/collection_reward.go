@@ -3,7 +3,6 @@ package collection
 import (
 	"errors"
 	"fmt"
-	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/common"
@@ -32,7 +31,7 @@ func GetRewardsToMysql(gwEndpoint string) error {
 	if curMaxEpoch < 0 {
 		epochNumber = 0
 	}
-	o := orm.NewOrm()
+	o := dbmodel.GetOrmInstance()
 
 	//  开始事务
 	if err = o.Begin(); err != nil {

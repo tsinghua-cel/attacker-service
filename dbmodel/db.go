@@ -6,11 +6,21 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"sync"
 )
 
 var (
-	projectID string
+	projectID   string
+	ormInstance orm.Ormer
+	once        sync.Once
 )
+
+func GetOrmInstance() orm.Ormer {
+	once.Do(func() {
+		ormInstance = orm.NewOrm()
+	})
+	return ormInstance
+}
 
 func DbInit(connect string) {
 	projectID = uuid.NewString()

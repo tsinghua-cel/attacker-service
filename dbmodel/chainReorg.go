@@ -57,7 +57,7 @@ func (repo *chainReorgRepositoryImpl) GetListByFilter(filters ...interface{}) []
 }
 
 func InsertNewReorg(ev types.ReorgEvent) {
-	NewChainReorgRepository(orm.NewOrm()).Create(&ChainReorg{
+	NewChainReorgRepository(GetOrmInstance()).Create(&ChainReorg{
 		Epoch:                 int64(ev.Epoch),
 		Slot:                  int64(ev.Slot),
 		Depth:                 int(ev.Depth),
@@ -71,17 +71,17 @@ func InsertNewReorg(ev types.ReorgEvent) {
 }
 
 func GetAllReorgList() []*ChainReorg {
-	return NewChainReorgRepository(orm.NewOrm()).GetListByFilter()
+	return NewChainReorgRepository(GetOrmInstance()).GetListByFilter()
 }
 
 func GetReorgListByEpoch(epoch int64) []*ChainReorg {
-	return NewChainReorgRepository(orm.NewOrm()).GetListByFilter("epoch", epoch)
+	return NewChainReorgRepository(GetOrmInstance()).GetListByFilter("epoch", epoch)
 }
 
 func GetReorgCountByEpoch(epoch int64) int {
 	// select count(1) from t_chain_reorg where epoch = epoch;
 	var count int
 	sql := fmt.Sprintf("select count(1) from %s where epoch = ? and %s ", new(ChainReorg).TableName(), ProjectFilterString())
-	orm.NewOrm().Raw(sql, epoch).QueryRow(&count)
+	GetOrmInstance().Raw(sql, epoch).QueryRow(&count)
 	return count
 }
