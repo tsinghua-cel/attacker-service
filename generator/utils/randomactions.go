@@ -43,7 +43,7 @@ func (a ActionPoint) FullActions() []string {
 	normalActions := []string{
 		"return",
 		//"delayWithDuration:[time]",
-		"delayWithSeconds:[time]",
+		"delayWithSecond:[time]",
 	}
 	switch a {
 	case "BlockGetNewParentRoot", "AttestBeforeSign":
