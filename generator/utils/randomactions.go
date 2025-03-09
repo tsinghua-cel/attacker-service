@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	"github.com/tsinghua-cel/attacker-service/common"
 	"math/rand"
 	"strconv"
 	"strings"
@@ -41,7 +42,8 @@ func (a ActionPoint) SpecialActions() []string {
 func (a ActionPoint) FullActions() []string {
 	normalActions := []string{
 		"return",
-		"delayWithDuration:[time]",
+		//"delayWithDuration:[time]",
+		"delayWithSeconds:[time]",
 	}
 	switch a {
 	case "BlockGetNewParentRoot", "AttestBeforeSign":
@@ -61,7 +63,8 @@ func (a ActionPoint) RandomAction(slot int) string {
 		}
 		action = strings.Replace(action, "[slot]", strconv.FormatInt(int64(rparam), 10), -1)
 	} else {
-		rparam := rand.Intn(10) + 3
+		base := common.GetChainBaseInfo()
+		rparam := (rand.Intn(10) + 3) * base.SecondsPerSlot
 		action = strings.Replace(action, "[time]", strconv.Itoa(rparam), -1)
 	}
 	return action
