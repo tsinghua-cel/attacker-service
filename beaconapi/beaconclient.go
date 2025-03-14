@@ -190,7 +190,7 @@ func (b *BeaconGwClient) getAllValReward(epoch int) (*apiv1.AttestationRewards, 
 		Epoch: phase0.Epoch(epoch),
 	})
 	if err != nil {
-		log.WithError(err).Error("get val reward failed")
+		log.WithField("epoch", epoch).WithError(err).Error("get val reward failed")
 		return nil, err
 	}
 
@@ -367,7 +367,7 @@ func (b *BeaconGwClient) getBlockReward(slot int) (*apiv1.BlockRewards, error) {
 		Block: fmt.Sprintf("%d", slot),
 	})
 	if err != nil {
-		log.WithError(err).Error("get block reward failed")
+		log.WithField("slot", slot).WithError(err).Error("get block reward failed")
 		return nil, err
 	}
 	return res.Data, nil
