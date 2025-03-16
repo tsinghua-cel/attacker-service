@@ -1,47 +1,71 @@
 package collection
 
 import (
+	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
+	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"strconv"
+	"time"
 )
 
-func GetBlockDutyToMysql(client *beaconapi.BeaconGwClient) error {
-	slots_per_epoch, err := client.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
-	if err != nil {
-		log.WithError(err).Error("GetRewardsToMysql get chain config failed")
-		return err
+var (
+	latestBlockDutyEpoch int64 = -1
+)
+
+func ScheduleBlockDuty(interval time.Duration, url string) {
+	client := beaconapi.NewBeaconGwClient(url)
+	orm := orm.NewOrm()
+	tc := time.NewTicker(interval)
+	defer tc.Stop()
+	for {
+		select {
+		case <-tc.C:
+			log.Info("ScheduleBlockDuty")
+			if err := GetBlockDutyToMysql(orm, client); err != nil {
+				log.WithError(err).Error("ScheduleBlockDuty failed")
+			}
+		}
 	}
+}
+
+func GetBlockDutyToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error {
 	latestHeader, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		return err
 	}
 
 	latestSlot, _ := strconv.ParseInt(latestHeader.Header.Message.Slot, 10, 64)
-	latestEpoch := latestSlot / int64(slots_per_epoch)
+	curEpoch := common.SlotToEpoch(latestSlot)
 
-	curMaxEpoch := dbmodel.GetMaxBlockDutyEpoch()
-	if latestEpoch <= curMaxEpoch {
-		return nil
+	if latestBlockDutyEpoch < 0 {
+		latestBlockDutyEpoch = dbmodel.GetMaxBlockDutyEpoch()
 	}
-	epochNumber := curMaxEpoch + 1
 
-	duties, err := client.GetProposerDuties(int(epochNumber))
-	if err != nil {
-		log.WithError(err).Error("GetBlockDutyToMysql get proposer duties failed")
-		return err
-	}
-	if len(duties) == 0 {
-		log.WithField("epoch", epochNumber).Info("no proposer duties")
+	var maxRangeEpoch = 5
+
+	if curEpoch <= latestBlockDutyEpoch {
 		return nil
 	}
 
-	o := getOrm()
-
-	if err := dbmodel.InsertNewBlockDuties(o, epochNumber, duties); err != nil {
-		log.WithError(err).Error("GetBlockDutyToMysql insert proposer duties failed")
-		return err
+	if (curEpoch - latestBlockDutyEpoch) > int64(maxRangeEpoch) {
+		curEpoch = latestBlockDutyEpoch + int64(maxRangeEpoch)
 	}
+
+	for epoch := latestBlockDutyEpoch + 1; epoch <= curEpoch; epoch++ {
+		duties, err := client.GetProposerDuties(int(epoch))
+		if err != nil {
+			log.WithField("epoch", epoch).WithError(err).Error("GetBlockDutyToMysql get proposer duties failed")
+			return err
+		}
+
+		if err := dbmodel.InsertNewBlockDuties(o, epoch, duties); err != nil {
+			log.WithField("epoch", epoch).WithError(err).Error("GetBlockDutyToMysql insert proposer duties failed")
+			return err
+		}
+		latestBlockDutyEpoch = epoch
+	}
+
 	return nil
 }

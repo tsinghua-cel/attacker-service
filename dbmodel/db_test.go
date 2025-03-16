@@ -22,8 +22,8 @@ func TestAttestReward(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if GetMaxRewardedEpoch() != 1 {
-		fmt.Println("max epoch is ", GetMaxRewardedEpoch())
+	if GetMaxAttestRewardEpoch() != 1 {
+		fmt.Println("max epoch is ", GetMaxAttestRewardEpoch())
 		t.Fatal("max epoch error")
 	}
 	if list := GetRewardListByEpoch(1); len(list) != 1 {

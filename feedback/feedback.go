@@ -3,7 +3,7 @@ package feedback
 import (
 	"github.com/ethereum/go-ethereum/event"
 	log "github.com/sirupsen/logrus"
-	"github.com/tsinghua-cel/attacker-service/dbmodel"
+	"github.com/tsinghua-cel/attacker-service/collection"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"sync"
@@ -59,7 +59,7 @@ func (f *Feedback) loop() {
 		case <-tc.C:
 			f.mux.Lock()
 			for timestamp, pair := range f.historyStrategy {
-				safeEpoch := dbmodel.GetMaxRewardedEpoch()
+				safeEpoch := collection.LatestAttestRewardEpoch()
 				ended := pair.IsEnd(safeEpoch)
 				log.WithFields(log.Fields{
 					"strategy":  pair.origin,

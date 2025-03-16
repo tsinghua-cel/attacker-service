@@ -7,8 +7,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/collection"
+	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/config"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/docs"
@@ -157,26 +157,17 @@ func localFilesystemLogger(logPath string) {
 }
 
 func getCollectionBackground() {
-	rewardTicker := time.NewTicker(time.Minute * 2)
-	defer rewardTicker.Stop()
-	headerTicker := time.NewTicker(time.Second * 30)
-	defer headerTicker.Stop()
-	dutyTicker := time.NewTicker(time.Minute)
-	defer dutyTicker.Stop()
-	client := beaconapi.NewBeaconGwClient(config.GetConfig().HonestBeaconRpc)
+	chainBase := common.GetChainBaseInfo()
+	epochSeconds := chainBase.SecondsPerSlot * chainBase.SlotsPerEpoch
+	attestDuty := time.Duration(epochSeconds) * time.Second
+	blockDuty := time.Duration(epochSeconds) * time.Second
+	attestReward := time.Duration(epochSeconds) * time.Second
+	blockReward := time.Duration(chainBase.SecondsPerSlot*10) * time.Second
+	headerUpdate := time.Duration(chainBase.SecondsPerSlot*10) * time.Second
 
-	for {
-		select {
-		case <-rewardTicker.C:
-			log.WithFields(log.Fields{
-				"beacon": config.GetConfig().BeaconRpc,
-			}).Debug("goto get attest reward")
-			collection.GetRewardsToMysql(client)
-		case <-headerTicker.C:
-			collection.UpdateProjectSlot(client)
-		case <-dutyTicker.C:
-			collection.GetAttestDutyToMysql(client)
-			collection.GetBlockDutyToMysql(client)
-		}
-	}
+	go collection.ScheduleBlockDuty(blockDuty, config.GetConfig().HonestBeaconRpc)
+	go collection.ScheduleAttestDuty(attestDuty, config.GetConfig().HonestBeaconRpc)
+	go collection.ScheduleAttestReward(attestReward, config.GetConfig().HonestBeaconRpc)
+	go collection.ScheduleBlockReward(blockReward, config.GetConfig().HonestBeaconRpc)
+	go collection.ScheduleSlotUpdate(headerUpdate, config.GetConfig().HonestBeaconRpc)
 }

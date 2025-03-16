@@ -65,6 +65,20 @@ func (repo *blockRewardRepositoryImpl) GetListBySlotRange(start int64, end int64
 	return list
 }
 
+func GetMaxBlockRewardSlot(o orm.Ormer) int64 {
+	if o == nil {
+		o = GetOrmInstance()
+	}
+	var reward BlockReward
+	query := o.QueryTable(new(BlockReward).TableName())
+	query = ProjectFilter(query)
+	err := query.OrderBy("-slot").One(&reward)
+	if err != nil {
+		return 0
+	}
+	return reward.Slot
+}
+
 func InsertBlockReward(o orm.Ormer, reward *BlockReward) error {
 	return NewBlockRewardRepository(o).Create(reward)
 }
