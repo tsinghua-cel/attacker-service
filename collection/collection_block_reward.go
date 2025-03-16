@@ -42,10 +42,12 @@ func GetBlockRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error
 	}
 
 	var maxRangeSlot = 32
+	var safeSlotGenerate = 64 // two epoch
 
-	if latestSlot <= latestBlockRewardSlot {
+	if latestSlot <= (latestBlockRewardSlot + int64(safeSlotGenerate)) {
 		return nil
 	}
+	latestSlot = latestSlot - int64(safeSlotGenerate)
 
 	if (latestSlot - latestBlockRewardSlot) > int64(maxRangeSlot) {
 		latestSlot = latestBlockRewardSlot + int64(maxRangeSlot)

@@ -48,10 +48,12 @@ func GetAttestRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) erro
 	}
 
 	var maxRangeEpoch = 5
+	var safeEpochGenerate = 2
 
-	if curEpoch <= latestAttestRewardEpoch {
+	if curEpoch <= (latestAttestRewardEpoch + int64(safeEpochGenerate)) {
 		return nil
 	}
+	curEpoch = curEpoch - int64(safeEpochGenerate)
 
 	if (curEpoch - latestAttestRewardEpoch) > int64(maxRangeEpoch) {
 		curEpoch = latestAttestRewardEpoch + int64(maxRangeEpoch)

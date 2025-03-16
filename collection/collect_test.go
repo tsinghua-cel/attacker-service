@@ -37,13 +37,13 @@ func TestGetAttRewards(t *testing.T) {
 func TestGetBlockRewards(t *testing.T) {
 	// bftest_2
 	clList := []string{
-		"http://18.168.16.120:33272", // node 1 prysm beacon node.
-		"http://18.168.16.120:33277", // node 2 prysm beacon node.	client := beaconapi.NewBeaconGwClient(beacon)
-		"http://18.168.16.120:33282", // node 2 prysm beacon node.	client := beaconapi.NewBeaconGwClient(beacon)
+		"http://18.168.16.120:33432", // node 1 prysm beacon node.
+		"http://18.168.16.120:33437", // node 2 prysm beacon node.	client := beaconapi.NewBeaconGwClient(beacon)
+		"http://18.168.16.120:33442", // node 2 prysm beacon node.	client := beaconapi.NewBeaconGwClient(beacon)
 	}
 	for i, beacon := range clList {
 		client := beaconapi.NewBeaconGwClient(beacon)
-		slot := 2729
+		slot := 7
 		t.Log("node index", i)
 		root, err := client.GetSlotRoot(int64(slot))
 		if err != nil {
