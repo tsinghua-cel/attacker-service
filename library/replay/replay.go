@@ -38,8 +38,9 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 				continue
 			}
 			latestEpoch = epoch
+			next := epoch + 1
 			// get next epoch duties
-			originStrategy := dbmodel.GetStrategyByProjectAndEpoch(replayProject.(string), epoch+1)
+			originStrategy := dbmodel.GetStrategyByProjectAndEpoch(replayProject.(string), next)
 			if originStrategy != nil {
 				strategy := types.Strategy{}
 				if err := json.Unmarshal([]byte(originStrategy.Content), &strategy); err != nil {
@@ -47,12 +48,12 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 					continue
 				}
 				strategy.Uid = uuid.NewString()
-				log.WithField("epoch", epoch).WithField("project", replayProject).WithField("strategy", strategy).Info("replay strategy")
+				log.WithField("epoch", next).WithField("project", replayProject).WithField("strategy", strategy).Info("replay strategy")
 				if err := attacker.UpdateStrategy(strategy); err != nil {
 					log.WithField("error", err).Error("failed to update strategy")
 				}
 			} else {
-				log.WithField("epoch", epoch).WithField("project", replayProject).Error("no strategy found, skip it")
+				log.WithField("epoch", next).WithField("project", replayProject).Error("no strategy found, skip it")
 			}
 		}
 	}
