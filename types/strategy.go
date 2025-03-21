@@ -46,8 +46,9 @@ func (s *Strategy) GetValidatorRole(valIdx int, slot int64) RoleType {
 }
 
 type StrategyGeneratorParam struct {
-	Strategy            string `json:"strategy"`
-	DurationPerStrategy int64  `json:"duration_per_strategy"`
-	MinMaliciousIdx     int    `json:"min_malicious_idx"`
-	MaxMaliciousIdx     int    `json:"max_malicious_idx"`
+	Strategy            string                 `json:"strategy"`
+	DurationPerStrategy int64                  `json:"duration_per_strategy"`
+	MinMaliciousIdx     int                    `json:"min_malicious_idx"`
+	MaxMaliciousIdx     int                    `json:"max_malicious_idx"`
+	Extend              map[string]interface{} `json:"extend"`
 }

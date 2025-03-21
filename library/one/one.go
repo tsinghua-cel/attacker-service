@@ -26,7 +26,7 @@ func (o *Instance) Description() string {
 
 func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedbacker types.FeedBacker) {
 	log.WithField("name", o.Name()).Info("start to run strategy")
-	var latestEpoch int64
+	var latestEpoch int64 = -1
 	ticker := time.NewTicker(time.Second * 3)
 	attacker := params.Attacker
 	for {

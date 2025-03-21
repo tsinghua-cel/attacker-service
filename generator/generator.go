@@ -70,6 +70,7 @@ func (g *Generator) runGenerator() {
 				Attacker:          g.attacker,
 				MaxValidatorIndex: g.param.MaxMaliciousIdx,
 				MinValidatorIndex: g.param.MinMaliciousIdx,
+				Extend:            g.param.Extend,
 			}, nil)
 			cancle()
 		}
@@ -79,6 +80,7 @@ func (g *Generator) runGenerator() {
 			Attacker:          g.attacker,
 			MaxValidatorIndex: g.param.MaxMaliciousIdx,
 			MinValidatorIndex: g.param.MinMaliciousIdx,
+			Extend:            g.param.Extend,
 		}, nil)
 	}
 }

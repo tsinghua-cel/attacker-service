@@ -14,6 +14,7 @@ type LibraryParams struct {
 	Attacker          AttackerInc
 	MaxValidatorIndex int
 	MinValidatorIndex int
+	Extend            map[string]interface{}
 }
 
 func (p LibraryParams) GetLatestHackerSlot(duties []ProposerDuty) int {

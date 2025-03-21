@@ -159,3 +159,18 @@ func GetStrategyListByGreatLostRatio(limit int) []*Strategy {
 	}
 	return list
 }
+
+func GetStrategyByProjectAndEpoch(project string, epoch int64) *Strategy {
+	norm := GetOrmInstance()
+	list := make([]*Strategy, 0)
+	sql := fmt.Sprintf("SELECT * FROM t_strategy WHERE project_id='%s' and min_epoch=%d", project, epoch)
+	_, err := norm.Raw(sql).QueryRows(&list)
+	if err != nil {
+		log.WithError(err).Error("failed to get GetStrategyByProjectAndEpoch")
+		return nil
+	}
+	if len(list) > 0 {
+		return list[0]
+	}
+	return nil
+}

@@ -1,10 +1,12 @@
-package sandwich
+package replay
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
+	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"time"
 )
@@ -13,6 +15,11 @@ type Instance struct{}
 
 func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedbacker types.FeedBacker) {
 	log.WithField("name", o.Name()).Info("start to run strategy")
+	if params.Extend == nil || params.Extend["replay"] == "" {
+		log.WithField("name", o.Name()).Error("replay project id is empty")
+		return
+	}
+	var replayProject = params.Extend["replay"]
 	var latestEpoch int64 = -1
 	ticker := time.NewTicker(time.Second * 3)
 	attacker := params.Attacker
@@ -32,38 +39,30 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			}
 			latestEpoch = epoch
 			// get next epoch duties
-			duties, err := attacker.GetEpochDuties(epoch + 1)
-			if err != nil {
-				log.WithFields(log.Fields{
-					"error": err,
-					"epoch": epoch + 1,
-				}).Error("failed to get duties")
-				latestEpoch = epoch - 1
-				continue
-			}
-			if hackDuties, happen := CheckDuties(params, duties); happen {
+			originStrategy := dbmodel.GetStrategyByProjectAndEpoch(replayProject.(string), epoch+1)
+			if originStrategy != nil {
 				strategy := types.Strategy{}
-				strategy.Uid = uuid.NewString()
-				strategy.Slots = GenSlotStrategy(hackDuties)
-				strategy.Category = o.Name()
-				if err = attacker.UpdateStrategy(strategy); err != nil {
-					log.WithField("error", err).Error("failed to update strategy")
-				} else {
-					log.WithFields(log.Fields{
-						"epoch":    epoch + 1,
-						"strategy": strategy,
-					}).Info("update strategy successfully")
+				if err := json.Unmarshal([]byte(originStrategy.Content), &strategy); err != nil {
+					log.WithField("uuid", originStrategy.UUID).WithField("error", err).Error("failed to unmarshal strategy")
+					continue
 				}
+				strategy.Uid = uuid.NewString()
+				log.WithField("epoch", epoch).WithField("project", replayProject).WithField("strategy", strategy).Info("replay strategy")
+				if err := attacker.UpdateStrategy(strategy); err != nil {
+					log.WithField("error", err).Error("failed to update strategy")
+				}
+			} else {
+				log.WithField("epoch", epoch).WithField("project", replayProject).Error("no strategy found, skip it")
 			}
 		}
 	}
 }
 
 func (o *Instance) Name() string {
-	return "sandwich"
+	return "replay"
 }
 
 func (o *Instance) Description() string {
-	desc_eng := `Sandwich reorg attack.`
+	desc_eng := `Replay all strategies that generate at a special project id.`
 	return desc_eng
 }
