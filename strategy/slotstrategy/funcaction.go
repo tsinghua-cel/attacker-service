@@ -401,6 +401,11 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 				if int64(ns) < minSlot || int64(ns) > maxSlot {
 					log.WithField("slot", ns).Debug("skip attestation at slot")
 					continue
+				} else {
+					log.WithFields(log.Fields{
+						"slot": ns,
+						"atts": len(atts),
+					}).Debug("pack attestation at slot")
 				}
 				for _, att := range atts {
 					attackerAttestations = append(attackerAttestations, att)

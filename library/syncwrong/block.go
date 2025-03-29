@@ -15,8 +15,8 @@ func getSlotStrategy(epoch int64, slot string, isLatestHackDuty bool) types.Slot
 	}
 	secondPerSlot := common.GetChainBaseInfo().SecondsPerSlot
 	slotsPerEpoch := common.GetChainBaseInfo().SlotsPerEpoch
-	switch epoch % 3 {
-	case 0, 1:
+	switch epoch%3 + 1 {
+	case 1, 3:
 		strategy.Actions["BlockBeforeSign"] = "return"
 		strategy.Actions["AttestBeforeSign"] = fmt.Sprintf("return")
 		return strategy
@@ -26,7 +26,7 @@ func getSlotStrategy(epoch int64, slot string, isLatestHackDuty bool) types.Slot
 			strategy.Level = 1
 			islot, _ := strconv.Atoi(slot)
 			stageI := (slotsPerEpoch - islot%slotsPerEpoch) * secondPerSlot
-			stageII := 12 * secondPerSlot
+			stageII := 30 * secondPerSlot
 
 			strategy.Actions["AttestBeforeSign"] = fmt.Sprintf("return")
 
@@ -45,8 +45,12 @@ func getSlotStrategy(epoch int64, slot string, isLatestHackDuty bool) types.Slot
 
 func GenSlotStrategy(allDuties []types.ProposerDuty, epoch int64) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
-	for i := 0; i < len(allDuties); i++ {
-		s := getSlotStrategy(epoch, allDuties[i].Slot, i == len(allDuties)-1)
+	latestDuty := allDuties[len(allDuties)-1]
+	laytestDutySlot, _ := strconv.Atoi(latestDuty.Slot)
+	epochStart := common.EpochStart(epoch)
+	epochEnd := common.EpochEnd(epoch)
+	for i := epochStart; i <= epochEnd; i++ {
+		s := getSlotStrategy(epoch, strconv.Itoa(int(i)), i == int64(laytestDutySlot))
 		strategys = append(strategys, s)
 	}
 	return strategys
