@@ -63,6 +63,10 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 					latestEpoch = epoch - 1
 					continue
 				}
+				if nextEpoch < 3 {
+					log.WithField("epoch", nextEpoch).Info("skip to generate strategy")
+					continue
+				}
 				strategy := types.Strategy{}
 				strategy.Uid = uuid.NewString()
 				strategy.Slots = GenSlotStrategy(params.FillterHackerDuties(duties), nextEpoch)
