@@ -26,7 +26,7 @@ func getSlotStrategy(epoch int64, slot string, isLatestHackDuty bool) types.Slot
 			strategy.Level = 1
 			islot, _ := strconv.Atoi(slot)
 			stageI := (slotsPerEpoch - islot%slotsPerEpoch) * secondPerSlot
-			stageII := 30 * secondPerSlot
+			stageII := (32 + 30) * secondPerSlot
 
 			strategy.Actions["AttestBeforeSign"] = fmt.Sprintf("return")
 
