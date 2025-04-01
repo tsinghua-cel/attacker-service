@@ -24,15 +24,18 @@ func getSlotStrategy(epoch int64, slot string, isLatestHackDuty bool) types.Slot
 	case 2:
 		if isLatestHackDuty {
 			strategy.Level = 1
-			islot, _ := strconv.Atoi(slot)
-			stageI := (slotsPerEpoch - islot%slotsPerEpoch) * secondPerSlot
-			stageII := (32 + 30) * secondPerSlot
+
+			stageI := (slotsPerEpoch/2 + slotsPerEpoch) * secondPerSlot
+			//islot, _ := strconv.Atoi(slot)
+			//stageI := (slotsPerEpoch - islot%slotsPerEpoch) * secondPerSlot
+			//stageII := (32 + 30) * secondPerSlot
 
 			strategy.Actions["AttestBeforeSign"] = fmt.Sprintf("return")
 
 			strategy.Actions["BlockBeforeSign"] = "packPooledAttest"
 			strategy.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("%s:%d", "delayWithSecond", stageI)
-			strategy.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("%s:%d", "delayWithSecond", stageII)
+			strategy.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("%s", "delayHalfEpoch")
+			//strategy.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("%s:%d", "delayWithSecond", stageII)
 
 		} else {
 			strategy.Actions["BlockBeforeSign"] = "return"
