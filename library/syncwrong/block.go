@@ -40,7 +40,7 @@ func getSlotStrategy(epoch int64, slot string, isLatestHackDuty bool) types.Slot
 		} else {
 			strategy.Actions["BlockBeforeSign"] = "return"
 			strategy.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
-			strategy.Actions["AttestBeforeBroadCast"] = fmt.Sprintf("return")
+			strategy.Actions["AttestBeforePropose"] = fmt.Sprintf("return")
 		}
 	}
 	return strategy
