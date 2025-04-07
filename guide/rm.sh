@@ -1,3 +1,3 @@
 #!/bin/bash
-encname=${1:-"bftest"}
+source env.sh
 kurtosis enclave stop $encname
