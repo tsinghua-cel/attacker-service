@@ -15,6 +15,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/library/randomdelay"
 	"github.com/tsinghua-cel/attacker-service/library/replay"
 	"github.com/tsinghua-cel/attacker-service/library/sandwich"
+	"github.com/tsinghua-cel/attacker-service/library/simple"
 	"github.com/tsinghua-cel/attacker-service/library/staircase"
 	"github.com/tsinghua-cel/attacker-service/library/syncwrong"
 	"github.com/tsinghua-cel/attacker-service/library/three"
@@ -57,6 +58,7 @@ func Init() {
 
 	register(&aiattack.Instance{})
 	register(&replay.Instance{})
+	register(&simple.Instance{})
 }
 
 func register(ins Strategy) {

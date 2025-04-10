@@ -1,4 +1,4 @@
-package utils
+package simple
 
 import (
 	"fmt"
@@ -46,7 +46,7 @@ func (a ActionPoint) FullActions() []string {
 		"delayWithSecond:[time]",
 	}
 	switch a {
-	case "BlockGetNewParentRoot", "AttestBeforeSign":
+	case "BlockGetNewParentRoot":
 		return a.SpecialActions()
 	}
 	normalActions = append(normalActions, a.SpecialActions()...)
