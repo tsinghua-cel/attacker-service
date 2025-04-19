@@ -3,7 +3,7 @@ package common
 import (
 	"encoding/base64"
 	"errors"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )
@@ -73,7 +73,30 @@ func Base64ToSignedDenebBlock(signedBlockBase64 string) (*ethpb.SignedBeaconBloc
 	return signedBlock, nil
 }
 
+func Base64ToSignedCapellaBlock(signedBlockBase64 string) (*ethpb.SignedBeaconBlockCapella, error) {
+	signedBlockData, err := base64.StdEncoding.DecodeString(signedBlockBase64)
+	if err != nil {
+		log.WithError(err).Error("base64 decode signed block data failed")
+		return nil, err
+	}
+	var signedBlock = new(ethpb.SignedBeaconBlockCapella)
+	if err := proto.Unmarshal(signedBlockData, signedBlock); err != nil {
+		log.WithError(err).Error("unmarshal signed block data failed")
+		return nil, err
+	}
+	return signedBlock, nil
+}
+
 func SignedDenebBlockToBase64(signedBlock *ethpb.SignedBeaconBlockDeneb) (string, error) {
+	data, err := proto.Marshal(signedBlock)
+	if err != nil {
+		log.WithError(err).Error("marshal signed block data failed")
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func SignedCapellaBlockToBase64(signedBlock *ethpb.SignedBeaconBlockCapella) (string, error) {
 	data, err := proto.Marshal(signedBlock)
 	if err != nil {
 		log.WithError(err).Error("marshal signed block data failed")

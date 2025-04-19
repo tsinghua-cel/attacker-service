@@ -3,9 +3,8 @@ package slotstrategy
 import (
 	"errors"
 	"fmt"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
+	attaggregation "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/plugins"
@@ -372,104 +371,74 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
 			}
-			epoch := common.SlotToEpoch(slot)
-			last := epoch - 1
-			if last < 0 {
-				last = 0
-			}
-			minSlot := common.EpochStart(last)
-			maxSlot := common.EpochEnd(epoch)
-			log.WithFields(log.Fields{
-				"slot":   slot,
-				"action": name,
-			}).Info("do action ")
 
 			if len(params) == 0 {
 				return r
 			}
-			block, ok := params[0].(*ethpb.SignedBeaconBlockDeneb)
-			if !ok {
-				log.WithFields(log.Fields{
-					"param": fmt.Sprintf("%T", params[0]),
-				}).Error("invalid param type, require *ethpb.SignedBeaconBlockDeneb")
-				r.Result = params[0]
-				return r
-			}
-
-			attackerAttestations := make([]ethpb.Att, 0)
-			pool := backend.GetAttestPool()
-			for ns, atts := range pool {
-				if int64(ns) < minSlot || int64(ns) > maxSlot {
-					log.WithField("slot", ns).Debug("skip attestation at slot")
+			block := params[0].(*ethpb.SignedBeaconBlockCapella)
+			epoch := common.SlotToEpoch(slot)
+			startEpoch := common.EpochStart(epoch)
+			endEpoch := common.EpochEnd(epoch)
+			attackerAttestations := make([]*ethpb.Attestation, 0)
+			validatorSet := backend.GetValidatorDataSet()
+			log.WithFields(log.Fields{
+				"slot": slot,
+			}).Info("rePackAttestation")
+			for i := startEpoch; i <= endEpoch; i++ {
+				allSlotAttest := backend.GetAttestSet(uint64(i))
+				if allSlotAttest == nil {
 					continue
-				} else {
-					log.WithFields(log.Fields{
-						"slot": ns,
-						"atts": len(atts),
-					}).Debug("pack attestation at slot")
-				}
-				for _, att := range atts {
-					attackerAttestations = append(attackerAttestations, att)
-				}
-			}
-			backend.ResetAttestPool()
-			allAtt := make([]ethpb.Att, 0)
-			for _, att := range block.Block.Body.Attestations {
-				allAtt = append(allAtt, att)
-			}
-			for _, att := range attackerAttestations {
-				allAtt = append(allAtt, att)
-			}
-			{
-				attsById := make(map[attestation.Id][]ethpb.Att, len(allAtt))
-				for _, att := range allAtt {
-					id, err := attestation.NewId(att, attestation.Data)
-					if err != nil {
-						log.WithField("att", att).Error("failed to create attestation ID")
-						continue
-					}
-					attsById[id] = append(attsById[id], att)
 				}
 
-				for id, as := range attsById {
-					as, err := attaggregation.Aggregate(as)
-					if err != nil {
-						log.WithField("id", id).Error("pack attestation failed")
+				for publicKey, att := range allSlotAttest.Attestations {
+					val := validatorSet.GetValidatorByPubkey(publicKey)
+					if val == nil {
+						log.WithField("pubkey", publicKey).Debug("validator not found")
 						continue
 					}
-					attsById[id] = as
+					valRole := backend.GetValidatorRole(int(i), int(val.Index))
+					if val != nil && valRole == types.AttackerRole {
+						log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
+						attackerAttestations = append(attackerAttestations, att)
+					}
+					//log.WithField("pubkey", publicKey).Debug("add attacker attestation to block")
+					//attackerAttestations = append(attackerAttestations, att)
 				}
-				var attsForInclusion types.ProposerAtts
-				attsForInclusion = make([]ethpb.Att, 0)
-				for _, as := range attsById {
+			}
+
+			allAtt := append(block.Block.Body.Attestations, attackerAttestations...)
+			{
+				// Remove duplicates from both aggregated/unaggregated attestations. This
+				// prevents inefficient aggregates being created.
+				atts, _ := types.ProposerAtts(allAtt).Dedup()
+				attsByDataRoot := make(map[[32]byte][]*ethpb.Attestation, len(atts))
+				for _, att := range atts {
+					attDataRoot, err := att.Data.HashTreeRoot()
+					if err != nil {
+						continue
+					}
+					attsByDataRoot[attDataRoot] = append(attsByDataRoot[attDataRoot], att)
+				}
+
+				attsForInclusion := types.ProposerAtts(make([]*ethpb.Attestation, 0))
+				for _, ass := range attsByDataRoot {
+					as, err := attaggregation.Aggregate(ass)
+					if err != nil {
+						continue
+					}
 					attsForInclusion = append(attsForInclusion, as...)
 				}
-
-				deduped, err := attsForInclusion.Dedup()
-				if err != nil {
-					log.WithField("atts", attsForInclusion).Error("dedup attestation failed")
-					return r
-				}
-				var sorted types.ProposerAtts
-				sorted, err = deduped.Sort()
+				deduped, _ := attsForInclusion.Dedup()
+				sorted, err := deduped.SortByProfitability()
 				if err != nil {
 					log.WithError(err).Error("sort attestation failed")
 				} else {
-					atts := sorted.LimitToMaxAttestations()
-					natts := make([]*ethpb.Attestation, 0)
-					for _, att := range atts {
-						if a, ok := att.(*ethpb.Attestation); ok {
-							natts = append(natts, a)
-						}
-					}
-
-					block.Block.Body.Attestations = natts
-					log.WithFields(log.Fields{
-						"att count": len(natts),
-						"slot":      slot,
-					}).Info("finally pack attestation success")
+					atts = sorted.LimitToMaxAttestations()
 				}
+				allAtt = atts
 			}
+
+			block.Block.Body.Attestations = allAtt
 
 			r.Result = block
 			return r

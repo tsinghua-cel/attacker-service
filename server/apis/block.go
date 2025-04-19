@@ -2,7 +2,7 @@ package apis
 
 import (
 	"errors"
-	"github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/hashicorp/golang-lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/types"
@@ -12,7 +12,7 @@ import (
 var (
 	ErrNilObject              = errors.New("nil object")
 	ErrUnsupportedBeaconBlock = errors.New("unsupported beacon block")
-	blockCacheContent         = lru.New(1000)
+	blockCacheContent, _      = lru.New(1000)
 )
 
 // BlockAPI offers and API for block operations.
@@ -115,7 +115,8 @@ func (s *BlockAPI) todoActionsWithSlot(slot uint64, name string) types.AttackerR
 }
 
 func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signedBlockDataBase64 string, name string) types.AttackerResponse {
-	signedDenebBlock, err := common.Base64ToSignedDenebBlock(signedBlockDataBase64)
+	//signedDenebBlock, err := common.Base64ToSignedDenebBlock(signedBlockDataBase64)
+	signedBlock, err := common.Base64ToSignedCapellaBlock(signedBlockDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
@@ -143,9 +144,10 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 			//	log.WithError(err).WithField("slot", slot).Error("get block instance failed")
 			//	return result
 			//}
-			r := action.RunAction(s.b, int64(slot), pubkey, signedDenebBlock)
+			r := action.RunAction(s.b, int64(slot), pubkey, signedBlock)
 			result.Cmd = r.Cmd
-			if newBlockBase64, err := common.SignedDenebBlockToBase64(signedDenebBlock); err != nil {
+			//if newBlockBase64, err := common.SignedDenebBlockToBase64(signedBlock); err != nil {
+			if newBlockBase64, err := common.SignedCapellaBlockToBase64(signedBlock); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
 					"action": name,

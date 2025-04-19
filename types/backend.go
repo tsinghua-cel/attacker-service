@@ -2,7 +2,7 @@ package types
 
 import (
 	ethtype "github.com/ethereum/go-ethereum/core/types"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	ethpb "github.com/prysmaticlabs/prysm/v4/proto/prysm/v1alpha1"
 	"math/big"
 )
 
