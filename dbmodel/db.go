@@ -22,8 +22,13 @@ func GetOrmInstance() orm.Ormer {
 	return ormInstance
 }
 
-func DbInit(connect string) {
-	projectID = uuid.NewString()
+func DbInit(connect string, project_id string) {
+	if project_id == "" {
+		projectID = uuid.NewString()
+	} else {
+		projectID = project_id
+	}
+
 	// Set up database
 	datasource := fmt.Sprintf("%s?charset=utf8", connect)
 	orm.RegisterDriver("mysql", orm.DRMySQL)

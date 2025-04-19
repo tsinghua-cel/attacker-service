@@ -22,6 +22,7 @@ import (
 
 var logLevel string
 var logPath string
+var specialProjectId string
 var maxHackValIdx int
 var minHackValIdx int
 var timePerStrategyRun int
@@ -54,6 +55,7 @@ func init() {
 
 	RootCmd.PersistentFlags().StringVar(&logLevel, "loglevel", "info", "log level")
 	RootCmd.PersistentFlags().StringVar(&logPath, "logpath", "", "log path")
+	RootCmd.PersistentFlags().StringVar(&specialProjectId, "project-id", "", "special project-id")
 	RootCmd.PersistentFlags().StringVar(&configPath, "config", "", "config file path")
 	RootCmd.PersistentFlags().StringVar(&strategies, "strategy", "", "choose the strategy to generate, split multi strategies by comma")
 	RootCmd.PersistentFlags().IntVar(&timePerStrategyRun, "duration-per-strategy-run", 30, "time per strategy run (only when set multi strategies), unit: minute")
@@ -97,7 +99,7 @@ func initConfig() {
 }
 
 func runNode() {
-	dbmodel.DbInit(config.GetConfig().DbConnect)
+	dbmodel.DbInit(config.GetConfig().DbConnect, specialProjectId)
 	params := types.StrategyGeneratorParam{
 		Strategy:            strategies,
 		DurationPerStrategy: int64(timePerStrategyRun),
