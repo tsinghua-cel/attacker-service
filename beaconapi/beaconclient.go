@@ -8,6 +8,7 @@ import (
 	"github.com/attestantio/go-eth2-client/api"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/attestantio/go-eth2-client/spec"
+	"github.com/attestantio/go-eth2-client/spec/bellatrix"
 	"github.com/attestantio/go-eth2-client/spec/capella"
 	"github.com/attestantio/go-eth2-client/spec/deneb"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -504,6 +505,23 @@ func (b *BeaconGwClient) GetCapellaBlockBySlot(slot uint64) (*capella.SignedBeac
 		return nil, err
 	}
 	return res.Data.Capella, nil
+}
+
+func (b *BeaconGwClient) GetBellatrixBlockBySlot(slot uint64) (*bellatrix.SignedBeaconBlock, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+
+	res, err := service.(eth2client.SignedBeaconBlockProvider).SignedBeaconBlock(context.Background(), &api.SignedBeaconBlockOpts{
+		Block: fmt.Sprintf("%d", slot),
+	})
+	if err != nil {
+		log.WithError(err).Error("get block failed")
+		return nil, err
+	}
+	return res.Data.Bellatrix, nil
 }
 
 func (b *BeaconGwClient) GetSpec() (map[string]any, error) {

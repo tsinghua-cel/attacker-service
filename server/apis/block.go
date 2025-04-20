@@ -116,7 +116,7 @@ func (s *BlockAPI) todoActionsWithSlot(slot uint64, name string) types.AttackerR
 
 func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signedBlockDataBase64 string, name string) types.AttackerResponse {
 	//signedDenebBlock, err := common.Base64ToSignedDenebBlock(signedBlockDataBase64)
-	signedBlock, err := common.Base64ToSignedCapellaBlock(signedBlockDataBase64)
+	signedBlock, err := common.Base64ToSignedBellatrixBlock(signedBlockDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
 			Cmd:    types.CMD_NULL,
@@ -147,7 +147,7 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 			r := action.RunAction(s.b, int64(slot), pubkey, signedBlock)
 			result.Cmd = r.Cmd
 			//if newBlockBase64, err := common.SignedDenebBlockToBase64(signedBlock); err != nil {
-			if newBlockBase64, err := common.SignedCapellaBlockToBase64(signedBlock); err != nil {
+			if newBlockBase64, err := common.SignedBellatrixBlockToBase64(signedBlock); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
 					"action": name,

@@ -87,6 +87,20 @@ func Base64ToSignedCapellaBlock(signedBlockBase64 string) (*ethpb.SignedBeaconBl
 	return signedBlock, nil
 }
 
+func Base64ToSignedBellatrixBlock(signedBlockBase64 string) (*ethpb.SignedBeaconBlockBellatrix, error) {
+	signedBlockData, err := base64.StdEncoding.DecodeString(signedBlockBase64)
+	if err != nil {
+		log.WithError(err).Error("base64 decode signed block data failed")
+		return nil, err
+	}
+	var signedBlock = new(ethpb.SignedBeaconBlockBellatrix)
+	if err := proto.Unmarshal(signedBlockData, signedBlock); err != nil {
+		log.WithError(err).Error("unmarshal signed block data failed")
+		return nil, err
+	}
+	return signedBlock, nil
+}
+
 func SignedDenebBlockToBase64(signedBlock *ethpb.SignedBeaconBlockDeneb) (string, error) {
 	data, err := proto.Marshal(signedBlock)
 	if err != nil {
@@ -97,6 +111,15 @@ func SignedDenebBlockToBase64(signedBlock *ethpb.SignedBeaconBlockDeneb) (string
 }
 
 func SignedCapellaBlockToBase64(signedBlock *ethpb.SignedBeaconBlockCapella) (string, error) {
+	data, err := proto.Marshal(signedBlock)
+	if err != nil {
+		log.WithError(err).Error("marshal signed block data failed")
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func SignedBellatrixBlockToBase64(signedBlock *ethpb.SignedBeaconBlockBellatrix) (string, error) {
 	data, err := proto.Marshal(signedBlock)
 	if err != nil {
 		log.WithError(err).Error("marshal signed block data failed")

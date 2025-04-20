@@ -375,7 +375,7 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 			if len(params) == 0 {
 				return r
 			}
-			block := params[0].(*ethpb.SignedBeaconBlockCapella)
+			block := params[0].(*ethpb.SignedBeaconBlockBellatrix)
 			epoch := common.SlotToEpoch(slot)
 			startEpoch := common.EpochStart(epoch)
 			endEpoch := common.EpochEnd(epoch)
