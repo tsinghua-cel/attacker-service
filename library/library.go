@@ -11,6 +11,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/library/ext_unrealized"
 	"github.com/tsinghua-cel/attacker-service/library/ext_withholding"
 	"github.com/tsinghua-cel/attacker-service/library/five"
+	"github.com/tsinghua-cel/attacker-service/library/liveness"
 	"github.com/tsinghua-cel/attacker-service/library/one"
 	"github.com/tsinghua-cel/attacker-service/library/randomdelay"
 	"github.com/tsinghua-cel/attacker-service/library/replay"
@@ -59,6 +60,7 @@ func Init() {
 	register(&aiattack.Instance{})
 	register(&replay.Instance{})
 	register(&simple.Instance{})
+	register(&liveness.Instance{})
 }
 
 func register(ins Strategy) {

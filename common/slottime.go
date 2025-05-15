@@ -1,6 +1,10 @@
 package common
 
-import "github.com/tsinghua-cel/attacker-service/types"
+import (
+	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/tsinghua-cel/attacker-service/types"
+	"time"
+)
 
 type slotTimeTool struct {
 	SecondsPerSlot int
@@ -49,4 +53,23 @@ func TimeToSlot(slot int64) int64 {
 
 func GetChainBaseInfo() types.ChainBaseInfo {
 	return *baseInfo
+}
+
+// BeginsAt computes the timestamp where the given slot begins, relative to the genesis timestamp.
+func BeginsAt(slot int64) time.Time {
+	sd := time.Second * time.Duration(params.BeaconConfig().SecondsPerSlot) * time.Duration(slot)
+	genesis := time.Unix(tool.GenesisTime, 0)
+	return genesis.Add(sd)
+}
+
+func CurrentSlot() int64 {
+	now := time.Now().Unix()
+	if now < tool.GenesisTime {
+		return 0
+	}
+	return (now - tool.GenesisTime) / int64(tool.SecondsPerSlot)
+}
+
+func CurrentEpoch() int64 {
+	return SlotToEpoch(CurrentSlot())
 }
