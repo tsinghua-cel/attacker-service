@@ -48,8 +48,9 @@ func (tc *TimeClock) SetTarget(targetTime time.Time) {
 }
 
 // ResetTarget resets the target time to now + duration
-func (tc *TimeClock) ResetTarget(t time.Time) {
-	tc.SetTarget(t)
+func (tc *TimeClock) ResetTarget(t time.Duration) {
+	d := time.Now().Add(t)
+	tc.SetTarget(d)
 }
 
 // Stop stops the clock and closes all listener channels

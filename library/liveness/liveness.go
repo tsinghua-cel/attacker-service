@@ -48,13 +48,13 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	var setCacheDuty = func(epoch int64, duties []types.ProposerDuty) {
 		epochDutyCache.Add(epoch, duties)
 	}
-	beginEpoch := common.CurrentEpoch()
+	curSlot := common.CurrentSlot()
 	colock := common.NewTimeClock()
 	defer colock.Stop()
 
 	listen := colock.AddListener()
 
-	var targetSlot = common.EpochStart(beginEpoch + 1)
+	var targetSlot = common.EpochStart(curSlot + 1)
 	colock.SetTarget(common.BeginsAt(targetSlot))
 
 	for {
@@ -64,68 +64,43 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			return
 		case <-listen:
 			epoch := common.CurrentEpoch()
-			if epoch == 0 {
+			nextEpoch := epoch + 1
+
+			// reset timer to next slot.
+			colock.ResetTarget(time.Second * time.Duration(common.GetChainBaseInfo().SecondsPerSlot))
+			if _, ok := history[int(nextEpoch)]; ok {
+				// already processed next epoch.
 				continue
 			}
-			if _, ok := history[int(epoch)]; ok {
-				// already processed epoch.
-				continue
-			}
+
 			var (
-				nextEpoch             = epoch + 1
-				currentDuty, nextDuty []types.ProposerDuty
-				err                   error
+				curDuty, nextDuty []types.ProposerDuty
+				err               error
 			)
 
-			if currentDuty = getCacheDuty(epoch); currentDuty == nil {
-				// current duty not exist, get next epoch duty and then sleep to before next epoch.
-				currentDuty, err = attacker.GetEpochDuties(epoch)
-				if err != nil {
-					time.Sleep(time.Second)
-					olog.Error("GetEpochDuties err, wait next")
-					continue
-				}
-				setCacheDuty(epoch, currentDuty)
-			}
-
-			if !params.IsHackValidator(toInt(currentDuty[0].ValidatorIndex)) {
-				olog.WithFields(log.Fields{
-					"epoch": epoch,
-					"first": currentDuty[0].ValidatorIndex,
-				}).Debug("strategy skip validator")
-				history[int(epoch)] = true
-				// wait to next epoch start.
-				colock.SetTarget(common.BeginsAt(common.EpochStart(nextEpoch)))
-				continue
-			}
-
+			// always get next epoch duty.
 			if nextDuty = getCacheDuty(nextEpoch); nextDuty == nil {
 				nextDuty, err = attacker.GetEpochDuties(nextEpoch)
+				// if failed, wait next loop.
 				if err != nil {
 					// get next epoch duty failed, continue for next loop.
 					continue
 				}
 				setCacheDuty(nextEpoch, nextDuty)
 			}
+
+			history[int(nextEpoch)] = true
 			if !params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) {
 				olog.WithFields(log.Fields{
-					"epoch": nextEpoch,
-					"first": nextDuty[0].ValidatorIndex,
-				}).Debug("strategy skip validator")
-				history[int(epoch)] = true
-				// wait to the second next epoch start.
-				colock.SetTarget(common.BeginsAt(common.EpochStart(nextEpoch + 1)))
-				continue
-			}
-			// currentDuty and nextDuty is valid.
-			olog.WithFields(log.Fields{
-				"currentEpoch": epoch,
-				"nextEpoch":    nextEpoch,
-			}).Info("strategy trigger")
-			{
+					"next epoch":      nextEpoch,
+					"first validator": nextDuty[0].ValidatorIndex,
+				}).Debug("strategy skip")
+
+			} else {
+				// set strategy for next epoch, and check if current epoch duty is hack validator.
 				strategy := types.Strategy{}
 				strategy.Uid = uuid.NewString()
-				strategy.Slots = GenSlotStrategy(currentDuty, nextDuty)
+				strategy.Slots = GenSlotStrategy(nextDuty)
 				strategy.Category = o.Name()
 				if err = attacker.UpdateStrategy(strategy); err != nil {
 					log.WithField("error", err).Error("failed to update strategy")
@@ -135,7 +110,16 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						"strategy": strategy,
 					}).Info("update strategy successfully")
 				}
+				curDuty = getCacheDuty(epoch)
+				// then give a trigger log.
+				if curDuty != nil && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) {
+					olog.WithFields(log.Fields{
+						"current epoch": epoch,
+						"next epoch":    nextEpoch,
+					}).Info("strategy trigger")
+				}
 			}
+
 		}
 	}
 }

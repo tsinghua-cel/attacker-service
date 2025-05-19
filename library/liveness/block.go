@@ -17,9 +17,8 @@ func getSlotStrategy(slot string) types.SlotStrategy {
 	return strategy
 }
 
-func GenSlotStrategy(curEpochDuties []types.ProposerDuty, nextEpochDuties []types.ProposerDuty) []types.SlotStrategy {
+func GenSlotStrategy(nextEpochDuties []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
-	strategys = append(strategys, getSlotStrategy(curEpochDuties[0].Slot))
 	strategys = append(strategys, getSlotStrategy(nextEpochDuties[0].Slot))
 	return strategys
 }
