@@ -114,3 +114,46 @@ func TestGetBlockReward(t *testing.T) {
 	d, _ := json.MarshalIndent(data, "", "  ")
 	fmt.Printf("get block :%s\n", d)
 }
+
+func TestProposeDuty(t *testing.T) {
+	endpoint := "47.242.120.101:32920"
+	client := NewBeaconGwClient(endpoint)
+	epochs := make([]int, 0)
+	h, err := client.GetLatestBeaconHeader()
+	if err != nil {
+		t.Fatalf("get latest header failed err:%s", err)
+	}
+	slot, _ := strconv.Atoi(h.Header.Message.Slot)
+	beginEpoch := slot / 32
+	for i := 0; i < 5; i++ {
+		epochs = append(epochs, beginEpoch+i)
+	}
+
+	for _, epoch := range epochs {
+		duty, err := client.GetEpochProposerDuties(epoch)
+		if err != nil {
+			t.Errorf("get epoch (%d) proposer duties failed err:%s", epoch, err)
+		} else {
+			d, _ := json.Marshal(duty)
+			fmt.Printf("get epoch (%d) proposer duties :%s\n", epoch, string(d))
+		}
+	}
+
+}
+
+func TestBeaconState(t *testing.T) {
+	endpoint := "47.242.120.101:34003"
+	client := NewBeaconGwClient(endpoint)
+	epochs := make([]int, 0)
+	client.GetBeaconState("head")
+	for _, epoch := range epochs {
+		duty, err := client.GetEpochProposerDuties(epoch)
+		if err != nil {
+			t.Errorf("get epoch (%d) proposer duties failed err:%s", epoch, err)
+		} else {
+			d, _ := json.Marshal(duty)
+			fmt.Printf("get epoch (%d) proposer duties :%s\n", epoch, string(d))
+		}
+	}
+
+}

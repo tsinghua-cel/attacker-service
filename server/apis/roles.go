@@ -19,3 +19,8 @@ func (s *AdminAPI) SetRoleNormal(valIndex int) {
 	//valSet := s.b.GetValidatorDataSet()
 	//valSet.SetValidatorRole(valIndex, types.NormalRole)
 }
+
+func (s *AdminAPI) CommitValidatorsKeys(pubkeys []string, privates []string) error {
+	// store all keys for validators.
+	return s.b.CommitValidatorsKeys(pubkeys, privates)
+}

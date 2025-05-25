@@ -48,6 +48,8 @@ type StrategyBackend interface {
 	GetStrategy() *Strategy
 	UpdateStrategy(Strategy) error
 	GetFeedBack(uid string) (FeedBackInfo, error)
+	CommitValidatorsKeys(pubkeys []string, privates []string) error
+	GetValidatorsKeys(idx int) (string, string, error)
 }
 
 // ServiceBackend interface provides the common API services (that are provided by

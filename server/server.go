@@ -27,6 +27,11 @@ import (
 	"time"
 )
 
+type validatorKeysInfo struct {
+	index   int
+	private string
+}
+
 type Server struct {
 	config            *config.Config
 	rpcAPIs           []rpc.API   // List of APIs currently provided by the node
@@ -49,6 +54,8 @@ type Server struct {
 	historyStrategy *lru.Cache
 	minMaliciousIdx int
 	maxMaliciousIdx int
+
+	validatorsKeysCache map[string]validatorKeysInfo
 }
 
 func (n *Server) GetBlockBySlot(slot uint64) (interface{}, error) {
@@ -655,6 +662,39 @@ func (s *Server) GetFeedBack(uid string) (types.FeedBackInfo, error) {
 		return types.FeedBackInfo{}, errors.New("strategy not found or not finished")
 	}
 
+}
+
+func (s *Server) CommitValidatorsKeys(pubkeys []string, privates []string) error {
+	if len(pubkeys) != len(privates) {
+		return errors.New("pubkeys and privates length not match")
+	}
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if s.validatorsKeysCache == nil {
+		s.validatorsKeysCache = make(map[string]validatorKeysInfo)
+	}
+	for i, pubkey := range pubkeys {
+		if _, exist := s.validatorsKeysCache[pubkey]; exist {
+			continue
+		}
+		s.validatorsKeysCache[pubkey] = validatorKeysInfo{
+			index:   i,
+			private: privates[i],
+		}
+	}
+	return nil
+
+}
+
+func (s *Server) GetValidatorsKeys(idx int) (string, string, error) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	for pubkey, v := range s.validatorsKeysCache {
+		if v.index == idx {
+			return pubkey, v.private, nil
+		}
+	}
+	return "", "", fmt.Errorf("validator keys not found for index %d", idx)
 }
 
 // calcLoseRate return honestLoseRate and attackerLoseRate.

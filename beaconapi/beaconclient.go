@@ -159,6 +159,28 @@ func (b *BeaconGwClient) GetLatestValidators() (*spec.VersionedBeaconState, erro
 	return res.Data, nil
 }
 
+// GetBeaconState
+// slot: "head", "genesis", "finalized", "justified", <slot>, <hex encoded stateRoot with 0x prefix>.
+func (b *BeaconGwClient) GetBeaconState(slot string) (*spec.VersionedBeaconState, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.BeaconStateProvider).BeaconState(context.Background(), &api.BeaconStateOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		State: slot,
+	})
+	if err != nil {
+		log.WithError(err).Error("get beacon state failed")
+		return nil, err
+	}
+
+	return res.Data, nil
+}
+
 func (b *BeaconGwClient) GetLatestBeaconHeader() (types.BeaconHeaderInfo, error) {
 	h, err := b.getLatestBeaconHeader()
 	if err != nil {
@@ -321,6 +343,10 @@ func (b *BeaconGwClient) GetCurrentEpochProposerDuties() ([]types.ProposerDuty, 
 	slotPerEpoch, _ := b.GetIntConfig(SLOTS_PER_EPOCH)
 	curSlot, _ := strconv.Atoi(latestHeader.Header.Message.Slot)
 	epoch := curSlot / slotPerEpoch
+	return b.GetProposerDuties(epoch)
+}
+
+func (b *BeaconGwClient) GetEpochProposerDuties(epoch int) ([]types.ProposerDuty, error) {
 	return b.GetProposerDuties(epoch)
 }
 
