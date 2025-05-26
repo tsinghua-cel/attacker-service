@@ -41,6 +41,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	olog.Info("start to run strategy")
 	attacker := params.Attacker
 	o.b = attacker.GetBackend()
+	o.param = params
 
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
@@ -172,6 +173,10 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						history[int(epoch)] = true
 						break
 					} else if offset == 2 {
+						olog.WithFields(log.Fields{
+							"epoch":        epoch,
+							"len(curduty)": len(curDuty),
+						}).Debug("before ComputeBestMaskDuty")
 						// compute bestMaskDuty and update current epoch strategy.
 						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()), curDuty)
 						if err != nil {
