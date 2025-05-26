@@ -4,11 +4,45 @@ import (
 	"fmt"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/types"
+	"strconv"
 )
 
 var (
 	epochLatestDuty = make(map[int]types.ProposerDuty)
 )
+
+func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.SlotStrategy {
+	exists := make(map[int]types.SlotStrategy)
+	for _, s := range strategies {
+		exists[toInt(s.Slot)] = s
+	}
+	epochStart := common.EpochStart(int64(epoch))
+	epochEnd := common.EpochEnd(int64(epoch))
+	for i := epochStart; i <= epochEnd; i++ {
+		if os, ok := exists[int(i)]; !ok {
+			ns := types.SlotStrategy{
+				Slot:    strconv.Itoa(int(i)),
+				Level:   2,
+				Actions: make(map[string]string),
+			}
+			ns.Actions["AttestBeforeBroadCast"] = "return"
+			exists[int(i)] = ns
+		} else {
+			if _, ok := os.Actions["AttestBeforeBroadCast"]; !ok {
+				os.Actions["AttestBeforeBroadCast"] = "return"
+			}
+
+		}
+	}
+	nstrategies := make([]types.SlotStrategy, 0)
+	for i := epochStart; i <= epochEnd; i++ {
+		if s, ok := exists[int(i)]; ok {
+			nstrategies = append(nstrategies, s)
+		}
+	}
+	return nstrategies
+
+}
 
 func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
@@ -53,7 +87,7 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []ty
 
 	// set last duty to epoch latest duty.
 	epochLatestDuty[epoch] = lastDuty
-	return strategys
+	return fillDefaultStrategy(epoch, strategys)
 }
 
 // before genStrategy, need preCompute best maskDuty.
@@ -96,7 +130,7 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 
 	// set last duty to epoch latest duty.
 	epochLatestDuty[epoch] = lastDuty
-	return strategys
+	return fillDefaultStrategy(epoch, strategys)
 }
 
 // before genStrategy, need preCompute best maskDuty.
@@ -136,7 +170,7 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 
 	// set last duty to epoch latest duty.
 	epochLatestDuty[epoch] = lastDuty
-	return strategys
+	return fillDefaultStrategy(epoch, strategys)
 }
 
 // before genStrategy, need preCompute best maskDuty.
