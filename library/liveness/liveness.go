@@ -207,7 +207,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						break
 					} else if offset == 3 {
 						// compute bestMaskDuty and update current epoch strategy.
-						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()))
+						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()), curDuty)
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
