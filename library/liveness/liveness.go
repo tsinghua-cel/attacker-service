@@ -82,14 +82,23 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 				} else {
 					setCacheDuty(epoch, duty)
 					curDuty = duty
+					olog.WithFields(log.Fields{
+						"epoch": epoch,
+						"duty":  len(duty),
+					}).Info("get epoch duties")
 				}
 			}
 			if nextDuty == nil {
 				if duty, err := attacker.GetEpochDuties(nextEpoch); err != nil {
 					continue
 				} else {
-					setCacheDuty(epoch, duty)
+					setCacheDuty(nextEpoch, duty)
 					nextDuty = duty
+
+					olog.WithFields(log.Fields{
+						"epoch": nextEpoch,
+						"duty":  len(duty),
+					}).Info("get epoch duties")
 				}
 			}
 
