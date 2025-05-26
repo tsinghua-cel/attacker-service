@@ -164,7 +164,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						break
 					} else if offset == 2 {
 						// compute bestMaskDuty and update current epoch strategy.
-						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()))
+						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()), curDuty)
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
@@ -256,7 +256,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	}
 }
 
-func (o *Instance) ComputeBestMaskDuty(slot uint64) (*types.ProposerDuty, error) {
+func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.ProposerDuty) (*types.ProposerDuty, error) {
 	strSlot := strconv.FormatUint(uint64(slot), 10)
 	currentState, err := o.b.GetBeaconState(strSlot)
 	if err != nil {
@@ -276,7 +276,6 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64) (*types.ProposerDuty, error)
 	}
 	currentEpoch := common.SlotToEpoch(int64(slot))
 	next2Epoch := currentEpoch + 2
-	currentDuty, err := o.b.GetProposeDuties(int(currentEpoch))
 	// append all attacker validators' duties.
 	allAttackerDuties := make([]types.ProposerDuty, 0)
 	for _, duty := range currentDuty {
@@ -284,6 +283,10 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64) (*types.ProposerDuty, error)
 			allAttackerDuties = append(allAttackerDuties, duty)
 		}
 	}
+	log.WithFields(log.Fields{
+		"currentEpoch":        currentEpoch,
+		"attackerDutiesCount": len(allAttackerDuties),
+	}).Info("before compute best mask duty")
 	var (
 		maxAttackerValidatorDuties = 0
 		bestMaskDuty               = types.ProposerDuty{}
@@ -291,9 +294,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64) (*types.ProposerDuty, error)
 	for maskIdx := 1; maskIdx < len(allAttackerDuties); maskIdx++ {
 		// loop mask one attack validator to proposer block.
 		maskDuty := allAttackerDuties[maskIdx]
-
 		cState := mostate.Clone()
-
 		for i := 0; i < len(allAttackerDuties); i++ {
 			duty := allAttackerDuties[i]
 			// if current duty is earlier than current slot, skip it.
@@ -339,14 +340,19 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64) (*types.ProposerDuty, error)
 			}).Error("failed to precompute proposer indices")
 			return nil, err
 		}
-		if attackerCount := o.attackerCount(proposers); attackerCount > maxAttackerValidatorDuties {
+		attackerCount := o.attackerCount(proposers)
+		if attackerCount > maxAttackerValidatorDuties {
 			maxAttackerValidatorDuties = attackerCount
 			bestMaskDuty = maskDuty
 		}
+		log.WithFields(log.Fields{
+			"maskDuty":      maskDuty,
+			"attackerCount": attackerCount,
+		}).Info("computing best mask duty")
 	}
 	log.WithFields(log.Fields{
 		"maskDuty": bestMaskDuty,
-	}).Info("liveness attack strategy prepared")
+	}).Info("liveness attack strategy prepared final")
 	return &bestMaskDuty, nil
 }
 
