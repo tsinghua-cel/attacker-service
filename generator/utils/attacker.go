@@ -36,6 +36,10 @@ func (a attackerInc) GetEpochDuties(epoch int64) ([]types.ProposerDuty, error) {
 	return a.backend.GetProposeDuties(int(epoch))
 }
 
+func (a attackerInc) GetBackend() types.ServiceBackend {
+	return a.backend
+}
+
 func WrapToAttacker(backend types.ServiceBackend) types.AttackerInc {
 	return &attackerInc{
 		backend: backend,

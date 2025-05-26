@@ -1,6 +1,7 @@
 package types
 
 import (
+	"github.com/attestantio/go-eth2-client/spec"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"math/big"
@@ -23,6 +24,7 @@ type BeaconBackend interface {
 	GetSlotRoot(slot int64) (string, error)
 	GetBlockBySlot(slot uint64) (interface{}, error)
 	GetLatestBeaconHeader() (BeaconHeaderInfo, error)
+	GetBeaconState(slot string) (*spec.VersionedBeaconState, error)
 }
 
 type CacheBackend interface {

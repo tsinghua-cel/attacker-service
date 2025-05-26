@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
+	"github.com/attestantio/go-eth2-client/spec"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/golang/groupcache/lru"
@@ -695,6 +696,14 @@ func (s *Server) GetValidatorsKeys(idx int) (string, string, error) {
 		}
 	}
 	return "", "", fmt.Errorf("validator keys not found for index %d", idx)
+}
+
+func (s *Server) GetBeaconState(slot string) (*spec.VersionedBeaconState, error) {
+	state, err := s.beaconClient.GetBeaconState(slot)
+	if err != nil {
+		return nil, fmt.Errorf("get state by root failed: %w", err)
+	}
+	return state, nil
 }
 
 // calcLoseRate return honestLoseRate and attackerLoseRate.

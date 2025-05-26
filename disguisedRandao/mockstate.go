@@ -1,10 +1,12 @@
 package disguisedRandao
 
 import (
+	"fmt"
 	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
+	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
 	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
 	customtypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
@@ -13,6 +15,7 @@ import (
 	"github.com/prysmaticlabs/prysm/v5/crypto/bls"
 	"github.com/prysmaticlabs/prysm/v5/crypto/hash"
 	"github.com/prysmaticlabs/prysm/v5/encoding/bytesutil"
+	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
 	"github.com/tsinghua-cel/attacker-service/common"
@@ -181,6 +184,33 @@ func (b *MoState) PrecomputeProposerIndices(activeIndices []primitives.Validator
 	return proposerIndices, nil
 }
 
+func (b *MoState) RandaoDomainData(epoch primitives.Epoch) ([]byte, error) {
+	var ethFork = eth.Fork{
+		PreviousVersion: b.fork.PreviousVersion[:],
+		CurrentVersion:  b.fork.CurrentVersion[:],
+		Epoch:           primitives.Epoch(b.fork.Epoch),
+	}
+	return signing.Domain(&ethFork, epoch, DomainRandao, b.genesisValidatorsRoot[:])
+}
+
+func (b *MoState) GenerateRandaoReveal(privk string, epoch primitives.Epoch) ([]byte, error) {
+	dv, err := b.RandaoDomainData(epoch)
+	if err != nil {
+		return nil, err
+	}
+	sszUint := primitives.SSZUint64(epoch)
+	root, err := signing.ComputeSigningRoot(&sszUint, dv)
+	if err != nil {
+		return nil, err
+	}
+	// private key to private key.
+	secretKey, err := bls.SecretKeyFromBytes(common.FromHex(privk))
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize keys privk, err:%s", err.Error())
+	}
+	return secretKey.Sign(root[:]).Marshal(), nil
+}
+
 func Seed(b *MoState, epoch primitives.Epoch, domain [bls.DomainByteLength]byte) ([32]byte, error) {
 	// See https://github.com/ethereum/consensus-specs/pull/1296
 	lookAheadEpoch := EpochsPerHistoricalVector -
@@ -202,13 +232,13 @@ func RandaoMix(b *MoState, epoch primitives.Epoch) ([]byte, error) {
 	return b.RandaoMixAtIndex(uint64(epoch % EpochsPerHistoricalVector))
 }
 
-func GenValidatorIndices(from, to primitives.ValidatorIndex) []primitives.ValidatorIndex {
+func GenValidatorIndices(from, to int) []primitives.ValidatorIndex {
 	if from > to {
 		return nil
 	}
 	indices := make([]primitives.ValidatorIndex, 0, to-from+1)
 	for i := from; i <= to; i++ {
-		indices = append(indices, i)
+		indices = append(indices, primitives.ValidatorIndex(i))
 	}
 	return indices
 }
@@ -244,4 +274,29 @@ func ComputeProposerIndex(bstate *MoState, activeIndices []primitives.ValidatorI
 			return candidateIndex, nil
 		}
 	}
+}
+
+func ProcessRandaoNoVerify(
+	beaconState *MoState,
+	randaoReveal []byte,
+	currentEpoch primitives.Epoch,
+) error {
+	// If block randao passed verification, we XOR the state's latest randao mix with the block's
+	// randao and update the state's corresponding latest randao mix value.
+	latestMixesLength := EpochsPerHistoricalVector
+	latestMixSlice, err := beaconState.RandaoMixAtIndex(uint64(currentEpoch % latestMixesLength))
+	if err != nil {
+		return err
+	}
+	blockRandaoReveal := hash.Hash(randaoReveal)
+	if len(blockRandaoReveal) != len(latestMixSlice) {
+		return errors.New("blockRandaoReveal length doesn't match latestMixSlice length")
+	}
+	for i, x := range blockRandaoReveal {
+		latestMixSlice[i] ^= x
+	}
+	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch%latestMixesLength), [32]byte(latestMixSlice)); err != nil {
+		return err
+	}
+	return nil
 }
