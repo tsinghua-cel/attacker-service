@@ -19,7 +19,7 @@ func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.Slo
 	epochStart := common.EpochStart(int64(epoch))
 	epochEnd := common.EpochEnd(int64(epoch))
 	for i := epochStart; i <= epochEnd; i++ {
-		if os, ok := exists[int(i)]; !ok {
+		if _, ok := exists[int(i)]; !ok {
 			ns := types.SlotStrategy{
 				Slot:    strconv.Itoa(int(i)),
 				Level:   2,
@@ -28,10 +28,9 @@ func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.Slo
 			ns.Actions["AttestBeforeBroadCast"] = "return"
 			exists[int(i)] = ns
 		} else {
-			if _, ok := os.Actions["AttestBeforeBroadCast"]; !ok {
-				os.Actions["AttestBeforeBroadCast"] = "return"
-			}
-
+			//if _, ok := os.Actions["AttestBeforeBroadCast"]; !ok {
+			//	os.Actions["AttestBeforeBroadCast"] = "return"
+			//}
 		}
 	}
 	nstrategies := make([]types.SlotStrategy, 0)
@@ -111,6 +110,7 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 		} else if duty.Slot == maskDuty.Slot {
 			// don't proposer block.
 			s.Actions["BlockBeforeSign"] = "return"
+			s.Actions["AttestBeforeBroadCast"] = "return"
 		} else {
 			totalDelay := common.TimeToSlot(releaseSlot) - common.TimeToSlot(int64(toInt(duty.Slot)))
 			stageI := 10
@@ -121,6 +121,7 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
+			s.Actions["AttestBeforeBroadCast"] = "return"
 
 			lastDuty = duty
 		}
@@ -151,6 +152,7 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 		if duty.Slot == maskDuty.Slot {
 			// don't proposer block.
 			s.Actions["BlockBeforeSign"] = "return"
+			s.Actions["AttestBeforeBroadCast"] = "return"
 		} else {
 			totalDelay := common.TimeToSlot(releaseSlot) - common.TimeToSlot(int64(toInt(duty.Slot)))
 			stageI := 10
@@ -161,6 +163,7 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
+			s.Actions["AttestBeforeBroadCast"] = "return"
 
 			lastDuty = duty
 		}
