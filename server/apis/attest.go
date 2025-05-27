@@ -132,7 +132,7 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 		}
 	}
 	// default action: add attestation to pool.
-	s.b.AddAttestToPool(slot, pubkey, signedAttestData)
+	//s.b.AddAttestToPool(slot, pubkey, signedAttestData)
 
 	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
