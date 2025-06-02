@@ -120,7 +120,7 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 			// set delay for receive block.
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
 			// pack pooled attestations.
-			s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
+			//s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
 			s.Actions["AttestBeforePropose"] = "return"
@@ -164,7 +164,7 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 			// set delay for receive block.
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
 			// pack pooled attestations.
-			s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
+			//s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
 			s.Actions["AttestBeforePropose"] = "return"
