@@ -25,7 +25,7 @@ func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.Slo
 				Level:   2,
 				Actions: make(map[string]string),
 			}
-			ns.Actions["AttestBeforeBroadCast"] = "return"
+			ns.Actions["AttestBeforePropose"] = "return"
 			exists[int(i)] = ns
 		} else {
 			//if _, ok := os.Actions["AttestBeforeBroadCast"]; !ok {
@@ -70,14 +70,14 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []ty
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
 			// don't broadcast attest.
-			s.Actions["AttestBeforeBroadCast"] = "return"
+			s.Actions["AttestBeforePropose"] = "return"
 			// add attest to pool.
 			s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
 		}
 		if i == len(attackerDuties)-1 {
 			// pack pooled attestations.
-			s.Actions["BlockBeforeSign"] = "packPooledAttest"
-			s.Actions["AttestBeforeBroadCast"] = "null"
+			s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
+			s.Actions["AttestBeforePropose"] = "null"
 		}
 
 		lastDuty = duty
@@ -110,7 +110,7 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 		} else if duty.Slot == maskDuty.Slot {
 			// don't proposer block.
 			s.Actions["BlockBeforeSign"] = "return"
-			s.Actions["AttestBeforeBroadCast"] = "return"
+			s.Actions["AttestBeforePropose"] = "return"
 		} else {
 			totalDelay := common.TimeToSlot(releaseSlot) - common.TimeToSlot(int64(toInt(duty.Slot)))
 			stageI := 10
@@ -120,10 +120,10 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 			// set delay for receive block.
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
 			// pack pooled attestations.
-			s.Actions["BlockBeforeSign"] = "packPooledAttest"
+			s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
-			s.Actions["AttestBeforeBroadCast"] = "return"
+			s.Actions["AttestBeforePropose"] = "return"
 
 			lastDuty = duty
 		}
@@ -154,7 +154,7 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 		if duty.Slot == maskDuty.Slot {
 			// don't proposer block.
 			s.Actions["BlockBeforeSign"] = "return"
-			s.Actions["AttestBeforeBroadCast"] = "return"
+			s.Actions["AttestBeforePropose"] = "return"
 		} else {
 			totalDelay := common.TimeToSlot(releaseSlot) - common.TimeToSlot(int64(toInt(duty.Slot)))
 			stageI := 10
@@ -164,10 +164,10 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 			// set delay for receive block.
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
 			// pack pooled attestations.
-			s.Actions["BlockBeforeSign"] = "packPooledAttest"
+			s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
-			s.Actions["AttestBeforeBroadCast"] = "return"
+			s.Actions["AttestBeforePropose"] = "return"
 
 			lastDuty = duty
 		}

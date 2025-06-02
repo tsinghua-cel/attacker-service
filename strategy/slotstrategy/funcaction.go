@@ -474,6 +474,109 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 			r.Result = block
 			return r
 		}, nil
+	case "packCurrentEpochAttest":
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+			epoch := common.SlotToEpoch(slot)
+			minSlot := common.EpochStart(epoch)
+			maxSlot := slot //common.EpochEnd(epoch)
+			log.WithFields(log.Fields{
+				"slot":   slot,
+				"action": name,
+			}).Info("do action ")
+
+			if len(params) == 0 {
+				return r
+			}
+			block, ok := params[0].(*ethpb.SignedBeaconBlockDeneb)
+			if !ok {
+				log.WithFields(log.Fields{
+					"param": fmt.Sprintf("%T", params[0]),
+				}).Error("invalid param type, require *ethpb.SignedBeaconBlockDeneb")
+				r.Result = params[0]
+				return r
+			}
+
+			attackerAttestations := make([]ethpb.Att, 0)
+			pool := backend.GetAttestPool()
+			for ns, atts := range pool {
+				if int64(ns) < minSlot || int64(ns) > maxSlot {
+					log.WithField("slot", ns).Debug("skip attestation at slot")
+					continue
+				} else {
+					log.WithFields(log.Fields{
+						"slot": ns,
+						"atts": len(atts),
+					}).Debug("pack attestation at slot")
+				}
+				for _, att := range atts {
+					attackerAttestations = append(attackerAttestations, att)
+				}
+			}
+			backend.ResetAttestPool(uint64(slot))
+			allAtt := make([]ethpb.Att, 0)
+			for _, att := range block.Block.Body.Attestations {
+				allAtt = append(allAtt, att)
+			}
+			for _, att := range attackerAttestations {
+				allAtt = append(allAtt, att)
+			}
+			{
+				attsById := make(map[attestation.Id][]ethpb.Att, len(allAtt))
+				for _, att := range allAtt {
+					id, err := attestation.NewId(att, attestation.Data)
+					if err != nil {
+						log.WithField("att", att).Error("failed to create attestation ID")
+						continue
+					}
+					attsById[id] = append(attsById[id], att)
+				}
+
+				for id, as := range attsById {
+					as, err := attaggregation.Aggregate(as)
+					if err != nil {
+						log.WithField("id", id).Error("pack attestation failed")
+						continue
+					}
+					attsById[id] = as
+				}
+				var attsForInclusion types.ProposerAtts
+				attsForInclusion = make([]ethpb.Att, 0)
+				for _, as := range attsById {
+					attsForInclusion = append(attsForInclusion, as...)
+				}
+
+				deduped, err := attsForInclusion.Dedup()
+				if err != nil {
+					log.WithField("atts", attsForInclusion).Error("dedup attestation failed")
+					return r
+				}
+				var sorted types.ProposerAtts
+				sorted, err = deduped.Sort()
+				if err != nil {
+					log.WithError(err).Error("sort attestation failed")
+				} else {
+					atts := sorted.LimitToMaxAttestations()
+					natts := make([]*ethpb.Attestation, 0)
+					for _, att := range atts {
+						if a, ok := att.(*ethpb.Attestation); ok {
+							natts = append(natts, a)
+						}
+					}
+
+					block.Block.Body.Attestations = natts
+					log.WithFields(log.Fields{
+						"att count": len(natts),
+						"slot":      slot,
+					}).Info("finally pack attestation success")
+				}
+			}
+
+			r.Result = block
+			return r
+		}, nil
 	case "modifyAttestSource":
 		if len(params) < 1 {
 			log.WithField("action", actions).Error("need at least 1 param.")
