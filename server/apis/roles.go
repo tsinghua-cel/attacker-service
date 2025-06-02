@@ -1,5 +1,10 @@
 package apis
 
+import (
+	"fmt"
+	"github.com/tsinghua-cel/attacker-service/common"
+)
+
 // RoleAPI offers and API for role operations.
 type AdminAPI struct {
 	b Backend
@@ -23,4 +28,14 @@ func (s *AdminAPI) SetRoleNormal(valIndex int) {
 func (s *AdminAPI) CommitValidatorsKeys(pubkeys []string, privates []string) error {
 	// store all keys for validators.
 	return s.b.CommitValidatorsKeys(pubkeys, privates)
+}
+
+func (s *AdminAPI) CommitReceivedAttestation(signedAttestDataBase64 string) error {
+	// commit the received attestation.
+	signedAttestData, err := common.Base64ToSignedAttestation(signedAttestDataBase64)
+	if err != nil {
+		return fmt.Errorf("failed to decode signed attestation: %w", err)
+	}
+	s.b.AddAttestToPool(0, "", signedAttestData)
+	return nil
 }

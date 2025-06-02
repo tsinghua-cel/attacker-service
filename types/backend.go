@@ -32,7 +32,7 @@ type CacheBackend interface {
 	AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock)
 	AddAttestToPool(slot uint64, pubkey string, attestation *ethpb.Attestation)
 	GetAttestPool() map[uint64]map[string]*ethpb.Attestation
-	ResetAttestPool()
+	ResetAttestPool(threshold uint64)
 	GetAttestSet(slot uint64) *SlotAttestSet
 	GetBlockSet(slot uint64) *SlotBlockSet
 	GetValidatorDataSet() *ValidatorDataSet

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/attestantio/go-eth2-client/spec"
+	common2 "github.com/ethereum/go-ethereum/common"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/golang/groupcache/lru"
@@ -346,12 +347,18 @@ func (s *Server) AddSignedAttestation(slot uint64, pubkey string, attestation *e
 }
 
 func (s *Server) AddAttestToPool(slot uint64, pubkey string, attestation *ethpb.Attestation) {
+	s.addAttest(attestation)
+}
+
+func (s *Server) addAttest(attestation *ethpb.Attestation) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
+	slot := uint64(attestation.Data.Slot)
+	sigHash := common2.BytesToHash(attestation.Signature)
 	if _, ok := s.attestpool[slot]; !ok {
 		s.attestpool[slot] = make(map[string]*ethpb.Attestation)
 	}
-	s.attestpool[slot][pubkey] = attestation
+	s.attestpool[slot][sigHash.String()] = attestation
 }
 
 func (s *Server) GetAttestPool() map[uint64]map[string]*ethpb.Attestation {
@@ -368,10 +375,18 @@ func (s *Server) GetAttestPool() map[uint64]map[string]*ethpb.Attestation {
 	return data
 }
 
-func (s *Server) ResetAttestPool() {
+func (s *Server) ResetAttestPool(threshold uint64) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
-	s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
+	if threshold == 0 {
+		s.attestpool = make(map[uint64]map[string]*ethpb.Attestation)
+	} else {
+		for slot, _ := range s.attestpool {
+			if slot < threshold {
+				delete(s.attestpool, slot)
+			}
+		}
+	}
 }
 
 func (s *Server) AddSignedBlock(slot uint64, pubkey string, block *ethpb.GenericSignedBeaconBlock) {

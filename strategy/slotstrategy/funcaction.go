@@ -378,7 +378,7 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 				last = 0
 			}
 			minSlot := common.EpochStart(last)
-			maxSlot := common.EpochEnd(epoch)
+			maxSlot := slot //common.EpochEnd(epoch)
 			log.WithFields(log.Fields{
 				"slot":   slot,
 				"action": name,
@@ -412,7 +412,7 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 					attackerAttestations = append(attackerAttestations, att)
 				}
 			}
-			backend.ResetAttestPool()
+			backend.ResetAttestPool(uint64(slot))
 			allAtt := make([]ethpb.Att, 0)
 			for _, att := range block.Block.Body.Attestations {
 				allAtt = append(allAtt, att)
