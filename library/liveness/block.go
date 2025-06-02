@@ -119,6 +119,8 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockGetNewParentRoot"] = fmt.Sprintf("modifyParentRoot:%s", lastDuty.Slot)
 			// set delay for receive block.
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
+			// pack pooled attestations.
+			s.Actions["BlockBeforeSign"] = "packPooledAttest"
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
 			s.Actions["AttestBeforeBroadCast"] = "return"
@@ -161,6 +163,8 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockGetNewParentRoot"] = fmt.Sprintf("modifyParentRoot:%s", lastDuty.Slot)
 			// set delay for receive block.
 			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
+			// pack pooled attestations.
+			s.Actions["BlockBeforeSign"] = "packPooledAttest"
 			// set delay for broadcast block.
 			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
 			s.Actions["AttestBeforeBroadCast"] = "return"
