@@ -43,6 +43,11 @@ func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.Slo
 
 }
 
+// 50ms per slot.
+func calcDeltaTime(beginEpoch int64, currentSlot int64) int64 {
+	return 50 * (currentSlot - common.EpochStart(beginEpoch))
+}
+
 func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
@@ -60,15 +65,15 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []ty
 			// delay first slot for 4 seconds.
 			s.Actions["BlockBeforeBroadCast"] = "delayWithSecond:4"
 		} else {
-			totalDelay := common.TimeToSlot(releaseSlot) - common.TimeToSlot(int64(toInt(duty.Slot)))
-			stageI := 10
+			totalDelay := 1000*(common.TimeToSlot(releaseSlot)-common.TimeToSlot(int64(toInt(duty.Slot)))) + calcDeltaTime(int64(epoch), int64(toInt(duty.Slot)))
+			stageI := 1000 * 10
 			stageII := totalDelay - int64(stageI)
 			// modify block parent to last duty.
 			s.Actions["BlockGetNewParentRoot"] = fmt.Sprintf("modifyParentRoot:%s", lastDuty.Slot)
 			// set delay for receive block.
-			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
+			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithMilliSecond:%d", stageI)
 			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
+			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithMilliSecond:%d", stageII)
 			// don't broadcast attest.
 			s.Actions["AttestBeforePropose"] = "return"
 			// add attest to pool.
@@ -112,17 +117,17 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockBeforeSign"] = "return"
 			s.Actions["AttestBeforePropose"] = "return"
 		} else {
-			totalDelay := common.TimeToSlot(releaseSlot) - common.TimeToSlot(int64(toInt(duty.Slot)))
-			stageI := 10
+			totalDelay := 1000*(common.TimeToSlot(releaseSlot)-common.TimeToSlot(int64(toInt(duty.Slot)))) + calcDeltaTime(int64(epoch-1), int64(toInt(duty.Slot)))
+			stageI := 1000 * 10
 			stageII := totalDelay - int64(stageI)
 			// modify block parent to last duty.
 			s.Actions["BlockGetNewParentRoot"] = fmt.Sprintf("modifyParentRoot:%s", lastDuty.Slot)
 			// set delay for receive block.
-			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
+			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithMilliSecond:%d", stageI)
 			// pack pooled attestations.
 			//s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
 			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
+			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithMilliSecond:%d", stageII)
 			s.Actions["AttestBeforePropose"] = "return"
 
 			lastDuty = duty
@@ -156,17 +161,17 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockBeforeSign"] = "return"
 			s.Actions["AttestBeforePropose"] = "return"
 		} else {
-			totalDelay := common.TimeToSlot(releaseSlot) - common.TimeToSlot(int64(toInt(duty.Slot)))
-			stageI := 10
+			totalDelay := 1000*(common.TimeToSlot(releaseSlot)-common.TimeToSlot(int64(toInt(duty.Slot)))) + calcDeltaTime(int64(epoch-2), int64(toInt(duty.Slot)))
+			stageI := 1000 * 10
 			stageII := totalDelay - int64(stageI)
 			// modify block parent to last duty.
 			s.Actions["BlockGetNewParentRoot"] = fmt.Sprintf("modifyParentRoot:%s", lastDuty.Slot)
 			// set delay for receive block.
-			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithSecond:%d", stageI)
+			s.Actions["BlockDelayForReceiveBlock"] = fmt.Sprintf("delayWithMilliSecond:%d", stageI)
 			// pack pooled attestations.
 			//s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
 			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithSecond:%d", stageII)
+			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithMilliSecond:%d", stageII)
 			s.Actions["AttestBeforePropose"] = "return"
 
 			lastDuty = duty
