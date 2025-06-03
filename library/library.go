@@ -12,6 +12,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/library/ext_withholding"
 	"github.com/tsinghua-cel/attacker-service/library/five"
 	"github.com/tsinghua-cel/attacker-service/library/liveness"
+	livenessnormal "github.com/tsinghua-cel/attacker-service/library/liveness-normal"
 	"github.com/tsinghua-cel/attacker-service/library/one"
 	"github.com/tsinghua-cel/attacker-service/library/randomdelay"
 	"github.com/tsinghua-cel/attacker-service/library/replay"
@@ -61,6 +62,7 @@ func Init() {
 	register(&replay.Instance{})
 	register(&simple.Instance{})
 	register(&liveness.Instance{})
+	register(&livenessnormal.Instance{})
 }
 
 func register(ins Strategy) {

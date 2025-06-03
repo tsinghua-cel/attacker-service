@@ -115,22 +115,8 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						}).Info("strategy trigger")
 						continue
 					}
-					// set strategy for next epoch.
-					strategy := types.Strategy{}
-					strategy.Uid = uuid.NewString()
-					strategy.Slots = generateSimpleStrategy(int(nextEpoch), params.FillterHackerDuties(nextDuty))
-					strategy.Category = o.Name()
-					if err = attacker.UpdateStrategy(strategy); err != nil {
-						log.WithField("error", err).Error("failed to update strategy")
-					} else {
-						olog.WithFields(log.Fields{
-							"epoch":    nextEpoch,
-							"strategy": strategy,
-							"trigger":  triggerring,
-						}).Info("update strategy successfully")
-						history[int(epoch)] = true
-					}
 
+					history[int(epoch)] = true
 					break
 
 				} else {
@@ -246,20 +232,6 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						{
 							// set triggering to false
 							triggerring = false
-							// generate next epoch strategy.
-							strategy := types.Strategy{}
-							strategy.Uid = uuid.NewString()
-							strategy.Slots = generateSimpleStrategy(int(nextEpoch), params.FillterHackerDuties(nextDuty))
-							strategy.Category = o.Name()
-							if err = attacker.UpdateStrategy(strategy); err != nil {
-								olog.WithField("error", err).Error("failed to update triggering strategy")
-							} else {
-								olog.WithFields(log.Fields{
-									"epoch":    nextEpoch,
-									"strategy": strategy,
-									"trigger":  triggerring,
-								}).Info("update strategy successfully")
-							}
 						}
 						history[int(epoch)] = true
 						break
