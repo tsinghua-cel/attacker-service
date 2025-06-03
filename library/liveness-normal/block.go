@@ -4,12 +4,9 @@ import (
 	"github.com/tsinghua-cel/attacker-service/types"
 )
 
-func genStrategyForTrigger(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
+func genStrategyForTrigger(epoch int, duties []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
-	if len(attackerDuties) == 0 {
-		return strategys
-	}
-	for _, duty := range attackerDuties {
+	for _, duty := range duties {
 		s := types.SlotStrategy{
 			Slot:    duty.Slot,
 			Level:   2,
