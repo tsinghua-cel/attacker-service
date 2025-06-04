@@ -476,7 +476,6 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
 			}
-			lparam := backend.GetLibraryParam()
 			epoch := common.SlotToEpoch(slot)
 			duties, err := backend.GetProposeDuties(int(epoch))
 			if err != nil {
@@ -485,10 +484,8 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 					"action": name,
 				}).WithError(err).Error("get propose duties failed")
 			} else {
-
-				honestDuties := lparam.FilterHonestDuties(duties)
 				slots := make([]int64, 0)
-				for _, duty := range honestDuties {
+				for _, duty := range duties {
 					s, _ := strconv.Atoi(duty.Slot)
 					if int64(s) < slot {
 						slots = append(slots, int64(s))
