@@ -5,6 +5,6 @@ import (
 )
 
 func CheckDuties(param types.LibraryParams, duties []types.ProposerDuty) ([]types.ProposerDuty, bool) {
-	result := param.FillterHackerDuties(duties)
+	result := param.FilterHackerDuties(duties)
 	return result, len(result) > 0
 }

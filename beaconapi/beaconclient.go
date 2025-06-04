@@ -303,6 +303,39 @@ func (b *BeaconGwClient) getAttesterDuties(epoch int, vals []int) ([]*apiv1.Atte
 	return res.Data, nil
 }
 
+func (b *BeaconGwClient) FetchBlockAttestation(slot int64) ([]*phase0.Attestation, error) {
+	service, err := b.getService()
+	if err != nil {
+		log.WithError(err).Error("create eth2client failed")
+		return nil, err
+	}
+	res, err := service.(eth2client.SignedBeaconBlockProvider).SignedBeaconBlock(context.Background(), &api.SignedBeaconBlockOpts{
+		Common: api.CommonOpts{
+			Timeout: time.Second * 10,
+		},
+		Block: fmt.Sprintf("%d", slot),
+	})
+	if err != nil {
+		log.WithError(err).Error("get block attestation failed")
+		return nil, err
+	}
+	blk := res.Data.Deneb
+	return blk.Message.Body.Attestations, nil
+}
+
+func (b *BeaconGwClient) FetchBlocksAttestations(slots []int64) ([]*phase0.Attestation, error) {
+	attestations := make([]*phase0.Attestation, 0)
+	for _, slot := range slots {
+		att, err := b.FetchBlockAttestation(slot)
+		if err != nil {
+			log.WithError(err).Errorf("fetch block attestation for slot %d failed", slot)
+			continue
+		}
+		attestations = append(attestations, att...)
+	}
+	return attestations, nil
+}
+
 // POST /eth/v1/validator/duties/attester/:epoch
 func (b *BeaconGwClient) GetAttesterDuties(epoch int, vals []int) ([]types.AttestDuty, error) {
 	res, err := b.getAttesterDuties(epoch, vals)

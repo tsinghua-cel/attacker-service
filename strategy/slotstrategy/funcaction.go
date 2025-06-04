@@ -476,7 +476,42 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 			r := plugins.PluginResponse{
 				Cmd: types.CMD_NULL,
 			}
+			lparam := backend.GetLibraryParam()
 			epoch := common.SlotToEpoch(slot)
+			duties, err := backend.GetProposeDuties(int(epoch))
+			if err != nil {
+				log.WithFields(log.Fields{
+					"slot":   slot,
+					"action": name,
+				}).WithError(err).Error("get propose duties failed")
+			} else {
+
+				honestDuties := lparam.FilterHonestDuties(duties)
+				slots := make([]int64, 0)
+				for _, duty := range honestDuties {
+					s, _ := strconv.Atoi(duty.Slot)
+					if int64(s) < slot {
+						slots = append(slots, int64(s))
+					}
+				}
+				atts, err := backend.FetchHonestBlocksAttestations(slots)
+				if err != nil {
+					log.WithFields(log.Fields{
+						"slot":   slot,
+						"action": name,
+					}).WithError(err).Error("fetch attestations failed")
+				} else {
+					// add fetched atts to pool.
+					for _, att := range atts {
+						log.WithFields(log.Fields{
+							"attSlot": att.Data.Slot,
+							"action":  name,
+						}).Debug("fetch attestation from honest")
+						backend.AddAttestToPool(uint64(att.Data.Slot), "", att)
+					}
+				}
+			}
+
 			minSlot := common.EpochStart(epoch)
 			maxSlot := slot //common.EpochEnd(epoch)
 			log.WithFields(log.Fields{

@@ -10,6 +10,7 @@ import (
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/golang/groupcache/lru"
+	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
@@ -18,6 +19,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
 	"github.com/tsinghua-cel/attacker-service/feedback"
 	"github.com/tsinghua-cel/attacker-service/generator"
+	"github.com/tsinghua-cel/attacker-service/generator/utils"
 	"github.com/tsinghua-cel/attacker-service/openapi"
 	"github.com/tsinghua-cel/attacker-service/rpc"
 	"github.com/tsinghua-cel/attacker-service/server/apis"
@@ -719,6 +721,45 @@ func (s *Server) GetBeaconState(slot string) (*spec.VersionedBeaconState, error)
 		return nil, fmt.Errorf("get state by root failed: %w", err)
 	}
 	return state, nil
+}
+
+func (s *Server) FetchHonestBlocksAttestations(slots []int64) ([]*ethpb.Attestation, error) {
+	atts, err := s.honestBeacon.FetchBlocksAttestations(slots)
+	if err != nil {
+		return nil, err
+	}
+	// parse atts to *ethpb.Attestation.
+	results := make([]*ethpb.Attestation, 0, len(atts))
+	for _, att := range atts {
+		r := &ethpb.Attestation{
+			Data: &ethpb.AttestationData{
+				Slot: primitives.Slot(att.Data.Slot),
+				Source: &ethpb.Checkpoint{
+					Root:  att.Data.Source.Root[:],
+					Epoch: primitives.Epoch(att.Data.Source.Epoch),
+				},
+				Target: &ethpb.Checkpoint{
+					Root:  att.Data.Target.Root[:],
+					Epoch: primitives.Epoch(att.Data.Target.Epoch),
+				},
+				BeaconBlockRoot: att.Data.BeaconBlockRoot[:],
+				CommitteeIndex:  primitives.CommitteeIndex(att.Data.Index),
+			},
+			AggregationBits: att.AggregationBits,
+			Signature:       att.Signature[:],
+		}
+		results = append(results, r)
+	}
+	return results, nil
+}
+
+func (s *Server) GetLibraryParam() types.LibraryParams {
+	return types.LibraryParams{
+		Attacker:          utils.WrapToAttacker(s),
+		MaxValidatorIndex: s.maxMaliciousIdx,
+		MinValidatorIndex: s.minMaliciousIdx,
+		Extend:            make(map[string]interface{}),
+	}
 }
 
 // calcLoseRate return honestLoseRate and attackerLoseRate.

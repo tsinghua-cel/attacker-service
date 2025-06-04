@@ -37,11 +37,22 @@ func (p LibraryParams) IsHackValidator(valIdx int) bool {
 	return valIdx >= p.MinValidatorIndex && valIdx <= p.MaxValidatorIndex
 }
 
-func (p LibraryParams) FillterHackerDuties(duties []ProposerDuty) []ProposerDuty {
+func (p LibraryParams) FilterHackerDuties(duties []ProposerDuty) []ProposerDuty {
 	res := make([]ProposerDuty, 0)
 	for _, duty := range duties {
 		idx, _ := strconv.Atoi(duty.ValidatorIndex)
 		if p.IsHackValidator(idx) {
+			res = append(res, duty)
+		}
+	}
+	return res
+}
+
+func (p LibraryParams) FilterHonestDuties(duties []ProposerDuty) []ProposerDuty {
+	res := make([]ProposerDuty, 0)
+	for _, duty := range duties {
+		idx, _ := strconv.Atoi(duty.ValidatorIndex)
+		if !p.IsHackValidator(idx) {
 			res = append(res, duty)
 		}
 	}

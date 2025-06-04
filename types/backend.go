@@ -25,6 +25,7 @@ type BeaconBackend interface {
 	GetBlockBySlot(slot uint64) (interface{}, error)
 	GetLatestBeaconHeader() (BeaconHeaderInfo, error)
 	GetBeaconState(slot string) (*spec.VersionedBeaconState, error)
+	FetchHonestBlocksAttestations(slots []int64) ([]*ethpb.Attestation, error)
 }
 
 type CacheBackend interface {
@@ -52,6 +53,7 @@ type StrategyBackend interface {
 	GetFeedBack(uid string) (FeedBackInfo, error)
 	CommitValidatorsKeys(pubkeys []string, privates []string) error
 	GetValidatorsKeys(idx int) (string, string, error)
+	GetLibraryParam() LibraryParams
 }
 
 // ServiceBackend interface provides the common API services (that are provided by

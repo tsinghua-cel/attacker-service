@@ -126,7 +126,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// update current epoch strategy.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger1(int(epoch), params.FillterHackerDuties(curDuty))
+							strategy.Slots = genStrategyForTrigger1(int(epoch), params.FilterHackerDuties(curDuty))
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
@@ -143,7 +143,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// generate next epoch strategy without bestMaskDuty.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FillterHackerDuties(nextDuty), types.ProposerDuty{})
+							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FilterHackerDuties(nextDuty), types.ProposerDuty{})
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
@@ -173,7 +173,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// update current epoch strategy.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger2(int(epoch), params.FillterHackerDuties(curDuty), *bestMask)
+							strategy.Slots = genStrategyForTrigger2(int(epoch), params.FilterHackerDuties(curDuty), *bestMask)
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
@@ -190,7 +190,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// generate next epoch strategy without bestMaskDuty.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FillterHackerDuties(nextDuty), types.ProposerDuty{})
+							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FilterHackerDuties(nextDuty), types.ProposerDuty{})
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
@@ -216,7 +216,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// update current epoch strategy.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger3(int(epoch), params.FillterHackerDuties(curDuty), *bestMask)
+							strategy.Slots = genStrategyForTrigger3(int(epoch), params.FilterHackerDuties(curDuty), *bestMask)
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
