@@ -26,6 +26,8 @@ func NewBlockAPI(b Backend) *BlockAPI {
 }
 
 func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot string) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: parentRoot,
@@ -35,6 +37,7 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), pubkey, parentRoot)
 			result.Cmd = r.Cmd
+			report = true
 			if r.Result != nil {
 				if v, ok := r.Result.(string); ok {
 					result.Result = v
@@ -42,11 +45,15 @@ func (s *BlockAPI) GetNewParentRoot(slot uint64, pubkey string, parentRoot strin
 			}
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":    result.Cmd,
-		"slot":   slot,
-		"action": "BlockGetNewParentRoot",
-	}).Debug("exit GetNewParentRoot")
+	if report {
+
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debug("exit GetNewParentRoot")
+
+	}
 
 	return result
 }
@@ -85,6 +92,8 @@ func (s *BlockAPI) AfterPropose(slot uint64, pubkey string, signedBlockDataBase6
 }
 
 func (s *BlockAPI) todoActionsWithSlot(slot uint64, name string) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
@@ -95,26 +104,27 @@ func (s *BlockAPI) todoActionsWithSlot(slot uint64, name string) types.AttackerR
 			log.WithFields(log.Fields{
 				"slot":       slot,
 				"checkpoint": name,
-			}).Debug("find slot and action")
+			}).Trace("find slot and action")
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
-		} else {
-			log.WithFields(log.Fields{
-				"slot":       slot,
-				"checkpoint": name,
-			}).Debug("find slot but not find action")
+			report = true
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":    result.Cmd,
-		"slot":   slot,
-		"action": name,
-	}).Debug("exit todoActionsWithSlot")
+	if report {
 
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debugf("exit %s", name)
+
+	}
 	return result
 }
 
 func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signedBlockDataBase64 string, name string) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	signedDenebBlock, err := common.Base64ToSignedDenebBlock(signedBlockDataBase64)
 	if err != nil {
 		return types.AttackerResponse{
@@ -131,13 +141,13 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 		log.WithFields(log.Fields{
 			"slot":  slot,
 			"point": name,
-		}).Debug("find strategy")
+		}).Trace("find strategy")
 		action := t.Actions[name]
 		if action != nil {
 			log.WithFields(log.Fields{
 				"slot":  slot,
 				"point": name,
-			}).Debug("find action")
+			}).Trace("find action")
 			//block, err := common.GetDenebBlockFromGenericSignedBlock()
 			//if err != nil {
 			//	log.WithError(err).WithField("slot", slot).Error("get block instance failed")
@@ -145,6 +155,7 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 			//}
 			r := action.RunAction(s.b, int64(slot), pubkey, signedDenebBlock)
 			result.Cmd = r.Cmd
+			report = true
 			if newBlockBase64, err := common.SignedDenebBlockToBase64(signedDenebBlock); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
@@ -153,18 +164,16 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 			} else {
 				result.Result = newBlockBase64
 			}
-		} else {
-			log.WithFields(log.Fields{
-				"slot":  slot,
-				"point": name,
-			}).Debug("no action found")
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":    result.Cmd,
-		"slot":   slot,
-		"action": name,
-	}).Debug("exit todoActionsWithBlock")
+	if report {
 
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debugf("exit %s", name)
+
+	}
 	return result
 }

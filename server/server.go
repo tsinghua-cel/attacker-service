@@ -477,7 +477,7 @@ func (s *Server) UpdateStrategy(strategy types.Strategy) error {
 	if strategy.Uid != "" {
 		check = true
 	}
-	log.WithField("uid", strategy.Uid).Debug("goto parse and update strategy")
+	//log.WithField("uid", strategy.Uid).Debug("goto parse and update strategy")
 
 	if check {
 		if st := dbmodel.GetStrategyByUUID(strategy.Uid); st != nil {
@@ -542,7 +542,7 @@ func (s *Server) UpdateStrategy(strategy types.Strategy) error {
 	log.WithFields(log.Fields{
 		"strategy": s.strategy,
 		"check":    check,
-	}).Debug("goto check strategy")
+	}).Trace("goto check strategy")
 
 	dbmodel.InsertNewStrategy(&strategy)
 

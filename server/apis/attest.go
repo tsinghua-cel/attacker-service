@@ -6,6 +6,7 @@ import (
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"
 	"github.com/tsinghua-cel/attacker-service/types"
+	"time"
 )
 
 // AttestAPI offers and API for attestation operations.
@@ -32,41 +33,49 @@ func findMaxLevelStrategy(is []*slotstrategy.InternalSlotStrategy, slot int64) (
 			}
 		}
 	}
-	log.WithFields(log.Fields{
-		"slot":      slot,
-		"last.slot": last.Slot.StrValue(),
-		"actions":   last.Actions,
-		"find":      last.Slot.Compare(slot) == 0,
-	}).Debug("find max level strategy for slot")
+	//log.WithFields(log.Fields{
+	//	"slot":      slot,
+	//	"last.slot": last.Slot.StrValue(),
+	//	"actions":   last.Actions,
+	//	"find":      last.Slot.Compare(slot) == 0,
+	//}).Debug("find max level strategy for slot")
 	return last, last.Slot.Compare(slot) == 0
 }
 
 func (s *AttestAPI) BeforeBroadCast(slot uint64) types.AttackerResponse {
+	t1 := time.Now()
 	s.b.SetCurSlot(int64(slot))
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
 	}
+	report := false
 
 	if st, find := findMaxLevelStrategy(s.b.GetInternalSlotStrategy(), int64(slot)); find {
 
 		action := st.Actions["AttestBeforeBroadCast"]
 		if action != nil {
-			log.WithField("slot", slot).Debug("find action AttestBeforeBroadCast")
+			log.WithField("slot", slot).Trace("find action AttestBeforeBroadCast")
 			r := action.RunAction(s.b, int64(slot), "")
+			report = true
 			result.Cmd = r.Cmd
 		} else {
-			log.WithField("slot", slot).Debug("not find action AttestBeforeBroadCast")
+			//log.WithField("slot", slot).Trace("not find action AttestBeforeBroadCast")
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Debug("exit AttestBeforeBroadCast")
+	if report {
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debug("exit AttestBeforeBroadCast")
+	}
 
 	return result
 }
 
 func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	s.b.SetCurSlot(int64(slot))
 	result := types.AttackerResponse{
 		Cmd: types.CMD_NULL,
@@ -76,17 +85,24 @@ func (s *AttestAPI) AfterBroadCast(slot uint64) types.AttackerResponse {
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), "")
 			result.Cmd = r.Cmd
+			report = true
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Debug("exit AttestAfterBroadCast")
+	if report {
+
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debug("exit AttestAfterBroadCast")
+	}
 
 	return result
 }
 
 func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 string) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	s.b.SetCurSlot(int64(slot))
 	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
@@ -106,6 +122,7 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), pubkey, attestation)
 			result.Cmd = r.Cmd
+			report = true
 			newAttestation, ok := r.Result.(*ethpb.AttestationData)
 			if ok {
 				if newData, err := common.AttestationDataToBase64(newAttestation); err == nil {
@@ -115,14 +132,21 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 			}
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Debug("exit AttestBeforeSign")
+	if report {
+
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debug("exit AttestBeforeSign")
+
+	}
 	return result
 }
 
 func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	s.b.SetCurSlot(int64(slot))
 	signedAttestData, err := common.Base64ToSignedAttestation(signedAttestDataBase64)
 	if err != nil {
@@ -144,6 +168,7 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), pubkey, signedAttestData)
 			result.Cmd = r.Cmd
+			report = true
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
 				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
@@ -153,14 +178,21 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 			}
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Debug("exit AttestAfterSign")
+	if report {
+
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debug("exit AttestAfterSign")
+
+	}
 	return result
 }
 
 func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	s.b.SetCurSlot(int64(slot))
 	signedAttest, err := common.Base64ToSignedAttestation(signedAttestDataBase64)
 	if err != nil {
@@ -179,6 +211,7 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
 			result.Cmd = r.Cmd
+			report = true
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
 				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
@@ -188,14 +221,21 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 			}
 		}
 	}
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Debug("exit AttestBeforePropose")
+	if report {
+
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debug("exit AttestBeforePropose")
+
+	}
 	return result
 }
 
 func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBase64 string) types.AttackerResponse {
+	t1 := time.Now()
+	report := false
 	s.b.SetCurSlot(int64(slot))
 	signedAttest, err := common.Base64ToSignedAttestation(signedAttestDataBase64)
 	if err != nil {
@@ -214,6 +254,7 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 		if action != nil {
 			r := action.RunAction(s.b, int64(slot), pubkey, signedAttest)
 			result.Cmd = r.Cmd
+			report = true
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
 				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
@@ -223,11 +264,14 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 			}
 		}
 	}
+	if report {
 
-	log.WithFields(log.Fields{
-		"cmd":  result.Cmd,
-		"slot": slot,
-	}).Debug("exit AttestAfterPropose")
+		log.WithFields(log.Fields{
+			"cmd":      result.Cmd,
+			"slot":     slot,
+			"duration": time.Since(t1),
+		}).Debug("exit AttestAfterPropose")
 
+	}
 	return result
 }

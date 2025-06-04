@@ -132,7 +132,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 								olog.WithField("error", err).Error("failed to update triggering strategy")
 							} else {
 								olog.WithFields(log.Fields{
-									"epoch":    nextEpoch,
+									"epoch":    epoch,
 									"strategy": strategy,
 									"trigger":  triggerring,
 									"offset":   1,

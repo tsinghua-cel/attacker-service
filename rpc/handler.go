@@ -462,7 +462,7 @@ func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage) *jsonrpcMess
 	switch {
 	case msg.isNotification():
 		h.handleCall(ctx, msg)
-		h.log.Debug("Served "+msg.Method, "duration", time.Since(start))
+		h.log.Trace("Served "+msg.Method, "duration", time.Since(start))
 		return nil
 
 	case msg.isCall():
@@ -477,7 +477,7 @@ func (h *handler) handleCallMsg(ctx *callProc, msg *jsonrpcMessage) *jsonrpcMess
 			}
 			h.log.WithFields(fields).Warn("Served " + msg.Method)
 		} else {
-			h.log.WithFields(fields).Debug("Served " + msg.Method)
+			h.log.WithFields(fields).Trace("Served " + msg.Method)
 		}
 		return resp
 
