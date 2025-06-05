@@ -183,7 +183,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// update current epoch strategy.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger2(int(epoch), params.FilterHackerDuties(curDuty), *bestMask)
+							strategy.Slots = genStrategyForTrigger2(int(epoch), params.FilterHackerDuties(curDuty), bestMask)
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
@@ -226,7 +226,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// update current epoch strategy.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger3(int(epoch), params.FilterHackerDuties(curDuty), *bestMask)
+							strategy.Slots = genStrategyForTrigger3(int(epoch), params.FilterHackerDuties(curDuty), bestMask)
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
@@ -264,7 +264,32 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	}
 }
 
-func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.ProposerDuty) (*types.ProposerDuty, error) {
+type BestMaskDutyInfo struct {
+	FirstIsAttack  bool
+	AttackersCount int
+	duty           types.ProposerDuty
+}
+
+func (info BestMaskDutyInfo) BetterThan(other BestMaskDutyInfo) bool {
+	// if attackers count is equal, prefer the one with firstIsAttack.
+	if info.FirstIsAttack && !other.FirstIsAttack {
+		return true
+	} else if !info.FirstIsAttack && other.FirstIsAttack {
+		return false
+	}
+
+	// prefer the one with more attackers.
+	if info.AttackersCount > other.AttackersCount {
+		return true
+	} else if info.AttackersCount < other.AttackersCount {
+		return false
+	}
+
+	// if both are equal, prefer the one with smaller duty slot.
+	return toInt(info.duty.Slot) < toInt(other.duty.Slot)
+}
+
+func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.ProposerDuty) (types.ProposerDuty, error) {
 	strSlot := strconv.FormatUint(uint64(slot), 10)
 	currentState, err := o.b.GetBeaconState(strSlot)
 	if err != nil {
@@ -272,7 +297,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			"slot": strSlot,
 			"err":  err,
 		}).Error("failed to get beacon state")
-		return nil, err
+		return types.ProposerDuty{}, err
 	}
 	mostate, err := disguisedRandao.InitMoState(currentState)
 	if err != nil {
@@ -280,7 +305,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			"slot": strSlot,
 			"err":  err,
 		}).Error("failed to init mo state")
-		return nil, err
+		return types.ProposerDuty{}, err
 	}
 	currentEpoch := common.SlotToEpoch(int64(slot))
 	next2Epoch := currentEpoch + 2
@@ -295,10 +320,9 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		"currentEpoch":        currentEpoch,
 		"attackerDutiesCount": len(allAttackerDuties),
 	}).Info("before compute best mask duty")
-	var (
-		maxAttackerValidatorDuties = 0
-		bestMaskDuty               = types.ProposerDuty{}
-	)
+
+	var bestMaskInfo = BestMaskDutyInfo{}
+
 	for maskIdx := 1; maskIdx < len(allAttackerDuties); maskIdx++ {
 		// loop mask one attack validator to proposer block.
 		maskDuty := allAttackerDuties[maskIdx]
@@ -316,7 +340,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 				log.WithFields(log.Fields{
 					"validator index": allAttackerDuties[i].ValidatorIndex,
 				}).Error("failed to get validator keys when preparing strategy")
-				return nil, err
+				return types.ProposerDuty{}, err
 			}
 
 			// generate a randao reveal.
@@ -326,7 +350,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 					"validator index": allAttackerDuties[i].ValidatorIndex,
 					"err":             err,
 				}).Error("failed to generate randao reveal when preparing strategy")
-				return nil, err
+				return types.ProposerDuty{}, err
 			}
 
 			if err = disguisedRandao.ProcessRandaoNoVerify(cState, randaoReveal, primitives.Epoch(currentEpoch)); err != nil {
@@ -334,7 +358,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 					"validator index": allAttackerDuties[i].ValidatorIndex,
 					"err":             err,
 				}).Error("failed to process randao reveal when preparing strategy")
-				return nil, err
+				return types.ProposerDuty{}, err
 			}
 		}
 		// epoch process.
@@ -346,22 +370,29 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 				"next2epoch": next2Epoch,
 				"err":        err,
 			}).Error("failed to precompute proposer indices")
-			return nil, err
+			return types.ProposerDuty{}, err
 		}
-		attackerCount := o.attackerCount(proposers)
-		if o.param.IsHackValidator(int(proposers[0])) || attackerCount > maxAttackerValidatorDuties {
-			maxAttackerValidatorDuties = attackerCount
-			bestMaskDuty = maskDuty
+		curMaskInfo := BestMaskDutyInfo{
+			FirstIsAttack:  o.param.IsHackValidator(toInt(maskDuty.ValidatorIndex)),
+			AttackersCount: o.attackerCount(proposers),
+			duty:           maskDuty,
+		}
+		if curMaskInfo.BetterThan(bestMaskInfo) {
+			bestMaskInfo = curMaskInfo
 		}
 		log.WithFields(log.Fields{
-			"maskDuty":      maskDuty,
-			"attackerCount": attackerCount,
+			"maskDuty":      bestMaskInfo.duty,
+			"attackerCount": bestMaskInfo.AttackersCount,
+			"firstIsAttack": bestMaskInfo.FirstIsAttack,
 		}).Info("computing best mask duty")
 	}
+
 	log.WithFields(log.Fields{
-		"maskDuty": bestMaskDuty,
+		"maskDuty":      bestMaskInfo.duty,
+		"attackerCount": bestMaskInfo.AttackersCount,
+		"firstIsAttack": bestMaskInfo.FirstIsAttack,
 	}).Info("liveness attack strategy prepared final")
-	return &bestMaskDuty, nil
+	return bestMaskInfo.duty, nil
 }
 
 func (o *Instance) attackerCount(vals []primitives.ValidatorIndex) int {
