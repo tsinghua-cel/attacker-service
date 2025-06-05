@@ -26,6 +26,7 @@ func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.Slo
 				Actions: make(map[string]string),
 			}
 			ns.Actions["AttestBeforePropose"] = "return"
+			ns.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
 			exists[int(i)] = ns
 		} else {
 			//if _, ok := os.Actions["AttestBeforeBroadCast"]; !ok {
