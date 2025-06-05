@@ -81,6 +81,8 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []ty
 		if i == 0 {
 			// delay first slot for 4 seconds.
 			s.Actions["BlockBeforeBroadCast"] = "delayWithSecond:4"
+			s.Actions["AttestBeforePropose"] = "return"
+			s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
 		} else {
 			totalDelay := 1000*(common.TimeToSlot(releaseSlot)-common.TimeToSlot(int64(toInt(duty.Slot)))) + calcDeltaTime(int64(epoch), int64(toInt(duty.Slot)))
 			// set delay for broadcast block.
