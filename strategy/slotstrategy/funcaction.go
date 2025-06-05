@@ -562,6 +562,11 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 					}
 					attsById[id] = append(attsById[id], att)
 				}
+				log.WithFields(log.Fields{
+					"att count": len(attsById),
+					"slot":      slot,
+					"action":    name,
+				}).Debug("before aggregate")
 
 				for id, as := range attsById {
 					as, err := attaggregation.Aggregate(as)
@@ -577,11 +582,23 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 					attsForInclusion = append(attsForInclusion, as...)
 				}
 
+				log.WithFields(log.Fields{
+					"att count": len(attsById),
+					"slot":      slot,
+					"action":    name,
+				}).Debug("after aggregate")
+
 				deduped, err := attsForInclusion.Dedup()
 				if err != nil {
 					log.WithField("atts", attsForInclusion).Error("dedup attestation failed")
 					return r
 				}
+				log.WithFields(log.Fields{
+					"att count": len(deduped),
+					"slot":      slot,
+					"action":    name,
+				}).Debug("after dedup")
+
 				var sorted types.ProposerAtts
 				sorted, err = deduped.Sort()
 				if err != nil {
