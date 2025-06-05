@@ -106,13 +106,25 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			var err error
 			for {
 				if !triggerring {
+					// generate a simple strategy for nextDuty first.
+					slotsStrategies := genSimpleStrategy(int(nextEpoch), params.FilterHackerDuties(nextDuty))
+					strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
+					if err = attacker.UpdateStrategy(strategy); err != nil {
+						olog.WithField("error", err).Error("failed to update strategy simple")
+					} else {
+						olog.WithFields(log.Fields{
+							"epoch":    nextEpoch,
+							"strategy": strategy,
+						}).Debug("update strategy successfully")
+					}
+
 					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) {
 						triggerring = true
 						triggeredEpoch = int(epoch)
 						olog.WithFields(log.Fields{
 							"current epoch": epoch,
 							"next epoch":    epoch + 1,
-						}).Info("strategy trigger")
+						}).Debug("strategy trigger")
 						continue
 					}
 
@@ -124,10 +136,8 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 					if offset == 1 {
 						{
 							// update current epoch strategy.
-							strategy := types.Strategy{}
-							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger1(int(epoch), params.FilterHackerDuties(curDuty))
-							strategy.Category = o.Name()
+							slotsStrategies := genStrategyForTrigger1(int(epoch), params.FilterHackerDuties(curDuty))
+							strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
 							} else {
@@ -136,7 +146,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 									"strategy": strategy,
 									"trigger":  triggerring,
 									"offset":   1,
-								}).Info("update triggering strategy successfully")
+								}).Debug("update triggering strategy successfully")
 							}
 						}
 						{
@@ -153,7 +163,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 									"strategy": strategy,
 									"trigger":  triggerring,
 									"offset":   2,
-								}).Info("pre update triggering strategy successfully")
+								}).Debug("pre update triggering strategy successfully")
 							}
 						}
 						history[int(epoch)] = true
@@ -183,7 +193,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 									"strategy": strategy,
 									"trigger":  triggerring,
 									"offset":   2,
-								}).Info("update triggering strategy successfully")
+								}).Debug("update triggering strategy successfully")
 							}
 						}
 						{
@@ -200,7 +210,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 									"strategy": strategy,
 									"trigger":  triggerring,
 									"offset":   3,
-								}).Info("pre update triggering strategy successfully")
+								}).Debug("pre update triggering strategy successfully")
 							}
 						}
 						history[int(epoch)] = true
@@ -226,12 +236,24 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 									"strategy": strategy,
 									"trigger":  triggerring,
 									"offset":   3,
-								}).Info("update triggering strategy successfully")
+								}).Debug("update triggering strategy successfully")
 							}
 						}
 						{
 							// set triggering to false
 							triggerring = false
+							// generate a simple strategy for nextDuty first.
+							slotsStrategies := genSimpleStrategy(int(nextEpoch), params.FilterHackerDuties(nextDuty))
+							strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update strategy simple")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+								}).Debug("update strategy successfully")
+							}
+
 						}
 						history[int(epoch)] = true
 						break

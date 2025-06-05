@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/json"
+	"github.com/google/uuid"
 	"os"
 )
 
@@ -43,6 +44,15 @@ func (s *Strategy) GetValidatorRole(valIdx int, slot int64) RoleType {
 		}
 	}
 	return NormalRole
+}
+
+func NewStrategy(category string, slotsStrategies []SlotStrategy, validators []ValidatorStrategy) Strategy {
+	return Strategy{
+		Uid:        uuid.NewString(),
+		Category:   category,
+		Slots:      slotsStrategies,
+		Validators: validators,
+	}
 }
 
 type StrategyGeneratorParam struct {

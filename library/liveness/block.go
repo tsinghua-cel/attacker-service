@@ -49,6 +49,22 @@ func calcDeltaTime(beginEpoch int64, currentSlot int64) int64 {
 	return 50 * (currentSlot - common.EpochStart(beginEpoch))
 }
 
+func genSimpleStrategy(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
+	strategys := make([]types.SlotStrategy, 0)
+	duty := attackerDuties[0]
+	s := types.SlotStrategy{
+		Slot:    duty.Slot,
+		Level:   1,
+		Actions: make(map[string]string),
+	}
+	s.Actions["BlockBeforeBroadCast"] = "delayWithSecond:4"
+	s.Actions["AttestBeforePropose"] = "return"
+	s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
+
+	strategys = append(strategys, s)
+	return strategys
+}
+
 func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
