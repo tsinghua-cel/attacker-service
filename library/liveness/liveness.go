@@ -349,7 +349,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			return nil, err
 		}
 		attackerCount := o.attackerCount(proposers)
-		if attackerCount > maxAttackerValidatorDuties {
+		if o.param.IsHackValidator(int(proposers[0])) || attackerCount > maxAttackerValidatorDuties {
 			maxAttackerValidatorDuties = attackerCount
 			bestMaskDuty = maskDuty
 		}
