@@ -64,7 +64,7 @@ func (f *Feedback) loop() {
 				log.WithFields(log.Fields{
 					"strategy":  pair.origin,
 					"safeEpoch": safeEpoch,
-				}).Debug("check strategy end")
+				}).Trace("check strategy end")
 				if ended {
 					ev := StrategyEndEvent{
 						Uid:      pair.uid,

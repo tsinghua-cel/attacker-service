@@ -216,8 +216,12 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						history[int(epoch)] = true
 						break
 					} else if offset == 3 {
+						olog.WithFields(log.Fields{
+							"epoch":        epoch,
+							"len(curduty)": len(curDuty),
+						}).Debug("before ComputeBestMaskDuty")
 						// compute bestMaskDuty and update current epoch strategy.
-						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()), curDuty)
+						bestMask, err := o.ComputeBestMaskDuty(uint64(epoch), curDuty)
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
@@ -232,7 +236,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 								olog.WithField("error", err).Error("failed to update triggering strategy")
 							} else {
 								olog.WithFields(log.Fields{
-									"epoch":    nextEpoch,
+									"epoch":    epoch,
 									"strategy": strategy,
 									"trigger":  triggerring,
 									"offset":   3,
