@@ -378,7 +378,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			return types.ProposerDuty{}, err
 		}
 		curMaskInfo := BestMaskDutyInfo{
-			FirstIsAttack:  o.param.IsHackValidator(toInt(maskDuty.ValidatorIndex)),
+			FirstIsAttack:  o.param.IsHackValidator(int(proposers[0])),
 			AttackersCount: o.attackerCount(proposers),
 			duty:           maskDuty,
 			proposers:      proposers,
@@ -388,6 +388,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		}
 		log.WithFields(log.Fields{
 			"maskDuty":      bestMaskInfo.duty,
+			"computeEpoch":  next2Epoch,
 			"attackerCount": bestMaskInfo.AttackersCount,
 			"firstIsAttack": bestMaskInfo.FirstIsAttack,
 			"proposers":     bestMaskInfo.proposers,
@@ -395,8 +396,8 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 	}
 
 	log.WithFields(log.Fields{
-		"maskDuty":      bestMaskInfo.duty,
-		"attackerCount": bestMaskInfo.AttackersCount,
+		"maskDutySlot":  bestMaskInfo.duty.Slot,
+		"computeEpoch":  next2Epoch,
 		"firstIsAttack": bestMaskInfo.FirstIsAttack,
 		"proposers":     bestMaskInfo.proposers,
 	}).Info("liveness attack strategy prepared final")
