@@ -272,6 +272,7 @@ type BestMaskDutyInfo struct {
 	FirstIsAttack  bool
 	AttackersCount int
 	duty           types.ProposerDuty
+	proposers      []primitives.ValidatorIndex
 }
 
 func (info BestMaskDutyInfo) BetterThan(other BestMaskDutyInfo) bool {
@@ -366,7 +367,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			}
 		}
 		// epoch process.
-		proposers, err := mostate.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(0, 255),
+		proposers, err := cState.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(0, 255),
 			primitives.Epoch(next2Epoch))
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -380,6 +381,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			FirstIsAttack:  o.param.IsHackValidator(toInt(maskDuty.ValidatorIndex)),
 			AttackersCount: o.attackerCount(proposers),
 			duty:           maskDuty,
+			proposers:      proposers,
 		}
 		if curMaskInfo.BetterThan(bestMaskInfo) {
 			bestMaskInfo = curMaskInfo
@@ -388,13 +390,15 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			"maskDuty":      bestMaskInfo.duty,
 			"attackerCount": bestMaskInfo.AttackersCount,
 			"firstIsAttack": bestMaskInfo.FirstIsAttack,
-		}).Info("computing best mask duty")
+			"proposers":     bestMaskInfo.proposers,
+		}).Debug("computing best mask duty")
 	}
 
 	log.WithFields(log.Fields{
 		"maskDuty":      bestMaskInfo.duty,
 		"attackerCount": bestMaskInfo.AttackersCount,
 		"firstIsAttack": bestMaskInfo.FirstIsAttack,
+		"proposers":     bestMaskInfo.proposers,
 	}).Info("liveness attack strategy prepared final")
 	return bestMaskInfo.duty, nil
 }
