@@ -366,7 +366,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			}
 		}
 		// epoch process.
-		proposers, err := mostate.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(o.param.MinValidatorIndex, o.param.MaxValidatorIndex),
+		proposers, err := mostate.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(0, 255),
 			primitives.Epoch(next2Epoch))
 		if err != nil {
 			log.WithFields(log.Fields{
