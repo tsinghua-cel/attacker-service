@@ -415,6 +415,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			"attackerCount": bestMaskInfo.AttackersCount,
 			"firstIsAttack": bestMaskInfo.FirstIsAttack,
 			"proposers":     bestMaskInfo.proposers,
+			"curProposers":  proposers,
 		}).Debug("computing best mask duty")
 	}
 
