@@ -221,7 +221,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							"len(curduty)": len(curDuty),
 						}).Debug("before ComputeBestMaskDuty")
 						// compute bestMaskDuty and update current epoch strategy.
-						bestMask, err := o.ComputeBestMaskDuty(uint64(epoch), curDuty)
+						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()), curDuty)
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
@@ -295,42 +295,60 @@ func (info BestMaskDutyInfo) BetterThan(other BestMaskDutyInfo) bool {
 }
 
 func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.ProposerDuty) (types.ProposerDuty, error) {
-	strSlot := strconv.FormatUint(uint64(slot), 10)
-	currentState, err := o.b.GetBeaconState(strSlot)
+	//strSlot := strconv.FormatUint(uint64(slot), 10)
+	currentState, err := o.b.GetBeaconState("head")
 	if err != nil {
 		log.WithFields(log.Fields{
-			"slot": strSlot,
-			"err":  err,
+			"paramSlot": slot,
+			"err":       err,
 		}).Error("failed to get beacon state")
 		return types.ProposerDuty{}, err
 	}
+	stateSlot, err := currentState.Slot()
+	if err != nil {
+		log.WithFields(log.Fields{
+			"paramSlot": slot,
+			"err":       err,
+		}).Error("failed to get beacon state slot")
+		return types.ProposerDuty{}, err
+	}
+	log.WithFields(log.Fields{
+		"stateSlot":    stateSlot,
+		"paramSlot":    slot,
+		"currentEpoch": common.SlotToEpoch(int64(stateSlot)),
+		"paramEpoch":   common.SlotToEpoch(int64(slot)),
+	}).Debug("get beacon state to compute best mask duty")
+
 	mostate, err := disguisedRandao.InitMoState(currentState)
 	if err != nil {
 		log.WithFields(log.Fields{
-			"slot": strSlot,
-			"err":  err,
+			"err": err,
 		}).Error("failed to init mo state")
 		return types.ProposerDuty{}, err
 	}
-	currentEpoch := common.SlotToEpoch(int64(slot))
+	currentEpoch := common.SlotToEpoch(int64(stateSlot))
 	next2Epoch := currentEpoch + 2
 	// append all attacker validators' duties.
 	allAttackerDuties := make([]types.ProposerDuty, 0)
 	for _, duty := range currentDuty {
+		// filter out old duties.
+		if toInt(duty.Slot) <= int(stateSlot) {
+			continue
+		}
 		if o.param.IsHackValidator(toInt(duty.ValidatorIndex)) {
 			allAttackerDuties = append(allAttackerDuties, duty)
 		}
 	}
-	log.WithFields(log.Fields{
-		"currentEpoch":        currentEpoch,
-		"attackerDutiesCount": len(allAttackerDuties),
-	}).Info("before compute best mask duty")
 
 	var bestMaskInfo = BestMaskDutyInfo{}
 
-	for maskIdx := 1; maskIdx < len(allAttackerDuties); maskIdx++ {
+	for maskIdx := 0; maskIdx < len(allAttackerDuties); maskIdx++ {
 		// loop mask one attack validator to proposer block.
 		maskDuty := allAttackerDuties[maskIdx]
+		if toInt(maskDuty.Slot) < int(stateSlot) {
+			continue
+		}
+
 		cState := mostate.Clone()
 		for i := 0; i < len(allAttackerDuties); i++ {
 			duty := allAttackerDuties[i]
