@@ -69,7 +69,13 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			// 如果当前epoch的第一个slot是attacker, 并且下一个epoch 的第一个slot是attacker,
 			// 那么当前epoch 为 epoch 1， 后续一共三个epoch.
 			// 当前epoch的第一个slot delay 8s.
-			epoch := common.CurrentEpoch()
+			state, err := o.b.GetBeaconState("head")
+			if err != nil {
+				olog.WithField("error", err).Error("failed to get beacon state")
+				continue
+			}
+			slot, _ := state.Slot()
+			epoch := common.SlotToEpoch(int64(slot))
 			if history[int(epoch)] == true {
 				continue
 			}
@@ -103,7 +109,6 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 				}
 			}
 
-			var err error
 			for {
 				if !triggerring {
 					// generate a simple strategy for nextDuty first.
@@ -174,7 +179,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							"len(curduty)": len(curDuty),
 						}).Debug("before ComputeBestMaskDuty")
 						// compute bestMaskDuty and update current epoch strategy.
-						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()), curDuty)
+						bestMask, err := o.ComputeBestMaskDuty(uint64(slot), curDuty)
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
@@ -221,7 +226,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							"len(curduty)": len(curDuty),
 						}).Debug("before ComputeBestMaskDuty")
 						// compute bestMaskDuty and update current epoch strategy.
-						bestMask, err := o.ComputeBestMaskDuty(uint64(common.CurrentSlot()), curDuty)
+						bestMask, err := o.ComputeBestMaskDuty(uint64(slot), curDuty)
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
