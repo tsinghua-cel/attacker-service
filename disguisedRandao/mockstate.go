@@ -212,8 +212,9 @@ func (b *MoState) GenerateRandaoReveal(privk string, epoch primitives.Epoch) ([]
 }
 
 func Seed(b *MoState, epoch primitives.Epoch, domain [bls.DomainByteLength]byte) ([32]byte, error) {
-	// See https://github.com/ethereum/consensus-specs/pull/1296
-	lookAheadEpoch := EpochsPerHistoricalVector -
+	// See https://github.com/ethereum/consensus-specs/pull/1296 for
+	// rationale on why offset has to look down by 1.
+	lookAheadEpoch := epoch + EpochsPerHistoricalVector -
 		MinSeedLookahead - 1
 
 	randaoMix, err := RandaoMix(b, lookAheadEpoch)
