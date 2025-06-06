@@ -1,6 +1,7 @@
 package disguisedRandao
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
@@ -18,6 +19,7 @@ import (
 	eth "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"github.com/prysmaticlabs/prysm/v5/runtime/version"
 	"github.com/prysmaticlabs/prysm/v5/time/slots"
+	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"sync"
 )
@@ -178,6 +180,13 @@ func (b *MoState) PrecomputeProposerIndices(activeIndices []primitives.Validator
 		if err != nil {
 			return nil, err
 		}
+		log.WithFields(log.Fields{
+			"epoch":        e,
+			"slot":         uint64(slot) + i,
+			"stateSlot":    b.slot,
+			"seed":         hex.EncodeToString(seed[:]),
+			"seedWithSlot": hex.EncodeToString(seedWithSlot),
+		}).Debug("PrecomputeProposerIndices - compute proposer")
 		proposerIndices[i] = index
 	}
 
@@ -225,7 +234,14 @@ func Seed(b *MoState, epoch primitives.Epoch, domain [bls.DomainByteLength]byte)
 	seed = append(seed, randaoMix...)
 
 	seed32 := hash.Hash(seed)
-
+	log.WithFields(log.Fields{
+		"statSlot":       b.slot,
+		"epoch":          epoch,
+		"domain":         hex.EncodeToString(domain[:]),
+		"lookAheadEpoch": lookAheadEpoch,
+		"randaoMix":      hex.EncodeToString(randaoMix),
+		"seed":           hex.EncodeToString(seed32[:]),
+	}).Debug("Seed RandaoMix")
 	return seed32, nil
 }
 
