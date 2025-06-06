@@ -68,12 +68,14 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			// 如果当前epoch的第一个slot是attacker, 并且下一个epoch 的第一个slot是attacker,
 			// 那么当前epoch 为 epoch 1， 后续一共三个epoch.
 			// when strategy triggered, all block is not broadcast.
-			state, err := o.b.GetBeaconState("head")
-			if err != nil {
-				olog.WithField("error", err).Error("failed to get beacon state")
-				continue
-			}
-			slot, _ := state.Slot()
+			//state, err := o.b.GetBeaconState("head")
+			//if err != nil {
+			//	olog.WithField("error", err).Error("failed to get beacon state")
+			//	continue
+			//}
+			//slot, _ := state.Slot()
+			var err error
+			slot := common.CurrentSlot()
 			epoch := common.SlotToEpoch(int64(slot))
 			if history[int(epoch)] == true {
 				continue
