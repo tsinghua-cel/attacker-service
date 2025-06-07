@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
@@ -199,7 +200,14 @@ func (b *MoState) RandaoDomainData(epoch primitives.Epoch) ([]byte, error) {
 		CurrentVersion:  b.fork.CurrentVersion[:],
 		Epoch:           primitives.Epoch(b.fork.Epoch),
 	}
-	return signing.Domain(&ethFork, epoch, DomainRandao, b.genesisValidatorsRoot[:])
+	dv, err := signing.Domain(&ethFork, epoch, DomainRandao, b.genesisValidatorsRoot[:])
+	log.WithFields(log.Fields{
+		"previousVersion":      b.fork.PreviousVersion,
+		"currentVersion":       b.fork.CurrentVersion,
+		"epoch":                b.fork.Epoch,
+		"genesisValidatorRoot": hexutil.Encode(b.genesisValidatorsRoot[:]),
+	}).Debug("validator dump randao domain data")
+	return dv, err
 }
 
 func (b *MoState) GenerateRandaoReveal(privk string, epoch primitives.Epoch) ([]byte, error) {
@@ -217,7 +225,16 @@ func (b *MoState) GenerateRandaoReveal(privk string, epoch primitives.Epoch) ([]
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize keys privk, err:%s", err.Error())
 	}
-	return secretKey.Sign(root[:]).Marshal(), nil
+	randaoReveal := secretKey.Sign(root[:])
+	log.WithFields(log.Fields{
+		"epoch":      epoch,
+		"domainData": hexutil.Encode(domain.SignatureDomain),
+		"pubkey":     hexutil.Encode(pubKey[:]),
+
+		"root":         hexutil.Encode(root[:]),
+		"randaoReveal": hexutil.Encode(randaoReveal.Marshal()),
+	}).Debug("validator dump domain")
+	return randaoReveal.Marshal(), nil
 }
 
 func Seed(b *MoState, epoch primitives.Epoch, domain [bls.DomainByteLength]byte) ([32]byte, error) {

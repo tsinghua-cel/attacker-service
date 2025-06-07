@@ -2,6 +2,8 @@ package liveness
 
 import (
 	"context"
+	"encoding/hex"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -371,14 +373,29 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 				return types.ProposerDuty{}, err
 			}
 
-			// generate a randao reveal.
-			randaoReveal, err := cState.GenerateRandaoReveal(privk, primitives.Epoch(currentEpoch))
-			if err != nil {
+			randaoReveal := []byte{}
+
+			for m := 0; m < 2; m++ {
+				// generate a randao reveal.
+				mrandaoReveal, err := cState.GenerateRandaoReveal(privk, primitives.Epoch(currentEpoch))
+				if err != nil {
+					log.WithFields(log.Fields{
+						"validator index": allAttackerDuties[i].ValidatorIndex,
+						"err":             err,
+					}).Error("failed to generate randao reveal when preparing strategy")
+					return types.ProposerDuty{}, err
+				}
+
 				log.WithFields(log.Fields{
 					"validator index": allAttackerDuties[i].ValidatorIndex,
-					"err":             err,
-				}).Error("failed to generate randao reveal when preparing strategy")
-				return types.ProposerDuty{}, err
+					"randao reveal":   hex.EncodeToString(mrandaoReveal),
+					"epoch":           currentEpoch,
+					"m":               m,
+				}).Debug("dump validator randao reveal")
+				if m == 0 {
+					randaoReveal = mrandaoReveal
+				}
+
 			}
 
 			if err = disguisedRandao.ProcessRandaoNoVerify(cState, randaoReveal, primitives.Epoch(currentEpoch)); err != nil {
