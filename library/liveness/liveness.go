@@ -3,7 +3,6 @@ package liveness
 import (
 	"context"
 	"encoding/hex"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -365,7 +364,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 				continue
 			}
 			// simulate validator generate a randao_reveal and update to state.
-			_, privk, err := o.b.GetValidatorsKeys(toInt(allAttackerDuties[i].ValidatorIndex))
+			pubkey, privk, err := o.b.GetValidatorsKeys(toInt(allAttackerDuties[i].ValidatorIndex))
 			if err != nil {
 				log.WithFields(log.Fields{
 					"validator index": allAttackerDuties[i].ValidatorIndex,
@@ -377,7 +376,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 
 			for m := 0; m < 2; m++ {
 				// generate a randao reveal.
-				mrandaoReveal, err := cState.GenerateRandaoReveal(privk, primitives.Epoch(currentEpoch))
+				mrandaoReveal, err := cState.GenerateRandaoReveal(privk, pubkey, primitives.Epoch(currentEpoch))
 				if err != nil {
 					log.WithFields(log.Fields{
 						"validator index": allAttackerDuties[i].ValidatorIndex,

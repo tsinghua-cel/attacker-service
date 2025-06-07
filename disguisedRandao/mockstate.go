@@ -210,7 +210,7 @@ func (b *MoState) RandaoDomainData(epoch primitives.Epoch) ([]byte, error) {
 	return dv, err
 }
 
-func (b *MoState) GenerateRandaoReveal(privk string, epoch primitives.Epoch) ([]byte, error) {
+func (b *MoState) GenerateRandaoReveal(privk string, pubkey string, epoch primitives.Epoch) ([]byte, error) {
 	dv, err := b.RandaoDomainData(epoch)
 	if err != nil {
 		return nil, err
@@ -228,8 +228,8 @@ func (b *MoState) GenerateRandaoReveal(privk string, epoch primitives.Epoch) ([]
 	randaoReveal := secretKey.Sign(root[:])
 	log.WithFields(log.Fields{
 		"epoch":      epoch,
-		"domainData": hexutil.Encode(domain.SignatureDomain),
-		"pubkey":     hexutil.Encode(pubKey[:]),
+		"domainData": hexutil.Encode(dv),
+		"pubkey":     pubkey,
 
 		"root":         hexutil.Encode(root[:]),
 		"randaoReveal": hexutil.Encode(randaoReveal.Marshal()),
