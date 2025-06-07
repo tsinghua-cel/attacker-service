@@ -187,7 +187,7 @@ func (b *MoState) PrecomputeProposerIndices(activeIndices []primitives.Validator
 			"stateSlot":    b.slot,
 			"valIndex":     index,
 			"seed":         hex.EncodeToString(seed[:]),
-			"seedWithSlot": hex.EncodeToString(seedWithSlot),
+			"seedWithSlot": hex.EncodeToString(seedWithSlotHash[:]),
 		}).Debug("PrecomputeProposerIndices - compute proposer")
 		proposerIndices[i] = index
 	}
