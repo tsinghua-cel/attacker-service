@@ -27,7 +27,7 @@ import (
 
 var (
 	MaxEffectiveBalance       uint64           = 32 * (10 ^ 9)                   // Gwei
-	DomainBeaconProposer      [4]byte          = [4]byte{0x01, 0x00, 0x00, 0x00} // Domain for beacon proposer
+	DomainBeaconProposer      [4]byte          = [4]byte{0x00, 0x00, 0x00, 0x00} // Domain for beacon proposer
 	DomainRandao              [4]byte          = [4]byte{0x02, 0x00, 0x00, 0x00}
 	EpochsPerHistoricalVector primitives.Epoch = 65536
 	MinSeedLookahead          primitives.Epoch = 1 // todo:check the value.
