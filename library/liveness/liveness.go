@@ -3,6 +3,7 @@ package liveness
 import (
 	"context"
 	"encoding/hex"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/google/uuid"
 	"github.com/prysmaticlabs/prysm/v5/cache/lru"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
@@ -124,7 +125,8 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						}).Debug("update strategy successfully")
 					}
 
-					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) {
+					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
+						o.attackerInTailN(params.FilterHackerDuties(curDuty)[0], 5) {
 						triggerring = true
 						triggeredEpoch = int(epoch)
 						olog.WithFields(log.Fields{
@@ -279,6 +281,7 @@ type BestMaskDutyInfo struct {
 	AttackersCount int
 	duty           types.ProposerDuty
 	proposers      []primitives.ValidatorIndex
+	seed           []byte
 }
 
 func (info BestMaskDutyInfo) BetterThan(other BestMaskDutyInfo) bool {
@@ -397,7 +400,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			}
 		}
 		// epoch process.
-		proposers, err := cState.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(0, 255),
+		seed, proposers, err := cState.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(0, 255),
 			primitives.Epoch(next2Epoch))
 		if err != nil {
 			log.WithFields(log.Fields{
@@ -412,6 +415,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			AttackersCount: o.attackerCount(proposers),
 			duty:           maskDuty,
 			proposers:      proposers,
+			seed:           seed,
 		}
 		if curMaskInfo.BetterThan(bestMaskInfo) {
 			bestMaskInfo = curMaskInfo
@@ -431,7 +435,8 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		"computeEpoch":  next2Epoch,
 		"firstIsAttack": bestMaskInfo.FirstIsAttack,
 		"proposers":     bestMaskInfo.proposers,
-	}).Info("liveness attack strategy prepared final")
+		"seed":          hexutil.Encode(bestMaskInfo.seed),
+	}).Debug("liveness attack strategy prepared final")
 	return bestMaskInfo.duty, nil
 }
 
@@ -443,4 +448,11 @@ func (o *Instance) attackerCount(vals []primitives.ValidatorIndex) int {
 		}
 	}
 	return count
+}
+
+func (o *Instance) attackerInTailN(latestAttackDuty types.ProposerDuty, tailN int) bool {
+	slot := toInt(latestAttackDuty.Slot)
+	epoch := common.SlotToEpoch(int64(slot))
+	epochEnd := common.EpochEnd(epoch)
+	return (int(epochEnd) - tailN) <= slot
 }

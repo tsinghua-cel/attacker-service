@@ -162,36 +162,37 @@ func (b *MoState) Clone() *MoState {
 
 // PrecomputeProposerIndices computes proposer indices of the current epoch and returns a list of proposer indices,
 // the index of the list represents the slot number.
-func (b *MoState) PrecomputeProposerIndices(activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]primitives.ValidatorIndex, error) {
+func (b *MoState) PrecomputeProposerIndices(activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]byte, []primitives.ValidatorIndex, error) {
 	hashFunc := hash.CustomSHA256Hasher()
 	proposerIndices := make([]primitives.ValidatorIndex, common.GetChainBaseInfo().SlotsPerEpoch)
 
 	seed, err := Seed(b, e, DomainBeaconProposer)
 	if err != nil {
-		return nil, errors.Wrap(err, "could not generate seed")
+		return nil, nil, errors.Wrap(err, "could not generate seed")
 	}
 	slot, err := slots.EpochStart(e)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	for i := uint64(0); i < uint64(common.GetChainBaseInfo().SlotsPerEpoch); i++ {
 		seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot)+i)...)
 		seedWithSlotHash := hashFunc(seedWithSlot)
 		index, err := ComputeProposerIndex(b, activeIndices, seedWithSlotHash)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		log.WithFields(log.Fields{
 			"epoch":        e,
 			"slot":         uint64(slot) + i,
 			"stateSlot":    b.slot,
+			"valIndex":     index,
 			"seed":         hex.EncodeToString(seed[:]),
 			"seedWithSlot": hex.EncodeToString(seedWithSlot),
 		}).Debug("PrecomputeProposerIndices - compute proposer")
 		proposerIndices[i] = index
 	}
 
-	return proposerIndices, nil
+	return seed[:], proposerIndices, nil
 }
 
 func (b *MoState) RandaoDomainData(epoch primitives.Epoch) ([]byte, error) {
