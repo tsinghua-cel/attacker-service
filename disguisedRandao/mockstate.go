@@ -305,7 +305,28 @@ func ComputeProposerIndex(bstate *MoState, activeIndices []primitives.ValidatorI
 		maxEB := MaxEffectiveBalance
 
 		if effectiveBal*maxRandomByte >= maxEB*uint64(randomByte) {
+			log.WithFields(log.Fields{
+				"stateSlot": bstate.slot,
+				//"activeCount":  len(activeIndices),
+				"proposer":           candidateIndex,
+				"randomByte":         randomByte,
+				"seedWithSlot":       hex.EncodeToString(seed[:]),
+				"maxEB":              maxEB,
+				"v.EffectiveBalance": v.EffectiveBalance,
+				//"activeIndices": indicesToStr(activeIndices),
+			}).Debug("compute proposer index - selected")
 			return candidateIndex, nil
+		} else {
+			log.WithFields(log.Fields{
+				"stateSlot": bstate.slot,
+				//"activeCount":  len(activeIndices),
+				"proposer":           candidateIndex,
+				"randomByte":         randomByte,
+				"seedWithSlot":       hex.EncodeToString(seed[:]),
+				"maxEB":              maxEB,
+				"v.EffectiveBalance": v.EffectiveBalance,
+				//"activeIndices": indicesToStr(activeIndices),
+			}).Debug("compute proposer index - not selected")
 		}
 	}
 }
