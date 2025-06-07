@@ -227,10 +227,9 @@ func (b *MoState) GenerateRandaoReveal(privk string, pubkey string, epoch primit
 	}
 	randaoReveal := secretKey.Sign(root[:])
 	log.WithFields(log.Fields{
-		"epoch":      epoch,
-		"domainData": hexutil.Encode(dv),
-		"pubkey":     pubkey,
-
+		"epoch":        epoch,
+		"domainData":   hexutil.Encode(dv),
+		"pubkey":       pubkey,
 		"root":         hexutil.Encode(root[:]),
 		"randaoReveal": hexutil.Encode(randaoReveal.Marshal()),
 	}).Debug("validator dump domain")
@@ -332,5 +331,11 @@ func ProcessRandaoNoVerify(
 	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch%latestMixesLength), [32]byte(latestMixSlice)); err != nil {
 		return err
 	}
+	log.WithFields(log.Fields{
+		"epoch":             currentEpoch,
+		"randao":            hexutil.Encode(randaoReveal),
+		"latestMixesLength": latestMixesLength,
+		"latestMixSlice":    hexutil.Encode(latestMixSlice),
+	}).Debug("ProcessRandaoNoVerify")
 	return nil
 }

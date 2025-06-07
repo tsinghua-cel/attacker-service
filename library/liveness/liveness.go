@@ -372,30 +372,21 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 				return types.ProposerDuty{}, err
 			}
 
-			randaoReveal := []byte{}
-
-			for m := 0; m < 2; m++ {
-				// generate a randao reveal.
-				mrandaoReveal, err := cState.GenerateRandaoReveal(privk, pubkey, primitives.Epoch(currentEpoch))
-				if err != nil {
-					log.WithFields(log.Fields{
-						"validator index": allAttackerDuties[i].ValidatorIndex,
-						"err":             err,
-					}).Error("failed to generate randao reveal when preparing strategy")
-					return types.ProposerDuty{}, err
-				}
-
+			// generate a randao reveal.
+			randaoReveal, err := cState.GenerateRandaoReveal(privk, pubkey, primitives.Epoch(currentEpoch))
+			if err != nil {
 				log.WithFields(log.Fields{
 					"validator index": allAttackerDuties[i].ValidatorIndex,
-					"randao reveal":   hex.EncodeToString(mrandaoReveal),
-					"epoch":           currentEpoch,
-					"m":               m,
-				}).Debug("dump validator randao reveal")
-				if m == 0 {
-					randaoReveal = mrandaoReveal
-				}
-
+					"err":             err,
+				}).Error("failed to generate randao reveal when preparing strategy")
+				return types.ProposerDuty{}, err
 			}
+
+			log.WithFields(log.Fields{
+				"pubkey":        pubkey,
+				"randao reveal": hex.EncodeToString(randaoReveal),
+				"epoch":         currentEpoch,
+			}).Debug("dump validator randao reveal")
 
 			if err = disguisedRandao.ProcessRandaoNoVerify(cState, randaoReveal, primitives.Epoch(currentEpoch)); err != nil {
 				log.WithFields(log.Fields{
