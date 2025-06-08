@@ -125,8 +125,9 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						}).Debug("update strategy successfully")
 					}
 
-					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
-						o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) {
+					if epoch >= 2 && params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) {
+						//if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
+						//	o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) {
 						triggerring = true
 						triggeredEpoch = int(epoch)
 						olog.WithFields(log.Fields{

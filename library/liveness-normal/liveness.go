@@ -112,7 +112,9 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 
 			for {
 				if !triggerring {
-					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) {
+					if epoch >= 2 && params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) {
+						//if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
+						//	o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) {
 						triggerring = true
 						triggeredEpoch = int(epoch)
 						olog.WithFields(log.Fields{
@@ -192,4 +194,12 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			}
 		}
 	}
+}
+
+func (o *Instance) attackerInTailN(attackDuties []types.ProposerDuty, tailN int) bool {
+	latest := attackDuties[len(attackDuties)-1]
+	slot := toInt(latest.Slot)
+	epoch := common.SlotToEpoch(int64(slot))
+	epochEnd := common.EpochEnd(epoch)
+	return (int(epochEnd) - tailN) <= slot
 }
