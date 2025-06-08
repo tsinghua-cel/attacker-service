@@ -51,12 +51,12 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	history := make(map[int]bool)
 	epochDutyCache := lru.New(10)
 	var getCacheDuty = func(epoch int64) (duties []types.ProposerDuty) {
-		//return nil
-		if d, exist := epochDutyCache.Get(epoch); exist {
-			return d.([]types.ProposerDuty)
-		} else {
-			return nil
-		}
+		return nil
+		//if d, exist := epochDutyCache.Get(epoch); exist {
+		//	return d.([]types.ProposerDuty)
+		//} else {
+		//	return nil
+		//}
 	}
 	var setCacheDuty = func(epoch int64, duties []types.ProposerDuty) {
 		epochDutyCache.Add(epoch, duties)

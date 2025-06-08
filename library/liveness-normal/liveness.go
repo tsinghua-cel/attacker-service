@@ -48,11 +48,12 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	history := make(map[int]bool)
 	epochDutyCache := lru.New(10)
 	var getCacheDuty = func(epoch int64) (duties []types.ProposerDuty) {
-		if d, exist := epochDutyCache.Get(epoch); exist {
-			return d.([]types.ProposerDuty)
-		} else {
-			return nil
-		}
+		return nil
+		//if d, exist := epochDutyCache.Get(epoch); exist {
+		//	return d.([]types.ProposerDuty)
+		//} else {
+		//	return nil
+		//}
 	}
 	var setCacheDuty = func(epoch int64, duties []types.ProposerDuty) {
 		epochDutyCache.Add(epoch, duties)
@@ -90,10 +91,10 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 				} else {
 					setCacheDuty(epoch, duty)
 					curDuty = duty
-					olog.WithFields(log.Fields{
-						"epoch": epoch,
-						"duty":  len(duty),
-					}).Info("get epoch duties")
+					//olog.WithFields(log.Fields{
+					//	"epoch": epoch,
+					//	"duty":  len(duty),
+					//}).Info("get epoch duties")
 				}
 			}
 			if nextDuty == nil {
@@ -102,18 +103,20 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 				} else {
 					setCacheDuty(nextEpoch, duty)
 					nextDuty = duty
-
-					olog.WithFields(log.Fields{
-						"epoch": nextEpoch,
-						"duty":  len(duty),
-					}).Info("get epoch duties")
+					//
+					//olog.WithFields(log.Fields{
+					//	"epoch": nextEpoch,
+					//	"duty":  len(duty),
+					//}).Info("get epoch duties")
 				}
 			}
+			o.dumpDuties(epoch, curDuty)
+			o.dumpDuties(nextEpoch, nextDuty)
 
 			for {
 				if !triggerring {
 					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
-						o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) {
+						o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) && epoch > 3 {
 						triggerring = true
 						triggeredEpoch = int(epoch)
 						olog.WithFields(log.Fields{
@@ -201,4 +204,14 @@ func (o *Instance) attackerInTailN(attackDuties []types.ProposerDuty, tailN int)
 	epoch := common.SlotToEpoch(int64(slot))
 	epochEnd := common.EpochEnd(epoch)
 	return (int(epochEnd) - tailN) <= slot
+}
+
+func (s *Instance) dumpDuties(epoch int64, duties []types.ProposerDuty) {
+	for _, duty := range duties {
+		log.WithFields(log.Fields{
+			"epoch":     epoch,
+			"slot":      duty.Slot,
+			"validator": duty.ValidatorIndex,
+		}).Debug("epoch duty")
+	}
 }
