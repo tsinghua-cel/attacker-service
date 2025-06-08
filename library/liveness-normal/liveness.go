@@ -116,7 +116,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			for {
 				if !triggerring {
 					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
-						o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) && epoch > 3 {
+						o.attackerInTailN(params.FilterHackerDuties(curDuty), 9) && epoch > 3 {
 						triggerring = true
 						triggeredEpoch = int(epoch)
 						olog.WithFields(log.Fields{
