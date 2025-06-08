@@ -8,6 +8,7 @@ type AttackerInc interface {
 	GetChainBaseInfo() ChainBaseInfo
 	GetCurSlot() int64
 	GetEpochDuties(epoch int64) ([]ProposerDuty, error)
+	GetEpochDutiesFromAttack(epoch int64) ([]ProposerDuty, error)
 	GetBackend() ServiceBackend
 }
 

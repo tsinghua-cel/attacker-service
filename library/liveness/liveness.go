@@ -86,7 +86,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			var curDuty = getCacheDuty(epoch)
 			var nextDuty = getCacheDuty(nextEpoch)
 			if curDuty == nil {
-				if duty, err := attacker.GetEpochDuties(epoch); err != nil {
+				if duty, err := attacker.GetEpochDutiesFromAttack(epoch); err != nil {
 					continue
 				} else {
 					setCacheDuty(epoch, duty)
@@ -98,7 +98,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 				}
 			}
 			if nextDuty == nil {
-				if duty, err := attacker.GetEpochDuties(nextEpoch); err != nil {
+				if duty, err := attacker.GetEpochDutiesFromAttack(nextEpoch); err != nil {
 					continue
 				} else {
 					setCacheDuty(nextEpoch, duty)
@@ -125,9 +125,8 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						}).Debug("update strategy successfully")
 					}
 
-					if epoch >= 2 && params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) {
-						//if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
-						//	o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) {
+					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
+						o.attackerInTailN(params.FilterHackerDuties(curDuty), 5) {
 						triggerring = true
 						triggeredEpoch = int(epoch)
 						olog.WithFields(log.Fields{

@@ -20,6 +20,7 @@ type BeaconBackend interface {
 	SlotsPerEpoch() int
 	GetIntervalPerSlot() int
 	GetValidatorByProposeSlot(slot uint64) (int, error)
+	GetProposeDutiesFromAttack(epoch int) ([]ProposerDuty, error)
 	GetProposeDuties(epoch int) ([]ProposerDuty, error)
 	GetSlotRoot(slot int64) (string, error)
 	GetBlockBySlot(slot uint64) (interface{}, error)

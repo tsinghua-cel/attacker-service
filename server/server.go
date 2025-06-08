@@ -425,7 +425,13 @@ func (s *Server) GetValidatorByProposeSlot(slot uint64) (int, error) {
 }
 
 func (s *Server) GetProposeDuties(epoch int) ([]types.ProposerDuty, error) {
+	// get propose duties from an honest beacon node.
 	return s.honestBeacon.GetProposerDuties(epoch)
+}
+
+func (s *Server) GetProposeDutiesFromAttack(epoch int) ([]types.ProposerDuty, error) {
+	// get propose duties from local beacon node.
+	return s.beaconClient.GetProposerDuties(epoch)
 }
 
 func (s *Server) SlotsPerEpoch() int {

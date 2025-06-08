@@ -36,6 +36,10 @@ func (a attackerInc) GetEpochDuties(epoch int64) ([]types.ProposerDuty, error) {
 	return a.backend.GetProposeDuties(int(epoch))
 }
 
+func (a attackerInc) GetEpochDutiesFromAttack(epoch int64) ([]types.ProposerDuty, error) {
+	return a.backend.GetProposeDutiesFromAttack(int(epoch))
+}
+
 func (a attackerInc) GetBackend() types.ServiceBackend {
 	return a.backend
 }
