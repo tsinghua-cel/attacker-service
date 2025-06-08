@@ -116,7 +116,7 @@ func TestGetBlockReward(t *testing.T) {
 }
 
 func TestProposeDuty(t *testing.T) {
-	endpoint := "47.242.120.101:34003"
+	endpoint := "47.242.120.101:34002"
 	client := NewBeaconGwClient(endpoint)
 	epochs := make([]int, 0)
 	//h, err := client.GetLatestBeaconHeader()
@@ -129,14 +129,19 @@ func TestProposeDuty(t *testing.T) {
 	//	epochs = append(epochs, beginEpoch+i)
 	//}
 	epochs = append(epochs, 4)
-	epochs = append(epochs, 5)
+	//epochs = append(epochs, 5)
 
 	for _, epoch := range epochs {
 		duty, err := client.GetEpochProposerDuties(epoch)
 		if err != nil {
 			t.Errorf("get epoch (%d) proposer duties failed err:%s", epoch, err)
 		} else {
-			fmt.Printf("epoch [%d] duty[0].ValidatorIndex: %s\n", epoch, duty[0].ValidatorIndex)
+			s := "["
+			for _, d := range duty {
+				s += d.ValidatorIndex + ","
+			}
+			s += "]"
+			fmt.Printf("epoch [%d] duty: %s\n", epoch, s)
 			//d, _ := json.Marshal(duty)
 			//fmt.Printf("get epoch (%d) proposer duties :%s\n", epoch, string(d))
 		}
@@ -156,18 +161,12 @@ func TestProposeSlotRoot(t *testing.T) {
 }
 
 func TestBeaconState(t *testing.T) {
-	endpoint := "47.242.120.101:34003"
+	endpoint := "47.242.120.101:34002"
 	client := NewBeaconGwClient(endpoint)
-	epochs := make([]int, 0)
-	client.GetBeaconState("head")
-	for _, epoch := range epochs {
-		duty, err := client.GetEpochProposerDuties(epoch)
-		if err != nil {
-			t.Errorf("get epoch (%d) proposer duties failed err:%s", epoch, err)
-		} else {
-			d, _ := json.Marshal(duty)
-			fmt.Printf("get epoch (%d) proposer duties :%s\n", epoch, string(d))
-		}
+	state, err := client.GetBeaconState("head")
+	if err != nil {
+		t.Fatalf("get beacon state failed err:%s", err)
 	}
-
+	slot, _ := state.Slot()
+	fmt.Printf("get beacon state slot: %d\n", slot)
 }

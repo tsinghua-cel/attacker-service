@@ -465,7 +465,7 @@ func (s *Server) GetSlotRoot(slot int64) (string, error) {
 }
 
 func (s *Server) dumpDuties(epoch int64) error {
-	duties, err := s.GetProposeDuties(int(epoch))
+	duties, err := s.GetProposeDutiesFromAttack(int(epoch))
 	if err != nil {
 		return err
 	}
@@ -474,7 +474,7 @@ func (s *Server) dumpDuties(epoch int64) error {
 			"epoch":     epoch,
 			"slot":      duty.Slot,
 			"validator": duty.ValidatorIndex,
-		}).Debug("epoch duty")
+		}).Trace("epoch duty")
 	}
 	return nil
 }

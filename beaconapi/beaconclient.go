@@ -486,7 +486,7 @@ func (b *BeaconGwClient) getService() (eth2client.Service, error) {
 	if b.service == nil {
 		service, err := NewClient(context.Background(), b.endpoint)
 		if err != nil {
-			log.WithError(err).Error("create eth2client failed")
+			log.WithField("endpoint", b.endpoint).WithError(err).Error("create eth2client failed")
 			return nil, err
 		}
 		b.service = service
