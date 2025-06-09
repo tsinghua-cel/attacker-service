@@ -267,8 +267,10 @@ func (s *Server) Start() {
 	// start collect duties info.
 	go s.monitorDuties()
 	go s.monitorEvent()
-	go s.HandleEndStrategy()
-	s.feedBacker.Start()
+	if s.config.EnableFeedback {
+		s.feedBacker.Start()
+		go s.HandleEndStrategy()
+	}
 }
 
 func (s *Server) initTools() {
@@ -554,7 +556,7 @@ func (s *Server) UpdateStrategy(strategy types.Strategy) error {
 
 	dbmodel.InsertNewStrategy(&strategy)
 
-	if check {
+	if check && s.config.EnableFeedback {
 		s.historyStrategy.Add(strategy.Uid, HistoryStrategy{
 			Strategy: strategy,
 		})
@@ -603,6 +605,11 @@ func (s *Server) SetCurSlot(slot int64) {
 }
 
 func (s *Server) HandleEndStrategy() {
+	if !s.config.EnableFeedback {
+		log.Info("feed back disabled")
+		return
+	}
+
 	ch := make(chan feedback.StrategyEndEvent, 10)
 	sub := s.feedBacker.SubscribeStrategyEndEvent(ch)
 	if sub == nil {
@@ -667,6 +674,9 @@ func (s *Server) HandleEndStrategy() {
 }
 
 func (s *Server) GetFeedBack(uid string) (types.FeedBackInfo, error) {
+	if !s.config.EnableFeedback {
+		return types.FeedBackInfo{}, errors.New("feedback is disabled")
+	}
 	v, exist := s.historyStrategy.Get(uid)
 	if exist {
 		historyInfo := v.(HistoryStrategy)

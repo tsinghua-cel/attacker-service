@@ -15,6 +15,7 @@ type Config struct {
 	DbConnect       string `json:"dbconnect" toml:"dbconnect"`
 	SwagHost        string `json:"swag_host" toml:"swag_host"`
 	RewardFile      string `json:"reward_file" toml:"reward_file"`
+	EnableFeedback  bool   `json:"enable_feedback" toml:"enable_feedback"`
 }
 
 var _cfg *Config = nil
