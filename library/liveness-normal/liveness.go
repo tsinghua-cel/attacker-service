@@ -166,7 +166,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 						}
 						history[int(epoch)] = true
 						break
-					} else if offset == 2 {
+					} else {
 						{
 							// generate next epoch strategy.
 							strategy := types.Strategy{}
@@ -184,11 +184,6 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 								}).Info("update triggering strategy successfully")
 							}
 						}
-						history[int(epoch)] = true
-						break
-					} else if offset == 3 {
-						// set triggering to false
-						triggerring = false
 						history[int(epoch)] = true
 						break
 					}
