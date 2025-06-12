@@ -202,7 +202,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							// generate next epoch strategy without bestMaskDuty.
 							strategy := types.Strategy{}
 							strategy.Uid = uuid.NewString()
-							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FilterHackerDuties(nextDuty), types.ProposerDuty{})
+							strategy.Slots = genStrategyForTrigger3(int(nextEpoch), params.FilterHackerDuties(nextDuty), types.ProposerDuty{})
 							strategy.Category = o.Name()
 							if err = attacker.UpdateStrategy(strategy); err != nil {
 								olog.WithField("error", err).Error("failed to update triggering strategy")
