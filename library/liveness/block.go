@@ -44,9 +44,30 @@ func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.Slo
 
 }
 
-// 50ms per slot.
-func calcDeltaTime(beginEpoch int64, currentSlot int64) int64 {
-	return 100 * (currentSlot - common.EpochStart(beginEpoch))
+//// 100ms per slot.
+//func calcDeltaTime(beginEpoch int64, currentSlot int64) int64 {
+//	return 100 * (currentSlot - common.EpochStart(beginEpoch))
+//}
+
+var (
+	offset      = int(0)
+	offsetCache = make(map[int64]map[int64]int) // targetSlot - > (slot -> offset)
+)
+
+func calcTargetTime(slot int, targetSlot int64) int64 {
+	slotOffset := 0
+	if _, ok := offsetCache[targetSlot]; !ok {
+		offsetCache[targetSlot] = make(map[int64]int)
+		offset = 0
+		offsetCache[targetSlot][int64(slot)] = offset
+	} else {
+		if _, ok := offsetCache[targetSlot][int64(slot)]; !ok {
+			offset += 1
+			offsetCache[targetSlot][int64(slot)] = offset
+		}
+	}
+	slotOffset = offsetCache[targetSlot][int64(slot)]
+	return common.TimeToSlot(targetSlot)*1000 - 5*1000 + 100*int64(slotOffset)
 }
 
 func genSimpleStrategy(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
@@ -84,13 +105,9 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []ty
 			s.Actions["AttestBeforePropose"] = "return"
 			s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
 		} else {
-			deltaTime := calcDeltaTime(int64(epoch), int64(toInt(duty.Slot)))
-			if int64(toInt(duty.Slot)) == common.EpochEnd(int64(epoch)) {
-				deltaTime -= 50
-			}
-			totalDelay := 1000*(common.TimeToSlot(releaseSlot)-common.TimeToSlot(int64(toInt(duty.Slot)))) + deltaTime
+			targetTime := calcTargetTime(toInt(duty.Slot), releaseSlot)
 			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithMilliSecond:%d", totalDelay)
+			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayToMilliTime:%d", targetTime)
 			// don't broadcast attest.
 			s.Actions["AttestBeforePropose"] = "return"
 			// add attest to pool.
@@ -131,14 +148,9 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockBeforeSign"] = "return"
 			s.Actions["AttestBeforePropose"] = "return"
 		} else {
-			deltaTime := calcDeltaTime(int64(epoch), int64(toInt(duty.Slot)))
-			if int64(toInt(duty.Slot)) == common.EpochEnd(int64(epoch)) {
-				deltaTime -= 50
-			}
-			totalDelay := 1000*(common.TimeToSlot(releaseSlot)-common.TimeToSlot(int64(toInt(duty.Slot)))) + deltaTime
-			stageII := totalDelay - int64(0)
+			targetTime := calcTargetTime(toInt(duty.Slot), releaseSlot)
 			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithMilliSecond:%d", stageII)
+			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayToMilliTime:%d", targetTime)
 			s.Actions["AttestBeforePropose"] = "return"
 
 			lastDuty = duty
@@ -172,10 +184,9 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 			s.Actions["BlockBeforeSign"] = "return"
 			s.Actions["AttestBeforePropose"] = "return"
 		} else {
-			totalDelay := 1000*(common.TimeToSlot(releaseSlot)-common.TimeToSlot(int64(toInt(duty.Slot)))) + calcDeltaTime(int64(epoch-2), int64(toInt(duty.Slot)))
-			stageII := totalDelay
+			targetTime := calcTargetTime(toInt(duty.Slot), releaseSlot)
 			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayWithMilliSecond:%d", stageII)
+			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayToMilliTime:%d", targetTime)
 			s.Actions["AttestBeforePropose"] = "return"
 
 			lastDuty = duty

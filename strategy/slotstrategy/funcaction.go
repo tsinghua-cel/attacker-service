@@ -321,6 +321,32 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 			}
 			return r
 		}, nil
+	case "delayToMilliTime":
+		target := int64(0)
+		if len(params) > 0 {
+			target = int64(params[0])
+		}
+		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
+			// parse milli timestamp to time.
+			targetTime := time.Unix(int64(target)/1000, (int64(target)%1000)*1000000)
+			interval := target - time.Now().UnixMilli()
+			log.WithFields(log.Fields{
+				"slot":     slot,
+				"action":   name,
+				"interval": interval,
+			}).Debug("do action ")
+			r := plugins.PluginResponse{
+				Cmd: types.CMD_NULL,
+			}
+
+			select {
+			case <-time.After(targetTime.Sub(time.Now())):
+				if len(params) > 0 {
+					r.Result = params[0]
+				}
+			}
+			return r
+		}, nil
 	case "delayToEpochEnd":
 		return func(backend types.ServiceBackend, slot int64, pubkey string, params ...interface{}) plugins.PluginResponse {
 			epoch := common.SlotToEpoch(slot)
