@@ -344,6 +344,69 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 	}
 
 	var bestMaskInfo = BestMaskDutyInfo{}
+	{
+		// first compute a maskInfo when don't mask any slot.
+		cState := mostate.Clone()
+		for i := 0; i < len(allAttackerDuties); i++ {
+			duty := allAttackerDuties[i]
+			// if current duty is earlier than current slot, skip it.
+			// if the duty is the masked one, skip it.
+			if toInt(duty.Slot) < int(slot) {
+				continue
+			}
+			// simulate validator generate a randao_reveal and update to state.
+			pubkey, privk, err := o.b.GetValidatorsKeys(toInt(allAttackerDuties[i].ValidatorIndex))
+			if err != nil {
+				log.WithFields(log.Fields{
+					"validator index": allAttackerDuties[i].ValidatorIndex,
+				}).Error("failed to get validator keys when preparing strategy")
+				return types.ProposerDuty{}, err
+			}
+
+			// generate a randao reveal.
+			randaoReveal, err := cState.GenerateRandaoReveal(privk, pubkey, primitives.Epoch(currentEpoch))
+			if err != nil {
+				log.WithFields(log.Fields{
+					"validator index": allAttackerDuties[i].ValidatorIndex,
+					"err":             err,
+				}).Error("failed to generate randao reveal when preparing strategy")
+				return types.ProposerDuty{}, err
+			}
+
+			if err = disguisedRandao.ProcessRandaoNoVerify(cState, randaoReveal, primitives.Epoch(currentEpoch)); err != nil {
+				log.WithFields(log.Fields{
+					"validator index": allAttackerDuties[i].ValidatorIndex,
+					"err":             err,
+				}).Error("failed to process randao reveal when preparing strategy")
+				return types.ProposerDuty{}, err
+			}
+		}
+		// epoch process.
+		seed, proposers, err := cState.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(0, 255),
+			primitives.Epoch(next2Epoch))
+		if err != nil {
+			log.WithFields(log.Fields{
+				"current":    currentEpoch,
+				"next2epoch": next2Epoch,
+				"err":        err,
+			}).Error("failed to precompute proposer indices")
+			return types.ProposerDuty{}, err
+		}
+		curMaskInfo := BestMaskDutyInfo{
+			FirstIsAttack:  o.param.IsHackValidator(int(proposers[0])),
+			AttackersCount: o.attackerCount(proposers),
+			duty: types.ProposerDuty{
+				Slot:           "0",
+				ValidatorIndex: "0",
+				Pubkey:         "",
+			},
+			proposers: proposers,
+			seed:      seed,
+		}
+		if curMaskInfo.BetterThan(bestMaskInfo) {
+			bestMaskInfo = curMaskInfo
+		}
+	}
 
 	for maskIdx := 0; maskIdx < len(allAttackerDuties); maskIdx++ {
 		// loop mask one attack validator to proposer block.
