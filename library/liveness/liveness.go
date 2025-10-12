@@ -408,12 +408,15 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		}
 	}
 
+	t1 := time.Now()
+
 	for maskIdx := 0; maskIdx < len(allAttackerDuties); maskIdx++ {
 		// loop mask one attack validator to proposer block.
 		maskDuty := allAttackerDuties[maskIdx]
 		if toInt(maskDuty.Slot) < int(stateSlot) {
 			continue
 		}
+		t2 := time.Now()
 
 		cState := mostate.Clone()
 		for i := 0; i < len(allAttackerDuties); i++ {
@@ -456,6 +459,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 				return types.ProposerDuty{}, err
 			}
 		}
+		t3 := time.Now()
 		// epoch process.
 		seed, proposers, err := cState.PrecomputeProposerIndices(disguisedRandao.GenValidatorIndices(0, 255),
 			primitives.Epoch(next2Epoch))
@@ -477,6 +481,12 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		if curMaskInfo.BetterThan(bestMaskInfo) {
 			bestMaskInfo = curMaskInfo
 		}
+		t4 := time.Now()
+		log.WithFields(log.Fields{
+			"PrecomputeProposerIndices": t4.Sub(t3).String(),
+			"prepare randao":            t3.Sub(t2).String(),
+			"one cycle cost":            t4.Sub(t2).String(),
+		}).Debug("liveness attack strategy prepared one mask duty")
 		log.WithFields(log.Fields{
 			"maskDuty":      bestMaskInfo.duty,
 			"computeEpoch":  next2Epoch,
@@ -493,6 +503,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		"firstIsAttack": bestMaskInfo.FirstIsAttack,
 		"proposers":     bestMaskInfo.proposers,
 		"seed":          hexutil.Encode(bestMaskInfo.seed),
+		"cost":          time.Since(t1).String(),
 	}).Debug("liveness attack strategy prepared final")
 	return bestMaskInfo.duty, nil
 }
