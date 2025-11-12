@@ -322,7 +322,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		"paramEpoch":   common.SlotToEpoch(int64(slot)),
 	}).Debug("get beacon state to compute best mask duty")
 
-	mostate, err := disguisedRandao.InitMoState(currentState)
+	mostate, err := disguisedRandao.InitMoState(*currentState)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"err": err,

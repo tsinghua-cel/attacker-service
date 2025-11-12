@@ -1,4 +1,4 @@
-.PHONY: default attacker reward all clean docker docs
+.PHONY: default attacker reward randao all clean docker docs
 
 GOBIN = $(shell pwd)/build/bin
 TAG ?= latest
@@ -27,6 +27,10 @@ attacker:
 
 reward:
 	go build $(BUILD_FLAGS) -o=${GOBIN}/$@ -gcflags "all=-N -l" ./cmd/rewards
+	@echo "Done building."
+
+randao:
+	go build $(BUILD_FLAGS) -o=${GOBIN}/$@ -gcflags "all=-N -l" ./cmd/randao
 	@echo "Done building."
 
 docs:

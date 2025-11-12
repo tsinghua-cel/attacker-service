@@ -49,10 +49,7 @@ func (b *MoState) Id() multi_value_slice.Id {
 	return b.id
 }
 
-func InitMoState(beaconState *spec.VersionedBeaconState) (*MoState, error) {
-	if beaconState == nil {
-		return nil, errors.New("state is nil")
-	}
+func InitMoState(beaconState spec.VersionedBeaconState) (*MoState, error) {
 	state := beaconState.Deneb
 	moState := &MoState{
 		id:                    types.Enumerator.Inc(),
@@ -237,6 +234,10 @@ func (b *MoState) GenerateRandaoReveal(privk string, pubkey string, epoch primit
 	return randaoReveal.Marshal(), nil
 }
 
+func (b *MoState) ValidatorList() []*phase0.Validator {
+	return b.validators
+}
+
 func Seed(b *MoState, epoch primitives.Epoch, domain [bls.DomainByteLength]byte) ([32]byte, error) {
 	// See https://github.com/ethereum/consensus-specs/pull/1296 for
 	// rationale on why offset has to look down by 1.
@@ -353,11 +354,11 @@ func ProcessRandaoNoVerify(
 	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch%latestMixesLength), [32]byte(latestMixSlice)); err != nil {
 		return err
 	}
-	log.WithFields(log.Fields{
-		"epoch":             currentEpoch,
-		"randao":            hexutil.Encode(randaoReveal),
-		"latestMixesLength": latestMixesLength,
-		"latestMixSlice":    hexutil.Encode(latestMixSlice),
-	}).Debug("ProcessRandaoNoVerify")
+	//log.WithFields(log.Fields{
+	//	"epoch":             currentEpoch,
+	//	"randao":            hexutil.Encode(randaoReveal),
+	//	"latestMixesLength": latestMixesLength,
+	//	"latestMixSlice":    hexutil.Encode(latestMixSlice),
+	//}).Debug("ProcessRandaoNoVerify")
 	return nil
 }
