@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/attestantio/go-eth2-client/spec"
 	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
@@ -25,6 +26,7 @@ import (
 
 var (
 	beaconUrl            = flag.String("beacon-url", "", "Beacon URL")
+	stateFile            = flag.String("state", "", "State file")
 	validatorList        = flag.String("validator-list", "", "Validator list file path")
 	slot                 = flag.String("slot", "161", "Slot to test")
 	testCase             = flag.Int("case", 1, "Test case number(1,2,3")
@@ -47,12 +49,47 @@ func main() {
 		}).Fatal("failed to get validator list from file")
 		return
 	}
-	state, err := beaconClient.GetBeaconState(*slot)
-	if err != nil {
-		log.WithFields(log.Fields{
-			"err": err,
-		}).Fatal("failed to get beacon state")
-		return
+	var state *spec.VersionedBeaconState
+	if *stateFile != "" {
+		data, err := os.ReadFile(*stateFile)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"filePath": *stateFile,
+				"err":      err,
+			}).Warning("failed to read state file")
+			return
+		}
+		var localstate spec.VersionedBeaconState
+		if err = json.Unmarshal(data, &localstate); err != nil {
+			log.WithFields(log.Fields{
+				"filePath": *stateFile,
+				"err":      err,
+			}).Fatal("failed to unmarshal state from file")
+			return
+		}
+		state = &localstate
+	}
+	if state == nil {
+		chainstate, err := beaconClient.GetBeaconState(*slot)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Fatal("failed to get beacon state")
+			return
+		}
+		state = chainstate
+	}
+	if *stateFile == "" {
+
+		statedata, err := json.Marshal(state)
+		if err != nil {
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Fatal("failed to marshal beacon state")
+			return
+		}
+		os.WriteFile("state.json", statedata, 0644)
+
 	}
 	chainValidators, err := state.Validators()
 	if err != nil {
