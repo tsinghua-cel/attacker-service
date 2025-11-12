@@ -671,7 +671,7 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 				attestation = params[0].(*ethpb.AttestationData)
 				if root, err := backend.GetSlotRoot(int64(newSourceSlot)); err == nil {
 					attestation.Source.Root = common.FromHex(root)
-					if r.Result, err = common.AttestationDataToBase64(attestation); err == nil {
+					if r.Result, err = common.AttestationDataToBase64(attestation, false); err == nil {
 						r.Cmd = types.CMD_UPDATE_STATE
 					}
 				}
@@ -701,7 +701,7 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 				attestation = params[0].(*ethpb.AttestationData)
 				if root, err := backend.GetSlotRoot(int64(newTargetSlot)); err == nil {
 					attestation.Target.Root = common.FromHex(root)
-					if r.Result, err = common.AttestationDataToBase64(attestation); err == nil {
+					if r.Result, err = common.AttestationDataToBase64(attestation, false); err == nil {
 						r.Cmd = types.CMD_UPDATE_STATE
 					}
 				}
@@ -731,7 +731,7 @@ func GetFunctionAction(backend types.ServiceBackend, actions string) (ActionDo, 
 				attestation = params[0].(*ethpb.AttestationData)
 				if root, err := backend.GetSlotRoot(int64(newHeadSlot)); err == nil {
 					attestation.BeaconBlockRoot = common.FromHex(root)
-					if r.Result, err = common.AttestationDataToBase64(attestation); err == nil {
+					if r.Result, err = common.AttestationDataToBase64(attestation, false); err == nil {
 						r.Cmd = types.CMD_UPDATE_STATE
 					}
 				}

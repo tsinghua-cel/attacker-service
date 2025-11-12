@@ -125,7 +125,7 @@ func (s *AttestAPI) BeforeSign(slot uint64, pubkey string, attestDataBase64 stri
 			report = true
 			newAttestation, ok := r.Result.(*ethpb.AttestationData)
 			if ok {
-				if newData, err := common.AttestationDataToBase64(newAttestation); err == nil {
+				if newData, err := common.AttestationDataToBase64(newAttestation, false); err == nil {
 					result.Result = newData
 				}
 
@@ -171,7 +171,7 @@ func (s *AttestAPI) AfterSign(slot uint64, pubkey string, signedAttestDataBase64
 			report = true
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
-				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
+				if newData, err := common.SignedAttestationToBase64(newAttestation, false); err == nil {
 					result.Result = newData
 				}
 
@@ -214,7 +214,7 @@ func (s *AttestAPI) BeforePropose(slot uint64, pubkey string, signedAttestDataBa
 			report = true
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
-				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
+				if newData, err := common.SignedAttestationToBase64(newAttestation, false); err == nil {
 					result.Result = newData
 				}
 
@@ -257,7 +257,7 @@ func (s *AttestAPI) AfterPropose(slot uint64, pubkey string, signedAttestDataBas
 			report = true
 			newAttestation, ok := r.Result.(*ethpb.Attestation)
 			if ok {
-				if newData, err := common.SignedAttestationToBase64(newAttestation); err == nil {
+				if newData, err := common.SignedAttestationToBase64(newAttestation, false); err == nil {
 					result.Result = newData
 				}
 

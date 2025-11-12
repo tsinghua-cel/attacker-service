@@ -116,7 +116,7 @@ func TestGetBlockReward(t *testing.T) {
 }
 
 func TestProposeDuty(t *testing.T) {
-	endpoint := "47.242.120.101:34002"
+	endpoint := "47.242.120.101:34001"
 	client := NewBeaconGwClient(endpoint)
 	epochs := make([]int, 0)
 	//h, err := client.GetLatestBeaconHeader()
@@ -128,7 +128,16 @@ func TestProposeDuty(t *testing.T) {
 	//for i := 0; i < 5; i++ {
 	//	epochs = append(epochs, beginEpoch+i)
 	//}
-	epochs = append(epochs, 4)
+	epochs = append(epochs, 7)
+	epochs = append(epochs, 8)
+	epochs = append(epochs, 10)
+	epochs = append(epochs, 11)
+	epochs = append(epochs, 13)
+	epochs = append(epochs, 16)
+	epochs = append(epochs, 17)
+	epochs = append(epochs, 19)
+	epochs = append(epochs, 20)
+
 	//epochs = append(epochs, 5)
 
 	for _, epoch := range epochs {

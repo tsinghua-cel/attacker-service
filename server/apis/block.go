@@ -156,7 +156,7 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 			r := action.RunAction(s.b, int64(slot), pubkey, signedDenebBlock)
 			result.Cmd = r.Cmd
 			report = true
-			if newBlockBase64, err := common.SignedDenebBlockToBase64(signedDenebBlock); err != nil {
+			if newBlockBase64, err := common.SignedDenebBlockToBase64(signedDenebBlock, false); err != nil {
 				log.WithError(err).WithFields(log.Fields{
 					"slot":   slot,
 					"action": name,
