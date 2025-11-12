@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -399,60 +400,11 @@ func ComputeBestMaskDutyOneOrderMultiProcess(allRandao map[string][]byte, cState
 
 func ComputeBestMaskDutyFullTime(allRandao map[string][]byte, cState *disguisedRandao.MoState, slot uint64, epoch int64, currentDuty []types.ProposerDuty, validatorList []ValidatorInfo, fullOrder [][]int) (types.ProposerDuty, error) {
 	t1 := time.Now()
-	workerCount := *fullTimeRoutineCount
-	// dispatch orders to 32 worker goroutines
-	jobs := make(chan []int)
-	errCh := make(chan error, 1)
-	done := make(chan struct{}, workerCount)
-	workers := workerCount
-
-	for i := 0; i < workers; i++ {
-		go func() {
-			defer func() { done <- struct{}{} }()
-			for order := range jobs {
-				if _, err := ComputeBestMaskDutyOneOrderSync(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order); err != nil {
-					select {
-					case errCh <- err:
-					default:
-					}
-					return
-				}
-			}
-		}()
-	}
-
-	// send jobs, stop early if an error is reported
-	var finalErr error
-SendLoop:
 	for _, order := range fullOrder {
-		select {
-		case e := <-errCh:
-			finalErr = e
-			break SendLoop
-		case jobs <- order:
-		}
-	}
-	close(jobs)
-
-	// wait for all workers to finish
-	for i := 0; i < workers; i++ {
-		<-done
+		//_, err := ComputeBestMaskDutyOneOrderSync(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order); err != nil {
+		ComputeBestMaskDutyOneOrderMultiProcess(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order)
 	}
 
-	// check for any error reported after workers finished
-	if finalErr == nil {
-		select {
-		case e := <-errCh:
-			finalErr = e
-		default:
-		}
-	}
-	if finalErr != nil {
-		log.WithFields(log.Fields{
-			"err": finalErr,
-		}).Error("ComputeBestMaskDutyOneOrderSync failed")
-		return types.ProposerDuty{}, finalErr
-	}
 	t2 := time.Now()
 	log.WithFields(log.Fields{
 		"total cost":  t2.Sub(t1).String(),
@@ -500,7 +452,7 @@ func PrecomputeProposerIndicesSync(state *disguisedRandao.MoState, activeIndices
 }
 
 func PrecomputeProposerIndicesMultiProcess(state *disguisedRandao.MoState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]byte, []primitives.ValidatorIndex, error) {
-	hashFunc := hash.CustomSHA256Hasher()
+	hasher := sha256.New()
 	proposerIndices := make([]primitives.ValidatorIndex, 32)
 
 	seed, err := disguisedRandao.Seed(state, e, disguisedRandao.DomainBeaconProposer)
@@ -520,8 +472,10 @@ func PrecomputeProposerIndicesMultiProcess(state *disguisedRandao.MoState, activ
 		ii := i
 		go func() {
 			seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot)+ii)...)
-			seedWithSlotHash := hashFunc(seedWithSlot)
-			index, err := ComputeProposerIndex(state.ValidatorList(), activeIndices, seedWithSlotHash)
+			seedWithSlotHash := hasher.Sum(seedWithSlot)
+			var seedHash [32]byte
+			copy(seedHash[:], seedWithSlotHash)
+			index, err := ComputeProposerIndex(state.ValidatorList(), activeIndices, seedHash)
 			if err != nil {
 				select {
 				case errCh <- err:
