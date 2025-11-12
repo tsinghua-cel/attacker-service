@@ -21,7 +21,9 @@ import (
 	"github.com/tsinghua-cel/attacker-service/types"
 	"math/rand"
 	"os"
+	"runtime"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -140,6 +142,7 @@ func main() {
 		attackDutiesCount := setting.attackCount
 		testCount := setting.testCount
 		attackDuties := RandomAttackerDuties(rand.New(rand.NewSource(time.Now().UnixNano())), proposerDuty, attackDutiesCount)
+		seed, _ := disguisedRandao.Seed(mostate, primitives.Epoch(epoch+2), disguisedRandao.DomainBeaconProposer)
 		t1 := time.Now()
 		allRandaoReveal, _ := GetAllRandaoReveal(mostate, int64(epoch), attackDuties, validatorSortedIndex)
 		t2 := time.Now()
@@ -193,7 +196,7 @@ func main() {
 				for i := 0; i < testCount; i++ {
 					cState, _ := disguisedRandao.InitMoState(*state)
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyOneOrderMultiProcess(allRandaoReveal, cState, uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
+					_, err := ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandaoReveal, cState, uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyOneOrderMultiProcess failed")
@@ -226,7 +229,7 @@ func main() {
 				for i := 0; i < testCount/10; i++ {
 					cState, _ := disguisedRandao.InitMoState(*state)
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyFullTime(allRandaoReveal, cState, uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder)
+					_, err := ComputeBestMaskDutyFullTime(seed, allRandaoReveal, cState, uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder)
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyFullTime failed")
@@ -354,7 +357,71 @@ func ComputeBestMaskDutyOneOrderSync(allRandao map[string][]byte, cState *disgui
 	return types.ProposerDuty{}, nil
 }
 
-func ComputeBestMaskDutyOneOrderMultiProcess(allRandao map[string][]byte, cState *disguisedRandao.MoState, slot uint64, epoch int64, currentDuty []types.ProposerDuty, validatorList []ValidatorInfo, order []int) (types.ProposerDuty, error) {
+// --- New reusable proposer worker pool ---
+type proposerTask struct {
+	seed          [32]byte
+	validatorList []*phase0.Validator
+	activeIndices []primitives.ValidatorIndex
+	idx           int
+	resCh         chan proposerResult
+}
+
+type proposerResult struct {
+	idx   int
+	index primitives.ValidatorIndex
+	err   error
+}
+
+type ProposerWorkerPool struct {
+	tasks       chan proposerTask
+	workerCount int
+	stopCh      chan struct{}
+}
+
+func NewProposerWorkerPool(workerCnt int) *ProposerWorkerPool {
+	p := &ProposerWorkerPool{
+		tasks:       make(chan proposerTask, 1024),
+		workerCount: workerCnt,
+		stopCh:      make(chan struct{}),
+	}
+	for i := 0; i < workerCnt; i++ {
+		go p.worker()
+	}
+	return p
+}
+
+func (p *ProposerWorkerPool) worker() {
+	for {
+		select {
+		case t := <-p.tasks:
+			index, err := ComputeProposerIndex(t.validatorList, t.activeIndices, t.seed)
+			// send result back (non-blocking in case caller gave buffer)
+			t.resCh <- proposerResult{idx: t.idx, index: index, err: err}
+		case <-p.stopCh:
+			return
+		}
+	}
+}
+
+func (p *ProposerWorkerPool) Submit(t proposerTask) {
+	p.tasks <- t
+}
+
+var proposerPool *ProposerWorkerPool
+var proposerPoolOnce sync.Once
+
+func ensureProposerPool() {
+	proposerPoolOnce.Do(func() {
+		// use number of CPU cores as default worker count
+		wc := runtime.NumCPU()
+		if wc <= 0 {
+			wc = 4
+		}
+		proposerPool = NewProposerWorkerPool(wc)
+	})
+}
+
+func ComputeBestMaskDutyOneOrderMultiProcess(seed [32]byte, allRandao map[string][]byte, cState *disguisedRandao.MoState, slot uint64, epoch int64, currentDuty []types.ProposerDuty, validatorList []ValidatorInfo, order []int) (types.ProposerDuty, error) {
 	currentEpoch := epoch
 	next2Epoch := currentEpoch + 2
 	{
@@ -381,7 +448,7 @@ func ComputeBestMaskDutyOneOrderMultiProcess(allRandao map[string][]byte, cState
 		}).Debug("liveness attack strategy processed all randao reveals")
 
 		// epoch process.
-		_, _, err := PrecomputeProposerIndicesMultiProcess(cState, allIndices, primitives.Epoch(next2Epoch))
+		_, _, err := PrecomputeProposerIndicesMultiProcess(seed, cState, allIndices, primitives.Epoch(next2Epoch))
 		if err != nil {
 			log.WithFields(log.Fields{
 				"current": currentEpoch,
@@ -398,11 +465,11 @@ func ComputeBestMaskDutyOneOrderMultiProcess(allRandao map[string][]byte, cState
 	return types.ProposerDuty{}, nil
 }
 
-func ComputeBestMaskDutyFullTime(allRandao map[string][]byte, cState *disguisedRandao.MoState, slot uint64, epoch int64, currentDuty []types.ProposerDuty, validatorList []ValidatorInfo, fullOrder [][]int) (types.ProposerDuty, error) {
+func ComputeBestMaskDutyFullTime(seed [32]byte, allRandao map[string][]byte, cState *disguisedRandao.MoState, slot uint64, epoch int64, currentDuty []types.ProposerDuty, validatorList []ValidatorInfo, fullOrder [][]int) (types.ProposerDuty, error) {
 	t1 := time.Now()
 	for _, order := range fullOrder {
 		//_, err := ComputeBestMaskDutyOneOrderSync(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order); err != nil {
-		ComputeBestMaskDutyOneOrderMultiProcess(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order)
+		ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order)
 	}
 
 	t2 := time.Now()
@@ -451,55 +518,44 @@ func PrecomputeProposerIndicesSync(state *disguisedRandao.MoState, activeIndices
 	return seed[:], proposerIndices, nil
 }
 
-func PrecomputeProposerIndicesMultiProcess(state *disguisedRandao.MoState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]byte, []primitives.ValidatorIndex, error) {
-	hasher := sha256.New()
+func PrecomputeProposerIndicesMultiProcess(seed [32]byte, state *disguisedRandao.MoState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]byte, []primitives.ValidatorIndex, error) {
 	proposerIndices := make([]primitives.ValidatorIndex, 32)
-
-	seed, err := disguisedRandao.Seed(state, e, disguisedRandao.DomainBeaconProposer)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "could not generate seed")
-	}
 	slot := e * 32
 
-	// run proposer index computation concurrently
-	errCh := make(chan error, 1)
-	resCh := make(chan struct {
-		idx   int
-		index primitives.ValidatorIndex
-	}, 32)
+	// use a reusable worker pool instead of spawning new goroutines each call
+	ensureProposerPool()
 
+	resCh := make(chan proposerResult, 32)
+
+	// submit tasks to the pool
 	for i := uint64(0); i < uint64(32); i++ {
 		ii := i
-		go func() {
-			seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot)+ii)...)
-			seedWithSlotHash := hasher.Sum(seedWithSlot)
-			var seedHash [32]byte
-			copy(seedHash[:], seedWithSlotHash)
-			index, err := ComputeProposerIndex(state.ValidatorList(), activeIndices, seedHash)
-			if err != nil {
-				select {
-				case errCh <- err:
-				default:
-				}
-				return
-			}
-			resCh <- struct {
-				idx   int
-				index primitives.ValidatorIndex
-			}{int(ii), index}
-		}()
+		// compute seedWithSlot
+		seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot)+ii)...)
+		// compute hash of seedWithSlot deterministically
+		var seedHash [32]byte
+		h := sha256.Sum256(seedWithSlot)
+		copy(seedHash[:], h[:])
+
+		task := proposerTask{
+			seed:          seedHash,
+			validatorList: state.ValidatorList(),
+			activeIndices: activeIndices,
+			idx:           int(ii),
+			resCh:         resCh,
+		}
+		proposerPool.Submit(task)
 	}
 
 	// collect results or return on first error
 	received := 0
 	for received < 32 {
-		select {
-		case err := <-errCh:
-			return nil, nil, err
-		case r := <-resCh:
-			proposerIndices[r.idx] = r.index
-			received++
+		r := <-resCh
+		if r.err != nil {
+			return nil, nil, r.err
 		}
+		proposerIndices[r.idx] = r.index
+		received++
 	}
 
 	return seed[:], proposerIndices, nil
