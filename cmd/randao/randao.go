@@ -124,7 +124,7 @@ func main() {
 		}).Error("failed to init mo state")
 		return
 	}
-	mostate.Dump()
+	//mostate.Dump()
 	curSlot, _ := state.Slot()
 	epoch := curSlot / 32
 
@@ -155,7 +155,7 @@ func main() {
 			"attack_count": attackDutiesCount,
 		}).Info("get all randao reveal for attacker duties")
 
-		log.Println("full order count ", len(fullOrder))
+		//log.Println("full order count ", len(fullOrder))
 		switch *testCase {
 		case 1:
 			{
