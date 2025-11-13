@@ -43,6 +43,9 @@ type MoState struct {
 	fork                  *phase0.Fork
 	validators            []*phase0.Validator
 	randaoMixesMultiValue *state_native.MultiValueRandaoMixes
+	bakRandaoMixs         []*state_native.MultiValueRandaoMixes
+	bakidx                int
+	originRandaoMix       [][]byte
 }
 
 func (b *MoState) Id() multi_value_slice.Id {
@@ -59,12 +62,20 @@ func InitMoState(beaconState spec.VersionedBeaconState) (*MoState, error) {
 		slot:                  primitives.Slot(state.Slot),
 		fork:                  state.Fork,
 	}
-	randaoMixes := make([][]byte, len(state.RANDAOMixes))
+	moState.originRandaoMix = make([][]byte, len(state.RANDAOMixes))
 	for i, mix := range state.RANDAOMixes {
-		randaoMixes[i] = make([]byte, 32)
-		copy(randaoMixes[i], mix[:])
+		moState.originRandaoMix[i] = make([]byte, 32)
+		copy(moState.originRandaoMix[i], mix[:])
 	}
-	moState.randaoMixesMultiValue = state_native.NewMultiValueRandaoMixes(randaoMixes)
+	moState.randaoMixesMultiValue = state_native.NewMultiValueRandaoMixes(moState.originRandaoMix)
+
+	var baklength = 1000
+	moState.bakRandaoMixs = make([]*state_native.MultiValueRandaoMixes, baklength)
+	for i := 0; i < baklength; i++ {
+		moState.bakRandaoMixs[i] = state_native.NewMultiValueRandaoMixes(moState.originRandaoMix)
+	}
+	moState.bakidx = 0
+
 	moState.validators = make([]*phase0.Validator, len(state.Validators))
 	for i, v := range state.Validators {
 		if v == nil {
@@ -75,6 +86,19 @@ func InitMoState(beaconState spec.VersionedBeaconState) (*MoState, error) {
 	}
 
 	return moState, nil
+}
+
+func (b *MoState) Reset() *MoState {
+	b.lock.Lock()
+	idx := b.bakidx
+	b.bakidx += 1
+	b.lock.Unlock()
+	b.randaoMixesMultiValue = b.bakRandaoMixs[idx%len(b.bakRandaoMixs)]
+	go func() {
+		b.bakRandaoMixs[idx%len(b.bakRandaoMixs)] = state_native.NewMultiValueRandaoMixes(b.originRandaoMix)
+	}()
+	return b
+
 }
 
 // UpdateRandaoMixesAtIndex for the beacon state. Updates the randao mixes

@@ -1,5 +1,10 @@
 package main
 
+import (
+	"math/rand"
+	"time"
+)
+
 // GenerateBinarySequences calls cb for every binary sequence of length n (values 0 or 1).
 // If cb returns false generation stops early.
 func GenerateBinarySequences(n int, cb func([]int) bool) {
@@ -34,4 +39,10 @@ func GetAllBinarySequences(n int) [][]int {
 		return true
 	})
 	return result
+}
+
+func GetRandomUniqueNumbers() []int {
+	rand.Seed(time.Now().UnixNano())
+	numbers := rand.Perm(256)
+	return numbers[:32]
 }

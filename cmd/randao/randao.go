@@ -31,7 +31,7 @@ var (
 	beaconUrl            = flag.String("beacon-url", "", "Beacon URL")
 	stateFile            = flag.String("state", "", "State file")
 	validatorList        = flag.String("validator-list", "", "Validator list file path")
-	slot                 = flag.String("slot", "161", "Slot to test")
+	slotToTest           = flag.String("slot", "161", "Slot to test")
 	testCase             = flag.Int("case", 1, "Test case number(1,2,3")
 	fullTimeRoutineCount = flag.Int("routine", 32, "Routine count that calculate full time used")
 )
@@ -42,7 +42,6 @@ var (
 
 func main() {
 	flag.Parse()
-	beaconClient := beaconapi.NewBeaconGwClient(*beaconUrl)
 	// get all validators from json.
 	validators, err := getValidatorListFromFile(*validatorList)
 	if err != nil {
@@ -73,7 +72,8 @@ func main() {
 		state = &localstate
 	}
 	if state == nil {
-		chainstate, err := beaconClient.GetBeaconState(*slot)
+		beaconClient := beaconapi.NewBeaconGwClient(*beaconUrl)
+		chainstate, err := beaconClient.GetBeaconState(*slotToTest)
 		if err != nil {
 			log.WithFields(log.Fields{
 				"err": err,
@@ -92,7 +92,6 @@ func main() {
 			return
 		}
 		os.WriteFile("state.json", statedata, 0644)
-
 	}
 	chainValidators, err := state.Validators()
 	if err != nil {
@@ -122,21 +121,16 @@ func main() {
 	curSlot, _ := state.Slot()
 	epoch := curSlot / 32
 
-	proposerDuty, err := beaconClient.GetEpochProposerDuties(int(epoch))
-	if err != nil {
-		log.WithFields(log.Fields{
-			"epoch": epoch,
-			"err":   err,
-		}).Fatal("failed to get proposer duties")
-		return
-	}
+	proposerDuty := GenerateRandomDuty(validatorSortedIndex, int(epoch))
+
 	type TestSetting struct {
 		attackCount int
 		testCount   int
 	}
 	var testSet = []TestSetting{
-		{10, 50},
-		{20, 50},
+		{10, 10},
+		{15, 10},
+		{20, 10},
 	}
 	for _, setting := range testSet {
 		attackDutiesCount := setting.attackCount
@@ -160,9 +154,8 @@ func main() {
 				durations := make([]time.Duration, 0, testCount)
 				successes := 0
 				for i := 0; i < testCount; i++ {
-					cState, _ := disguisedRandao.InitMoState(*state)
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyOneOrderSync(allRandaoReveal, cState, uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
+					_, err := ComputeBestMaskDutyOneOrderSync(allRandaoReveal, mostate.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyOneOrderSync failed")
@@ -194,9 +187,8 @@ func main() {
 				successes := 0
 
 				for i := 0; i < testCount; i++ {
-					cState, _ := disguisedRandao.InitMoState(*state)
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandaoReveal, cState, uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
+					_, err := ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandaoReveal, mostate.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyOneOrderMultiProcess failed")
@@ -226,10 +218,9 @@ func main() {
 				// run ComputeBestMaskDutyFullTime testCount times and record durations
 				durations := make([]time.Duration, 0, testCount)
 				successes := 0
-				for i := 0; i < testCount/10; i++ {
-					cState, _ := disguisedRandao.InitMoState(*state)
+				for i := 0; i < 1; i++ {
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyFullTime(seed, allRandaoReveal, cState, uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder)
+					_, err := ComputeBestMaskDutyFullTime(seed, allRandaoReveal, mostate.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder)
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyFullTime failed")
@@ -363,6 +354,7 @@ type proposerTask struct {
 	validatorList []*phase0.Validator
 	activeIndices []primitives.ValidatorIndex
 	idx           int
+	slot          uint64
 	resCh         chan proposerResult
 }
 
@@ -394,6 +386,12 @@ func (p *ProposerWorkerPool) worker() {
 	for {
 		select {
 		case t := <-p.tasks:
+			// compute seedWithSlot
+			seedWithSlot := append(t.seed[:], bytesutil.Bytes8(uint64(t.slot)+uint64(t.idx))...)
+			// compute hash of seedWithSlot deterministically
+			var seedHash [32]byte
+			h := sha256.Sum256(seedWithSlot)
+			copy(seedHash[:], h[:])
 			index, err := ComputeProposerIndex(t.validatorList, t.activeIndices, t.seed)
 			// send result back (non-blocking in case caller gave buffer)
 			t.resCh <- proposerResult{idx: t.idx, index: index, err: err}
@@ -417,6 +415,7 @@ func ensureProposerPool() {
 		if wc <= 0 {
 			wc = 4
 		}
+		log.WithField("worker count", wc).Info("Initializing proposer worker pool")
 		proposerPool = NewProposerWorkerPool(wc)
 	})
 }
@@ -448,7 +447,7 @@ func ComputeBestMaskDutyOneOrderMultiProcess(seed [32]byte, allRandao map[string
 		}).Debug("liveness attack strategy processed all randao reveals")
 
 		// epoch process.
-		_, _, err := PrecomputeProposerIndicesMultiProcess(seed, cState, allIndices, primitives.Epoch(next2Epoch))
+		_, _, err := PrecomputeProposerIndicesMultiProcess(seed, cState.ValidatorList(), allIndices, primitives.Epoch(next2Epoch))
 		if err != nil {
 			log.WithFields(log.Fields{
 				"current": currentEpoch,
@@ -469,7 +468,7 @@ func ComputeBestMaskDutyFullTime(seed [32]byte, allRandao map[string][]byte, cSt
 	t1 := time.Now()
 	for _, order := range fullOrder {
 		//_, err := ComputeBestMaskDutyOneOrderSync(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order); err != nil {
-		ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order)
+		ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandao, cState, uint64(slot), int64(epoch), currentDuty, validatorList, order)
 	}
 
 	t2 := time.Now()
@@ -518,7 +517,7 @@ func PrecomputeProposerIndicesSync(state *disguisedRandao.MoState, activeIndices
 	return seed[:], proposerIndices, nil
 }
 
-func PrecomputeProposerIndicesMultiProcess(seed [32]byte, state *disguisedRandao.MoState, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]byte, []primitives.ValidatorIndex, error) {
+func PrecomputeProposerIndicesMultiProcess(seed [32]byte, validators []*phase0.Validator, activeIndices []primitives.ValidatorIndex, e primitives.Epoch) ([]byte, []primitives.ValidatorIndex, error) {
 	proposerIndices := make([]primitives.ValidatorIndex, 32)
 	slot := e * 32
 
@@ -526,20 +525,14 @@ func PrecomputeProposerIndicesMultiProcess(seed [32]byte, state *disguisedRandao
 	ensureProposerPool()
 
 	resCh := make(chan proposerResult, 32)
-
 	// submit tasks to the pool
 	for i := uint64(0); i < uint64(32); i++ {
 		ii := i
-		// compute seedWithSlot
-		seedWithSlot := append(seed[:], bytesutil.Bytes8(uint64(slot)+ii)...)
-		// compute hash of seedWithSlot deterministically
-		var seedHash [32]byte
-		h := sha256.Sum256(seedWithSlot)
-		copy(seedHash[:], h[:])
 
 		task := proposerTask{
-			seed:          seedHash,
-			validatorList: state.ValidatorList(),
+			seed:          seed,
+			slot:          uint64(slot),
+			validatorList: validators,
 			activeIndices: activeIndices,
 			idx:           int(ii),
 			resCh:         resCh,
@@ -627,4 +620,19 @@ func RandomAttackerDuties(r *rand.Rand, arr []types.ProposerDuty, k int) []types
 		}
 	}
 	return result
+}
+
+func GenerateRandomDuty(validators []ValidatorInfo, epoch int) []types.ProposerDuty {
+	startSlot := epoch * 32
+	randomSeq := GetRandomUniqueNumbers()
+	duties := make([]types.ProposerDuty, 0)
+	for i, idx := range randomSeq {
+		duty := types.ProposerDuty{
+			ValidatorIndex: strconv.Itoa(idx),
+			Slot:           strconv.Itoa(startSlot + i),
+			Pubkey:         validators[idx].PubKey,
+		}
+		duties = append(duties, duty)
+	}
+	return duties
 }
