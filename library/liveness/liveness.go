@@ -346,7 +346,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 	var bestMaskInfo = BestMaskDutyInfo{}
 	{
 		// first compute a maskInfo when don't mask any slot.
-		cState := mostate.Clone()
+		cState := mostate.Reset()
 		for i := 0; i < len(allAttackerDuties); i++ {
 			duty := allAttackerDuties[i]
 			// if current duty is earlier than current slot, skip it.
@@ -418,7 +418,7 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 		}
 		t2 := time.Now()
 
-		cState := mostate.Clone()
+		cState := mostate.Reset()
 		for i := 0; i < len(allAttackerDuties); i++ {
 			duty := allAttackerDuties[i]
 			// if current duty is earlier than current slot, skip it.

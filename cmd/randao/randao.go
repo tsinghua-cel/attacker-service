@@ -28,12 +28,11 @@ import (
 )
 
 var (
-	beaconUrl            = flag.String("beacon-url", "", "Beacon URL")
-	stateFile            = flag.String("state", "", "State file")
-	validatorList        = flag.String("validator-list", "", "Validator list file path")
-	slotToTest           = flag.String("slot", "161", "Slot to test")
-	testCase             = flag.Int("case", 1, "Test case number(1,2,3")
-	fullTimeRoutineCount = flag.Int("routine", 32, "Routine count that calculate full time used")
+	beaconUrl     = flag.String("beacon-url", "", "Beacon URL")
+	stateFile     = flag.String("state", "", "State file")
+	validatorList = flag.String("validator-list", "", "Validator list file path")
+	slotToTest    = flag.String("slot", "161", "Slot to test")
+	testCase      = flag.Int("case", 1, "Test case number(1,2,3")
 )
 
 var (
@@ -42,6 +41,10 @@ var (
 
 func main() {
 	flag.Parse()
+	log.SetFormatter(&log.TextFormatter{
+		FullTimestamp:   true,
+		TimestampFormat: "2006-01-02 15:04:05.000",
+	})
 	// get all validators from json.
 	validators, err := getValidatorListFromFile(*validatorList)
 	if err != nil {
@@ -93,6 +96,8 @@ func main() {
 		}
 		os.WriteFile("state.json", statedata, 0644)
 	}
+	common.InitSlotTool(12, 32, GetGenesisTime(state))
+
 	chainValidators, err := state.Validators()
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -100,6 +105,7 @@ func main() {
 		}).Fatal("failed to get validators from beacon state")
 		return
 	}
+
 	validatorSortedIndex := make([]ValidatorInfo, len(chainValidators))
 	for index, v := range chainValidators {
 		pubkey := v.PublicKey.String()
@@ -118,6 +124,7 @@ func main() {
 		}).Error("failed to init mo state")
 		return
 	}
+	mostate.Dump()
 	curSlot, _ := state.Slot()
 	epoch := curSlot / 32
 
@@ -135,8 +142,11 @@ func main() {
 	for _, setting := range testSet {
 		attackDutiesCount := setting.attackCount
 		testCount := setting.testCount
+		fullOrder := GetAllBinarySequences(attackDutiesCount)
+		targetEpoch := primitives.Epoch(epoch + 2)
 		attackDuties := RandomAttackerDuties(rand.New(rand.NewSource(time.Now().UnixNano())), proposerDuty, attackDutiesCount)
-		seed, _ := disguisedRandao.Seed(mostate, primitives.Epoch(epoch+2), disguisedRandao.DomainBeaconProposer)
+
+		seed, _ := disguisedRandao.Seed(mostate, targetEpoch, disguisedRandao.DomainBeaconProposer)
 		t1 := time.Now()
 		allRandaoReveal, _ := GetAllRandaoReveal(mostate, int64(epoch), attackDuties, validatorSortedIndex)
 		t2 := time.Now()
@@ -144,7 +154,6 @@ func main() {
 			"cost":         t2.Sub(t1).String(),
 			"attack_count": attackDutiesCount,
 		}).Info("get all randao reveal for attacker duties")
-		fullOrder := GetAllBinarySequences(attackDutiesCount)
 
 		log.Println("full order count ", len(fullOrder))
 		switch *testCase {
@@ -468,7 +477,7 @@ func ComputeBestMaskDutyFullTime(seed [32]byte, allRandao map[string][]byte, cSt
 	t1 := time.Now()
 	for _, order := range fullOrder {
 		//_, err := ComputeBestMaskDutyOneOrderSync(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order); err != nil {
-		ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandao, cState, uint64(slot), int64(epoch), currentDuty, validatorList, order)
+		ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandao, cState.Reset(), uint64(slot), int64(epoch), currentDuty, validatorList, order)
 	}
 
 	t2 := time.Now()
@@ -635,4 +644,23 @@ func GenerateRandomDuty(validators []ValidatorInfo, epoch int) []types.ProposerD
 		duties = append(duties, duty)
 	}
 	return duties
+}
+
+func GetGenesisTime(state *spec.VersionedBeaconState) int64 {
+	if state.Phase0 != nil {
+		return int64(state.Phase0.GenesisTime)
+	}
+	if state.Altair != nil {
+		return int64(state.Altair.GenesisTime)
+	}
+	if state.Bellatrix != nil {
+		return int64(state.Bellatrix.GenesisTime)
+	}
+	if state.Capella != nil {
+		return int64(state.Capella.GenesisTime)
+	}
+	if state.Deneb != nil {
+		return int64(state.Deneb.GenesisTime)
+	}
+	return 0
 }

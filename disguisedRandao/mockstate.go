@@ -9,8 +9,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/helpers"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/core/signing"
-	state_native "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native"
-	customtypes "github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/custom-types"
 	"github.com/prysmaticlabs/prysm/v5/beacon-chain/state/state-native/types"
 	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	multi_value_slice "github.com/prysmaticlabs/prysm/v5/container/multi-value-slice"
@@ -42,10 +40,12 @@ type MoState struct {
 	slot                  primitives.Slot
 	fork                  *phase0.Fork
 	validators            []*phase0.Validator
-	randaoMixesMultiValue *state_native.MultiValueRandaoMixes
-	bakRandaoMixs         []*state_native.MultiValueRandaoMixes
-	bakidx                int
-	originRandaoMix       [][]byte
+	historyRanDaoMix      map[primitives.Epoch]phase0.Root
+	bakHistoryRanDaoMix   map[primitives.Epoch]phase0.Root
+	curAheadEpoch         primitives.Epoch
+	curEpoch              primitives.Epoch
+	targetAheadEpoch      primitives.Epoch
+	targetEpoch           primitives.Epoch
 }
 
 func (b *MoState) Id() multi_value_slice.Id {
@@ -61,20 +61,37 @@ func InitMoState(beaconState spec.VersionedBeaconState) (*MoState, error) {
 		genesisValidatorsRoot: state.GenesisValidatorsRoot,
 		slot:                  primitives.Slot(state.Slot),
 		fork:                  state.Fork,
+		historyRanDaoMix:      make(map[primitives.Epoch]phase0.Root),
+		bakHistoryRanDaoMix:   make(map[primitives.Epoch]phase0.Root),
+		curEpoch:              primitives.Epoch(common.SlotToEpoch(int64(state.Slot))),
+		targetEpoch:           primitives.Epoch(common.SlotToEpoch(int64(state.Slot))) + 2,
 	}
-	moState.originRandaoMix = make([][]byte, len(state.RANDAOMixes))
-	for i, mix := range state.RANDAOMixes {
-		moState.originRandaoMix[i] = make([]byte, 32)
-		copy(moState.originRandaoMix[i], mix[:])
-	}
-	moState.randaoMixesMultiValue = state_native.NewMultiValueRandaoMixes(moState.originRandaoMix)
+	//randaoMixValues := make([][]byte, len(state.RANDAOMixes))
+	//for i, mix := range state.RANDAOMixes {
+	//	randaoMixValues[i] = make([]byte, 32)
+	//	copy(randaoMixValues[i], mix[:])
+	//}
+	//historyRandaoMixValues := state_native.NewMultiValueRandaoMixes(randaoMixValues)
+	curAheadEpoch := moState.curEpoch + EpochsPerHistoricalVector -
+		MinSeedLookahead - 1
 
-	var baklength = 1000
-	moState.bakRandaoMixs = make([]*state_native.MultiValueRandaoMixes, baklength)
-	for i := 0; i < baklength; i++ {
-		moState.bakRandaoMixs[i] = state_native.NewMultiValueRandaoMixes(moState.originRandaoMix)
-	}
-	moState.bakidx = 0
+	moState.curAheadEpoch = curAheadEpoch
+
+	targetAheadEpoch := moState.targetEpoch + EpochsPerHistoricalVector -
+		MinSeedLookahead - 1
+	moState.targetAheadEpoch = targetAheadEpoch
+
+	moState.historyRanDaoMix[moState.curAheadEpoch] = state.RANDAOMixes[targetAheadEpoch%EpochsPerHistoricalVector]
+	moState.bakHistoryRanDaoMix[moState.curAheadEpoch] = state.RANDAOMixes[targetAheadEpoch%EpochsPerHistoricalVector]
+
+	moState.historyRanDaoMix[moState.targetAheadEpoch] = state.RANDAOMixes[targetAheadEpoch%EpochsPerHistoricalVector]
+	moState.bakHistoryRanDaoMix[moState.targetAheadEpoch] = state.RANDAOMixes[targetAheadEpoch%EpochsPerHistoricalVector]
+
+	moState.historyRanDaoMix[moState.curEpoch] = state.RANDAOMixes[moState.curEpoch%EpochsPerHistoricalVector]
+	moState.bakHistoryRanDaoMix[moState.curEpoch] = state.RANDAOMixes[moState.curEpoch%EpochsPerHistoricalVector]
+
+	moState.historyRanDaoMix[moState.targetEpoch] = state.RANDAOMixes[moState.targetEpoch%EpochsPerHistoricalVector]
+	moState.bakHistoryRanDaoMix[moState.targetEpoch] = state.RANDAOMixes[moState.targetEpoch%EpochsPerHistoricalVector]
 
 	moState.validators = make([]*phase0.Validator, len(state.Validators))
 	for i, v := range state.Validators {
@@ -88,97 +105,42 @@ func InitMoState(beaconState spec.VersionedBeaconState) (*MoState, error) {
 	return moState, nil
 }
 
-func (b *MoState) Reset() *MoState {
-	b.lock.Lock()
-	idx := b.bakidx
-	b.bakidx += 1
-	b.lock.Unlock()
-	b.randaoMixesMultiValue = b.bakRandaoMixs[idx%len(b.bakRandaoMixs)]
-	go func() {
-		b.bakRandaoMixs[idx%len(b.bakRandaoMixs)] = state_native.NewMultiValueRandaoMixes(b.originRandaoMix)
-	}()
-	return b
+func (b *MoState) Dump() {
+	log.WithFields(log.Fields{
+		"slot":        b.slot,
+		"curEpoch":    b.curEpoch,
+		"targetEpoch": b.targetEpoch,
+		"curAhead":    b.curAheadEpoch,
+		"targetAhead": b.targetAheadEpoch,
+		"randaoMixes": b.historyRanDaoMix,
+	}).Info("MoState Dump")
+}
 
+func (b *MoState) Reset() *MoState {
+	for k, v := range b.bakHistoryRanDaoMix {
+		b.historyRanDaoMix[k] = v
+	}
+	return b
 }
 
 // UpdateRandaoMixesAtIndex for the beacon state. Updates the randao mixes
 // at a specific index to a new value.
-func (b *MoState) UpdateRandaoMixesAtIndex(idx uint64, val [32]byte) error {
-	if err := b.randaoMixesMultiValue.UpdateAt(b, idx, val); err != nil {
-		return errors.Wrap(err, "could not update randao mixes")
+func (b *MoState) UpdateRandaoMixesAtIndex(epoch primitives.Epoch, val [32]byte) error {
+	if _, exist := b.historyRanDaoMix[epoch]; !exist {
+		return fmt.Errorf("randao mixes for epoch %d do not exist, current mixes: %+v", epoch, b.historyRanDaoMix)
 	}
-
+	b.historyRanDaoMix[epoch] = val
 	return nil
-}
-
-// RandaoMixes of block proposers on the beacon chain.
-func (b *MoState) RandaoMixes() [][]byte {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	mixes := b.randaoMixesVal()
-	if mixes == nil {
-		return nil
-	}
-	return mixes.Slice()
-}
-
-func (b *MoState) randaoMixesVal() customtypes.RandaoMixes {
-	{
-		if b.randaoMixesMultiValue == nil {
-			return nil
-		}
-		return b.randaoMixesMultiValue.Value(b)
-	}
 }
 
 // RandaoMixAtIndex retrieves a specific block root based on an
 // input index value.
-func (b *MoState) RandaoMixAtIndex(idx uint64) ([]byte, error) {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	{
-		if b.randaoMixesMultiValue == nil {
-			return nil, nil
-		}
-		r, err := b.randaoMixesMultiValue.At(b, idx)
-		if err != nil {
-			return nil, err
-		}
-		return r[:], nil
+func (b *MoState) RandaoMixAtIndex(epoch primitives.Epoch) ([]byte, error) {
+	if v, exist := b.historyRanDaoMix[epoch]; !exist {
+		return nil, fmt.Errorf("randao mixes for epoch %d do not exist, current mixes: %+v", epoch, b.historyRanDaoMix)
+	} else {
+		return v[:], nil
 	}
-}
-
-// RandaoMixesLength returns the length of the randao mixes slice.
-func (b *MoState) RandaoMixesLength() int {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	{
-		if b.randaoMixesMultiValue == nil {
-			return 0
-		}
-		return b.randaoMixesMultiValue.Len(b)
-	}
-}
-
-func (b *MoState) Clone() *MoState {
-	b.lock.RLock()
-	defer b.lock.RUnlock()
-
-	clone := &MoState{
-		id:                    b.id,
-		version:               b.version,
-		genesisTime:           b.genesisTime,
-		genesisValidatorsRoot: b.genesisValidatorsRoot,
-		slot:                  b.slot,
-		fork:                  b.fork,
-		validators:            make([]*phase0.Validator, len(b.validators)),
-		randaoMixesMultiValue: state_native.NewMultiValueRandaoMixes(b.RandaoMixes()),
-	}
-	copy(clone.validators, b.validators)
-	return clone
 }
 
 // PrecomputeProposerIndices computes proposer indices of the current epoch and returns a list of proposer indices,
@@ -288,7 +250,7 @@ func Seed(b *MoState, epoch primitives.Epoch, domain [bls.DomainByteLength]byte)
 }
 
 func RandaoMix(b *MoState, epoch primitives.Epoch) ([]byte, error) {
-	return b.RandaoMixAtIndex(uint64(epoch % EpochsPerHistoricalVector))
+	return b.RandaoMixAtIndex(epoch)
 }
 
 func GenValidatorIndices(from, to int) []primitives.ValidatorIndex {
@@ -363,8 +325,7 @@ func ProcessRandaoNoVerify(
 ) error {
 	// If block randao passed verification, we XOR the state's latest randao mix with the block's
 	// randao and update the state's corresponding latest randao mix value.
-	latestMixesLength := EpochsPerHistoricalVector
-	latestMixSlice, err := beaconState.RandaoMixAtIndex(uint64(currentEpoch % latestMixesLength))
+	latestMixSlice, err := beaconState.RandaoMixAtIndex(currentEpoch)
 	if err != nil {
 		return err
 	}
@@ -375,7 +336,7 @@ func ProcessRandaoNoVerify(
 	for i, x := range blockRandaoReveal {
 		latestMixSlice[i] ^= x
 	}
-	if err := beaconState.UpdateRandaoMixesAtIndex(uint64(currentEpoch%latestMixesLength), [32]byte(latestMixSlice)); err != nil {
+	if err := beaconState.UpdateRandaoMixesAtIndex(currentEpoch, [32]byte(latestMixSlice)); err != nil {
 		return err
 	}
 	//log.WithFields(log.Fields{
