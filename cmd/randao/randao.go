@@ -135,9 +135,9 @@ func main() {
 		testCount   int
 	}
 	var testSet = []TestSetting{
-		{10, 10},
-		{15, 10},
-		{20, 10},
+		{10, 20},
+		{15, 20},
+		{20, 20},
 	}
 	for _, setting := range testSet {
 		attackDutiesCount := setting.attackCount
@@ -146,9 +146,10 @@ func main() {
 		targetEpoch := primitives.Epoch(epoch + 2)
 		attackDuties := RandomAttackerDuties(rand.New(rand.NewSource(time.Now().UnixNano())), proposerDuty, attackDutiesCount)
 
-		seed, _ := disguisedRandao.Seed(mostate, targetEpoch, disguisedRandao.DomainBeaconProposer)
+		cState := mostate.Reset()
+		seed, _ := disguisedRandao.Seed(cState, targetEpoch, disguisedRandao.DomainBeaconProposer)
 		t1 := time.Now()
-		allRandaoReveal, _ := GetAllRandaoReveal(mostate, int64(epoch), attackDuties, validatorSortedIndex)
+		allRandaoReveal, _ := GetAllRandaoReveal(cState, int64(epoch), attackDuties, validatorSortedIndex)
 		t2 := time.Now()
 		log.WithFields(log.Fields{
 			"cost":         t2.Sub(t1).String(),
@@ -164,7 +165,7 @@ func main() {
 				successes := 0
 				for i := 0; i < testCount; i++ {
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyOneOrderSync(allRandaoReveal, mostate.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
+					_, err := ComputeBestMaskDutyOneOrderSync(allRandaoReveal, cState.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyOneOrderSync failed")
@@ -197,7 +198,7 @@ func main() {
 
 				for i := 0; i < testCount; i++ {
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandaoReveal, mostate.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
+					_, err := ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandaoReveal, cState.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder[0])
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyOneOrderMultiProcess failed")
@@ -227,9 +228,9 @@ func main() {
 				// run ComputeBestMaskDutyFullTime testCount times and record durations
 				durations := make([]time.Duration, 0, testCount)
 				successes := 0
-				for i := 0; i < 1; i++ {
+				for i := 0; i < testCount/20; i++ {
 					tStart := time.Now()
-					_, err := ComputeBestMaskDutyFullTime(seed, allRandaoReveal, mostate.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder)
+					_, err := ComputeBestMaskDutyFullTime(seed, allRandaoReveal, cState.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder)
 					elapsed := time.Since(tStart)
 					if err != nil {
 						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyFullTime failed")
@@ -476,7 +477,6 @@ func ComputeBestMaskDutyOneOrderMultiProcess(seed [32]byte, allRandao map[string
 func ComputeBestMaskDutyFullTime(seed [32]byte, allRandao map[string][]byte, cState *disguisedRandao.MoState, slot uint64, epoch int64, currentDuty []types.ProposerDuty, validatorList []ValidatorInfo, fullOrder [][]int) (types.ProposerDuty, error) {
 	t1 := time.Now()
 	for _, order := range fullOrder {
-		//_, err := ComputeBestMaskDutyOneOrderSync(allRandao, cState.Clone(), uint64(slot), int64(epoch), currentDuty, validatorList, order); err != nil {
 		ComputeBestMaskDutyOneOrderMultiProcess(seed, allRandao, cState.Reset(), uint64(slot), int64(epoch), currentDuty, validatorList, order)
 	}
 
