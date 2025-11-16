@@ -1,0 +1,492 @@
+version: "3.8"
+
+services:
+  ethmysql:
+    image: "mysql:latest"
+    environment:
+      - MYSQL_ROOT_PASSWORD=12345678
+    deploy:
+      restart_policy:
+        condition: any
+      placement:
+        constraints:
+          - node.labels.role == mysql
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ${BASEDIR}./data/mysql/data:/var/lib/mysql
+      - ${BASEDIR}./v5/config/mysql/conf/my.cnf:/etc/my.cnf
+      - ${BASEDIR}./v5/config/mysql/init:/docker-entrypoint-initdb.d/
+    networks:
+      - meta
+
+  execute1:
+    image: tscel/geth:v1.13-base-v5
+    entrypoint: /usr/local/bin/execution.sh
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 1
+    volumes:
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/execute1:/root/gethdata
+      - ${BASEDIR}./entrypoint/execute.sh:/usr/local/bin/execution.sh
+    networks:
+      - meta
+
+  execute2:
+    image: tscel/geth:v1.13-base-v5
+    entrypoint: /usr/local/bin/execution.sh
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 2
+    volumes:
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/execute2:/root/gethdata
+      - ${BASEDIR}./entrypoint/execute.sh:/usr/local/bin/execution.sh
+    networks:
+      - meta
+
+  execute3:
+    image: tscel/geth:v1.13-base-v5
+    entrypoint: /usr/local/bin/execution.sh
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 3
+    volumes:
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/execute3:/root/gethdata
+      - ${BASEDIR}./entrypoint/execute.sh:/usr/local/bin/execution.sh
+    networks:
+      - meta
+
+  execute4:
+    image: tscel/geth:v1.13-base-v5
+    entrypoint: /usr/local/bin/execution.sh
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 4
+    volumes:
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/execute4:/root/gethdata
+      - ${BASEDIR}./entrypoint/execute.sh:/usr/local/bin/execution.sh
+    networks:
+      - meta
+
+  execute5:
+    image: tscel/geth:v1.13-base-v5
+    entrypoint: /usr/local/bin/execution.sh
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 5
+    volumes:
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/execute5:/root/gethdata
+      - ${BASEDIR}./entrypoint/execute.sh:/usr/local/bin/execution.sh
+    networks:
+      - meta
+
+  attacker1:
+    image: tscel/bunnyfinder:latest
+    entrypoint: attacker --config /root/config.toml --strategy ext_withholding --max-hack-idx 85 --logpath /root/attackerdata/d.log --loglevel info
+    environment:
+      - NAME=attacker1
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 1
+    volumes:
+      - ${BASEDIR}./v5/config/attacker-config.toml:/root/config.toml
+      - ${BASEDIR}./v5/config/strategy-empty.json:/root/strategy.json
+      - ${BASEDIR}./data/attacker1:/root/attackerdata
+    networks:
+      - meta
+
+  attacker2:
+    image: tscel/bunnyfinder:latest
+    entrypoint: attacker --config /root/config.toml --strategy ext_withholding --max-hack-idx 85 --logpath /root/attackerdata/d.log --loglevel info
+    environment:
+      - NAME=attacker2
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 2
+    volumes:
+      - ${BASEDIR}./v5/config/attacker-config.toml:/root/config.toml
+      - ${BASEDIR}./v5/config/strategy-empty.json:/root/strategy.json
+      - ${BASEDIR}./data/attacker2:/root/attackerdata
+    networks:
+      - meta
+
+  attacker3:
+    image: tscel/bunnyfinder:latest
+    entrypoint: attacker --config /root/config.toml --strategy ext_withholding --max-hack-idx 85 --logpath /root/attackerdata/d.log --loglevel info
+    environment:
+      - NAME=attacker3
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 3
+    volumes:
+      - ${BASEDIR}./v5/config/attacker-config.toml:/root/config.toml
+      - ${BASEDIR}./v5/config/strategy-empty.json:/root/strategy.json
+      - ${BASEDIR}./data/attacker3:/root/attackerdata
+    networks:
+      - meta
+
+  attacker4:
+    image: tscel/bunnyfinder:latest
+    entrypoint: attacker --config /root/config.toml --strategy ext_withholding --max-hack-idx 85 --logpath /root/attackerdata/d.log --loglevel info
+    environment:
+      - NAME=attacker4
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 4
+    volumes:
+      - ${BASEDIR}./v5/config/attacker-config.toml:/root/config.toml
+      - ${BASEDIR}./v5/config/strategy-empty.json:/root/strategy.json
+      - ${BASEDIR}./data/attacker4:/root/attackerdata
+    networks:
+      - meta
+
+  attacker5:
+    image: tscel/bunnyfinder:latest
+    entrypoint: attacker --config /root/config.toml --strategy ext_withholding --max-hack-idx 85 --logpath /root/attackerdata/d.log --loglevel info
+    environment:
+      - NAME=attacker5
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 5
+    volumes:
+      - ${BASEDIR}./v5/config/attacker-config.toml:/root/config.toml
+      - ${BASEDIR}./v5/config/strategy-empty.json:/root/strategy.json
+      - ${BASEDIR}./data/attacker5:/root/attackerdata
+    networks:
+      - meta
+
+  beacon1:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/beacon-node.sh
+    environment:
+      - PEER_SERVICES=beacon2,beacon3,beacon4,beacon5
+      - EXECUTE=execute1
+      - MAXPEERS=70
+      - P2PKEY=0692f57d5ddf34d0f2649d968bf82e2dda69d1f435a7f3a7a26d81a1a11e687b
+      - ATTACKER_SERVICE_URL=http://attacker1:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 1
+    volumes:
+      - ${BASEDIR}./guide/entrypoint/beacon.sh:/usr/local/bin/beacon-node.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/beacon1:/root/beacondata
+    depends_on:
+      - execute1
+    networks:
+      - meta
+
+  beacon2:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/beacon-node.sh
+    environment:
+      - PEER_SERVICES=beacon1,beacon3,beacon4,beacon5
+      - EXECUTE=execute2
+      - MAXPEERS=70
+      - P2PKEY=9edcc99209261dfca0d5b79cd1ff43e2e30005c629337d921711bb77fa816dd3
+      - ATTACKER_SERVICE_URL=http://attacker2:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 2
+    volumes:
+      - ${BASEDIR}./guide/entrypoint/beacon.sh:/usr/local/bin/beacon-node.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/beacon2:/root/beacondata
+    depends_on:
+      - execute2
+    networks:
+      - meta
+
+  beacon3:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/beacon-node.sh
+    environment:
+      - PEER_SERVICES=beacon1,beacon2,beacon4,beacon5
+      - EXECUTE=execute3
+      - MAXPEERS=70
+      - P2PKEY=9513c7244d2983d47b54df161a3fc981b946944d7c2bba338588e0ab7dc40777
+      - ATTACKER_SERVICE_URL=http://attacker3:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 3
+    volumes:
+      - ${BASEDIR}./guide/entrypoint/beacon.sh:/usr/local/bin/beacon-node.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/beacon3:/root/beacondata
+    depends_on:
+      - execute3
+    networks:
+      - meta
+
+  beacon4:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/beacon-node.sh
+    environment:
+      - PEER_SERVICES=beacon1,beacon2,beacon3,beacon5
+      - EXECUTE=execute4
+      - MAXPEERS=70
+      - P2PKEY=c118a256c6aa383b0d02a6ac25139566bc042c837f248e71aa38fcd961dac8aa
+      - ATTACKER_SERVICE_URL=http://attacker4:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 4
+    volumes:
+      - ${BASEDIR}./guide/entrypoint/beacon.sh:/usr/local/bin/beacon-node.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/beacon4:/root/beacondata
+    depends_on:
+      - execute4
+    networks:
+      - meta
+
+  beacon5:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/beacon-node.sh
+    environment:
+      - PEER_SERVICES=beacon1,beacon2,beacon3,beacon4
+      - EXECUTE=execute5
+      - MAXPEERS=70
+      - P2PKEY=f01cd004ad47970f7ca62dadb1921a173c9686cf11e963c04d8a81f36322fd9f
+      - ATTACKER_SERVICE_URL=http://attacker5:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 5
+    volumes:
+      - ${BASEDIR}./guide/entrypoint/beacon.sh:/usr/local/bin/beacon-node.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/beacon5:/root/beacondata
+    depends_on:
+      - execute5
+    networks:
+      - meta
+
+  validator1:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/validator.sh
+    environment:
+      - VALIDATORS_NUM=86
+      - VALIDATORS_INDEX=0
+      - BEACONRPC=beacon1:4000
+      - ATTACKER_SERVICE_URL=http://attacker1:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 1
+    volumes:
+      - ${BASEDIR}./entrypoint/validator.sh:/usr/local/bin/validator.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/validator1:/root/validatordata
+    depends_on:
+      - beacon1
+    networks:
+      - meta
+
+  validator2:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/validator.sh
+    environment:
+      - VALIDATORS_NUM=50
+      - VALIDATORS_INDEX=86
+      - BEACONRPC=beacon2:4000
+      - ATTACKER_SERVICE_URL=http://attacker2:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 2
+    volumes:
+      - ${BASEDIR}./entrypoint/validator.sh:/usr/local/bin/validator.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/validator2:/root/validatordata
+    depends_on:
+      - beacon2
+    networks:
+      - meta
+
+  validator3:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/validator.sh
+    environment:
+      - VALIDATORS_NUM=51
+      - VALIDATORS_INDEX=136
+      - BEACONRPC=beacon3:4000
+      - ATTACKER_SERVICE_URL=http://attacker3:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 3
+    volumes:
+      - ${BASEDIR}./entrypoint/validator.sh:/usr/local/bin/validator.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/validator3:/root/validatordata
+    depends_on:
+      - beacon3
+    networks:
+      - meta
+
+  validator4:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/validator.sh
+    environment:
+      - VALIDATORS_NUM=51
+      - VALIDATORS_INDEX=187
+      - BEACONRPC=beacon4:4000
+      - ATTACKER_SERVICE_URL=http://attacker4:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 4
+    volumes:
+      - ${BASEDIR}./entrypoint/validator.sh:/usr/local/bin/validator.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/validator4:/root/validatordata
+    depends_on:
+      - beacon4
+    networks:
+      - meta
+
+  validator5:
+    image: tscel/bf.prysm:v5.2.0
+    entrypoint: /usr/local/bin/validator.sh
+    environment:
+      - VALIDATORS_NUM=18
+      - VALIDATORS_INDEX=238
+      - BEACONRPC=beacon5:4000
+      - ATTACKER_SERVICE_URL=http://attacker5:10000
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 1s
+        max_attempts: 100
+        window: 120s
+      placement:
+        constraints:
+          - node.labels.service-set == 5
+    volumes:
+      - ${BASEDIR}./entrypoint/validator.sh:/usr/local/bin/validator.sh
+      - ${BASEDIR}./v5/config:/root/config
+      - ${BASEDIR}./data/validator5:/root/validatordata
+    depends_on:
+      - beacon5
+    networks:
+      - meta
+
+networks:
+  meta:
+    driver: overlay
+    ipam:
+      config:
+        - subnet: 172.86.1.0/24
