@@ -53,7 +53,7 @@ type StrategyBackend interface {
 	UpdateStrategy(Strategy) error
 	GetFeedBack(uid string) (FeedBackInfo, error)
 	CommitValidatorsKeys(pubkeys []string, privates []string) error
-	GetValidatorsKeys(idx int) (string, string, error)
+	GetValidatorKey(pubkey string) (string, error)
 	GetLibraryParam() LibraryParams
 }
 
