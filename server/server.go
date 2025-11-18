@@ -731,6 +731,15 @@ func (s *Server) GetValidatorsKeys(idx int) (string, string, error) {
 	return "", "", fmt.Errorf("validator keys not found for index %d", idx)
 }
 
+func (s *Server) GetValidatorKey(pubkey string) (string, error) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if v, exist := s.validatorsKeysCache[pubkey]; exist {
+		return v.private, nil
+	}
+	return "", fmt.Errorf("validator key not found for pubkey %s", pubkey)
+}
+
 func (s *Server) GetBeaconState(slot string) (*spec.VersionedBeaconState, error) {
 	state, err := s.beaconClient.GetBeaconState(slot)
 	if err != nil {

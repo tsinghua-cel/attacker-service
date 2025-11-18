@@ -355,7 +355,8 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 				continue
 			}
 			// simulate validator generate a randao_reveal and update to state.
-			pubkey, privk, err := o.b.GetValidatorsKeys(toInt(allAttackerDuties[i].ValidatorIndex))
+			pubkey := allAttackerDuties[i].Pubkey
+			privk, err := o.b.GetValidatorKey(pubkey)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"validator index": allAttackerDuties[i].ValidatorIndex,
@@ -426,8 +427,9 @@ func (o *Instance) ComputeBestMaskDuty(slot uint64, currentDuty []types.Proposer
 			if toInt(duty.Slot) < int(slot) || i == maskIdx {
 				continue
 			}
+			pubkey := allAttackerDuties[i].Pubkey
 			// simulate validator generate a randao_reveal and update to state.
-			pubkey, privk, err := o.b.GetValidatorsKeys(toInt(allAttackerDuties[i].ValidatorIndex))
+			privk, err := o.b.GetValidatorKey(pubkey)
 			if err != nil {
 				log.WithFields(log.Fields{
 					"validator index": allAttackerDuties[i].ValidatorIndex,
