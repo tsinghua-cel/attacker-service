@@ -67,7 +67,8 @@ func calcTargetTime(slot int, targetSlot int64) int64 {
 		}
 	}
 	slotOffset = offsetCache[targetSlot][int64(slot)]
-	return common.TimeToSlot(targetSlot)*1000 - 5*1000 + 100*int64(slotOffset)
+	begin := common.TimeToSlot(targetSlot+1)*1000 - 8*1000
+	return begin - 5*1000 + 100*int64(slotOffset)
 }
 
 func genSimpleStrategy(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
