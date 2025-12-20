@@ -39,4 +39,4 @@ docs:
 clean:
 	rm -fr build/*
 docker:
-	docker build -t bunnyfinder:${TAG} .
+	docker build -t tscel/bunnyfinder:v2-${TAG} .
