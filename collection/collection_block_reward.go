@@ -1,7 +1,7 @@
 package collection
 
 import (
-	"github.com/astaxie/beego/orm"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/dbmodel"
@@ -15,21 +15,21 @@ var (
 
 func ScheduleBlockReward(interval time.Duration, url string) {
 	client := beaconapi.NewBeaconGwClient(url)
-	orm := orm.NewOrm()
+	
 	tc := time.NewTicker(interval)
 	defer tc.Stop()
 	for {
 		select {
 		case <-tc.C:
 			log.Info("ScheduleBlockReward")
-			if err := GetBlockRewardsToMysql(orm, client); err != nil {
+			if err := GetBlockRewardsToDB(client); err != nil {
 				log.WithError(err).Error("ScheduleBlockReward failed")
 			}
 		}
 	}
 }
 
-func GetBlockRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error {
+func GetBlockRewardsToDB(client *beaconapi.BeaconGwClient) error {
 	latestHeader, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		return err
@@ -38,7 +38,7 @@ func GetBlockRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error
 	latestSlot, _ := strconv.ParseInt(latestHeader.Header.Message.Slot, 10, 64)
 
 	if latestBlockRewardSlot < 0 {
-		latestBlockRewardSlot = dbmodel.GetMaxBlockRewardSlot(o)
+		latestBlockRewardSlot = dbmodel.GetMaxBlockRewardSlot(nil)
 	}
 
 	var maxRangeSlot = 32
@@ -58,7 +58,7 @@ func GetBlockRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error
 	for slot := latestBlockRewardSlot + 1; slot <= latestSlot; slot++ {
 		blockReward, err := client.GetBlockReward(int(slot))
 		if err != nil {
-			log.WithField("slot", slot).WithError(err).Error("GetBlockRewardsToMysql get block rewards failed, ignore")
+			log.WithField("slot", slot).WithError(err).Error("GetBlockRewardsToDB get block rewards failed, ignore")
 			continue
 		}
 		proposerIdx := blockReward.ProposerIndex
@@ -78,8 +78,8 @@ func GetBlockRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error
 		}
 		blkRewardInfo = append(blkRewardInfo, record)
 	}
-	if err := dbmodel.InsertBlockRewardList(o, blkRewardInfo); err != nil {
-		log.WithField("slot", latestSlot).WithError(err).Error("GetBlockRewardsToMysql insert block rewards failed")
+	if err := dbmodel.InsertBlockRewardList(nil, blkRewardInfo); err != nil {
+		log.WithField("slot", latestSlot).WithError(err).Error("GetBlockRewardsToDB insert block rewards failed")
 		return err
 	}
 	latestBlockRewardSlot = latestSlot

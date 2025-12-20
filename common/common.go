@@ -3,7 +3,7 @@ package common
 import (
 	"encoding/base64"
 	"errors"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
 )

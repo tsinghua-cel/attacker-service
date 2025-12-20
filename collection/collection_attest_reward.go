@@ -1,7 +1,6 @@
 package collection
 
 import (
-	"github.com/astaxie/beego/orm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/common"
@@ -20,21 +19,20 @@ func LatestAttestRewardEpoch() int64 {
 
 func ScheduleAttestReward(interval time.Duration, url string) {
 	client := beaconapi.NewBeaconGwClient(url)
-	orm := orm.NewOrm()
 	tc := time.NewTicker(interval)
 	defer tc.Stop()
 	for {
 		select {
 		case <-tc.C:
 			log.Info("ScheduleAttestReward")
-			if err := GetAttestRewardsToMysql(orm, client); err != nil {
+			if err := GetAttestRewardsToDB(client); err != nil {
 				log.WithError(err).Error("ScheduleAttestReward failed")
 			}
 		}
 	}
 }
 
-func GetAttestRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error {
+func GetAttestRewardsToDB(client *beaconapi.BeaconGwClient) error {
 	latestHeader, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		return err
@@ -44,7 +42,7 @@ func GetAttestRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) erro
 	curEpoch := common.SlotToEpoch(latestSlot)
 
 	if latestAttestRewardEpoch < 0 {
-		latestAttestRewardEpoch = dbmodel.GetMaxAttestRewardEpoch(o)
+		latestAttestRewardEpoch = dbmodel.GetMaxAttestRewardEpoch(nil)
 	}
 
 	var maxRangeEpoch = 5
@@ -62,7 +60,7 @@ func GetAttestRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) erro
 	for epoch := latestAttestRewardEpoch + 1; epoch <= curEpoch; epoch++ {
 		info, err := client.GetAllValReward(int(epoch))
 		if err != nil {
-			log.WithField("epoch", epoch).WithError(err).Error("GetAttestRewardsToMysql get attester rewards failed")
+			log.WithField("epoch", epoch).WithError(err).Error("GetAttestRewardsToDB get attester rewards failed")
 			return err
 		}
 		var attRewardInfo = make([]*dbmodel.AttestReward, 0)
@@ -80,8 +78,8 @@ func GetAttestRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) erro
 			}
 			attRewardInfo = append(attRewardInfo, record)
 		}
-		if err := dbmodel.InsertAttestRewardList(o, attRewardInfo); err != nil {
-			log.WithField("epoch", epoch).WithError(err).Error("GetAttestRewardsToMysql insert attester rewards failed")
+		if err := dbmodel.InsertAttestRewardList(nil, attRewardInfo); err != nil {
+			log.WithField("epoch", epoch).WithError(err).Error("GetAttestRewardsToDB insert attester rewards failed")
 			return err
 		}
 		latestAttestRewardEpoch = epoch

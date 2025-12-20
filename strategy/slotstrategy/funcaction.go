@@ -3,9 +3,9 @@ package slotstrategy
 import (
 	"errors"
 	"fmt"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	attaggregation "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation/attestations"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	attaggregation "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation/aggregation/attestations"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/plugins"

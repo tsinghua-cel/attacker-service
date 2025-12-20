@@ -2,24 +2,22 @@ package dbmodel
 
 import (
 	"fmt"
-	"github.com/astaxie/beego/orm"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 	"sync"
 )
 
 var (
-	projectID   string
-	ormInstance orm.Ormer
-	once        sync.Once
+	projectID string
+	db        *gorm.DB
+	once      sync.Once
 )
 
-func GetOrmInstance() orm.Ormer {
-	once.Do(func() {
-		ormInstance = orm.NewOrm()
-	})
-	return ormInstance
+func GetDB() *gorm.DB {
+	return db
 }
 
 func DbInit(connect string, project_id string) {
@@ -30,25 +28,37 @@ func DbInit(connect string, project_id string) {
 	}
 
 	// Set up database
-	datasource := fmt.Sprintf("%s?charset=utf8", connect)
-	orm.RegisterDriver("mysql", orm.DRMySQL)
-	err := orm.RegisterDataBase("default", "mysql", datasource)
+	datasource := fmt.Sprintf("%s?sslmode=disable", connect)
+	
+	var err error
+	db, err = gorm.Open(postgres.Open(datasource), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent),
+	})
 	if err != nil {
 		log.WithError(err).Fatal("failed to connect to database")
 	}
 
 	// Configure connection pool
-	orm.SetMaxIdleConns("default", 10)
-	orm.SetMaxOpenConns("default", 100)
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.WithError(err).Fatal("failed to get database instance")
+	}
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(100)
 
-	orm.RegisterModel(new(AttestReward))
-	orm.RegisterModel(new(ChainReorg))
-	orm.RegisterModel(new(BlockReward))
-	orm.RegisterModel(new(Strategy))
-	orm.RegisterModel(new(Project))
-	orm.RegisterModel(new(AttestDuty))
-	orm.RegisterModel(new(BlockDuty))
-	orm.RunSyncdb("default", false, false)
+	// Auto migrate tables
+	err = db.AutoMigrate(
+		&AttestReward{},
+		&ChainReorg{},
+		&BlockReward{},
+		&Strategy{},
+		&Project{},
+		&AttestDuty{},
+		&BlockDuty{},
+	)
+	if err != nil {
+		log.WithError(err).Fatal("failed to auto migrate tables")
+	}
 
 	// Create project
 	if err = NewProject(); err != nil {

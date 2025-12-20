@@ -1,7 +1,7 @@
 package apis
 
 import (
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/strategy/slotstrategy"

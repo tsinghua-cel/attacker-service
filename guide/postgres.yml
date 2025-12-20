@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  postgres:
+    container_name: "ethpostgres"
+    image: "postgres:latest"
+    environment:
+      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_USER=eth
+      - POSTGRES_DB=eth
+    restart: always
+    privileged: true
+    ports:
+      - "5432:5432"
+    volumes:
+      - /etc/localtime:/etc/localtime
+      - ./data/postgres/data:/var/lib/postgresql/data
+    networks:
+      - meta
+
+
+networks:
+  meta:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.99.0.0/16

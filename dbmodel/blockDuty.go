@@ -1,7 +1,7 @@
 package dbmodel
 
 import (
-	"github.com/astaxie/beego/orm"
+	"gorm.io/gorm"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"strconv"
@@ -9,9 +9,9 @@ import (
 
 type BlockDuty struct {
 	BaseModel
-	Epoch     int64 `orm:"column(epoch)" db:"epoch" json:"epoch" form:"epoch"`
-	Slot      int64 `orm:"column(slot)" db:"slot" json:"slot" form:"slot"`
-	Validator int64 `orm:"column(validator)" db:"validator" json:"validator" form:"validator"`
+	Epoch     int64 `gorm:"column:epoch;index" json:"epoch"`
+	Slot      int64 `gorm:"column:slot;index" json:"slot"`
+	Validator int64 `gorm:"column:validator;index" json:"validator"`
 }
 
 func (BlockDuty) TableName() string {
@@ -20,29 +20,26 @@ func (BlockDuty) TableName() string {
 
 type BlockDutyRepository interface {
 	Create(st *BlockDuty) error
-	GetListByFilter(filters ...interface{}) []*BlockDuty
+	GetListByFilter(filters map[string]interface{}) []*BlockDuty
 	GetSortedList(limit int, order string) []*BlockDuty
 }
 
 type blockDutyRepositoryImpl struct {
-	o orm.Ormer
+	db *gorm.DB
 }
 
-func NewBlockDutyRepository(o orm.Ormer) BlockDutyRepository {
-	return &blockDutyRepositoryImpl{o}
+func NewBlockDutyRepository(db *gorm.DB) BlockDutyRepository {
+	return &blockDutyRepositoryImpl{db}
 }
 
 func (repo *blockDutyRepositoryImpl) Create(st *BlockDuty) error {
-	st.BeforeInsert()
-	_, err := repo.o.Insert(st)
-	return err
+	return repo.db.Create(st).Error
 }
 
 func (repo *blockDutyRepositoryImpl) GetSortedList(limit int, order string) []*BlockDuty {
 	list := make([]*BlockDuty, 0)
-	query := repo.o.QueryTable(new(BlockDuty).TableName())
-	query = ProjectFilter(query)
-	_, err := query.OrderBy(order).Limit(limit).All(&list)
+	query := ProjectFilter(repo.db)
+	err := query.Order(order).Limit(limit).Find(&list).Error
 	if err != nil {
 		log.WithError(err).Error("failed to get block duty sorted list")
 		return nil
@@ -50,23 +47,21 @@ func (repo *blockDutyRepositoryImpl) GetSortedList(limit int, order string) []*B
 	return list
 }
 
-func (repo *blockDutyRepositoryImpl) GetListByFilter(filters ...interface{}) []*BlockDuty {
+func (repo *blockDutyRepositoryImpl) GetListByFilter(filters map[string]interface{}) []*BlockDuty {
 	list := make([]*BlockDuty, 0)
-	query := repo.o.QueryTable(new(BlockDuty).TableName())
-	query = ProjectFilter(query)
-	if len(filters) > 0 {
-		l := len(filters)
-		for k := 0; k < l; k += 2 {
-			query = query.Filter(filters[k].(string), filters[k+1])
-		}
+	query := ProjectFilter(repo.db)
+	
+	for k, v := range filters {
+		query = query.Where(k+" = ?", v)
 	}
-	query.OrderBy("-created_at").All(&list)
+	
+	query.Order("created_at DESC").Find(&list)
 	return list
 }
 
-func InsertNewBlockDuties(o orm.Ormer, epoch int64, st []types.ProposerDuty) error {
-	var err = DoWithTransaction(o, func(o orm.Ormer) error {
-		repo := NewBlockDutyRepository(o)
+func InsertNewBlockDuties(db *gorm.DB, epoch int64, st []types.ProposerDuty) error {
+	return DoWithTransaction(func(tx *gorm.DB) error {
+		repo := NewBlockDutyRepository(tx)
 		for _, s := range st {
 			slot, _ := strconv.ParseInt(s.Slot, 10, 64)
 			validx, _ := strconv.ParseInt(s.ValidatorIndex, 10, 64)
@@ -76,37 +71,35 @@ func InsertNewBlockDuties(o orm.Ormer, epoch int64, st []types.ProposerDuty) err
 				Epoch:     epoch,
 			}
 			if err := repo.Create(data); err != nil {
-				log.WithError(err).Error("failed to insert new strategy")
+				log.WithError(err).Error("failed to insert new block duty")
 				return err
 			}
 		}
 		return nil
 	})
-	return err
 }
 
 func GetBlockDuties(epoch int64) []*BlockDuty {
-	o := GetOrmInstance()
-	repo := NewBlockDutyRepository(o)
-	return repo.GetListByFilter("epoch", epoch)
+	repo := NewBlockDutyRepository(GetDB())
+	return repo.GetListByFilter(map[string]interface{}{"epoch": epoch})
 }
 
 func GetBlockDutiesWithValidatorAndEpoch(epoch, validator int64) []*BlockDuty {
-	o := GetOrmInstance()
-	repo := NewBlockDutyRepository(o)
-	return repo.GetListByFilter("epoch", epoch, "validator", validator)
+	repo := NewBlockDutyRepository(GetDB())
+	return repo.GetListByFilter(map[string]interface{}{
+		"epoch":     epoch,
+		"validator": validator,
+	})
 }
 
 func GetBlockDutiesWithValidator(validator int64) []*BlockDuty {
-	o := GetOrmInstance()
-	repo := NewBlockDutyRepository(o)
-	return repo.GetListByFilter("validator", validator)
+	repo := NewBlockDutyRepository(GetDB())
+	return repo.GetListByFilter(map[string]interface{}{"validator": validator})
 }
 
 func GetMaxBlockDutyEpoch() int64 {
-	o := GetOrmInstance()
-	repo := NewBlockDutyRepository(o)
-	list := repo.GetSortedList(1, "-epoch")
+	repo := NewBlockDutyRepository(GetDB())
+	list := repo.GetSortedList(1, "epoch DESC")
 	if len(list) == 0 {
 		return -1
 	}

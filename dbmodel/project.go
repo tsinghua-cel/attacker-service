@@ -2,7 +2,7 @@ package dbmodel
 
 import (
 	"errors"
-	"github.com/astaxie/beego/orm"
+	"gorm.io/gorm"
 )
 
 var (
@@ -11,9 +11,9 @@ var (
 
 type Project struct {
 	BaseModel
-	StrategyCategory string `orm:"column(strategy_category)" db:"strategy_category" json:"strategy_category" form:"strategy_category"` // strategy category
-	StrategyCount    int    `orm:"column(strategy_count)" db:"strategy_count" json:"strategy_count" form:"strategy_count"`             // strategy count
-	LatestSlot       int64  `orm:"column(latest_slot)" db:"latest_slot" json:"latest_slot" form:"latest_slot"`                         // latest slot
+	StrategyCategory string `gorm:"column:strategy_category" json:"strategy_category"`
+	StrategyCount    int    `gorm:"column:strategy_count" json:"strategy_count"`
+	LatestSlot       int64  `gorm:"column:latest_slot" json:"latest_slot"`
 }
 
 func (Project) TableName() string {
@@ -23,45 +23,39 @@ func (Project) TableName() string {
 type ProjectRepository interface {
 	Create(project *Project) error
 	Update(project *Project) error
-	GetListByFilter(filters ...interface{}) []*Project
+	GetListByFilter(filters map[string]interface{}) []*Project
 }
 
 type projectRepositoryImpl struct {
-	o orm.Ormer
+	db *gorm.DB
 }
 
-func NewProjectRepository(o orm.Ormer) ProjectRepository {
-	return &projectRepositoryImpl{o}
+func NewProjectRepository(db *gorm.DB) ProjectRepository {
+	return &projectRepositoryImpl{db}
 }
 
 func (repo *projectRepositoryImpl) Create(project *Project) error {
-	project.BeforeInsert()
-	_, err := repo.o.Insert(project)
-	return err
+	return repo.db.Create(project).Error
 }
 
 func (repo *projectRepositoryImpl) Update(project *Project) error {
-	project.BeforeUpdate()
-	_, err := repo.o.Update(project)
-	return err
+	return repo.db.Save(project).Error
 }
 
-func (repo *projectRepositoryImpl) GetListByFilter(filters ...interface{}) []*Project {
+func (repo *projectRepositoryImpl) GetListByFilter(filters map[string]interface{}) []*Project {
 	list := make([]*Project, 0)
-	query := repo.o.QueryTable(new(Project).TableName())
-	if len(filters) > 0 {
-		l := len(filters)
-		for k := 0; k < l; k += 2 {
-			query = query.Filter(filters[k].(string), filters[k+1])
-		}
+	query := repo.db.Model(&Project{})
+	
+	for k, v := range filters {
+		query = query.Where(k+" = ?", v)
 	}
-	// order by time
-	query.OrderBy("-created_at").All(&list)
+	
+	query.Order("created_at DESC").Find(&list)
 	return list
 }
 
 func GetProjectList() []*Project {
-	return NewProjectRepository(GetOrmInstance()).GetListByFilter()
+	return NewProjectRepository(GetDB()).GetListByFilter(map[string]interface{}{})
 }
 
 func NewProject() error {
@@ -69,11 +63,11 @@ func NewProject() error {
 		BaseModel:     BaseModel{},
 		StrategyCount: 0,
 	}
-	return NewProjectRepository(GetOrmInstance()).Create(project)
+	return NewProjectRepository(GetDB()).Create(project)
 }
 
 func UpdateProject(project *Project) error {
-	return NewProjectRepository(GetOrmInstance()).Update(project)
+	return NewProjectRepository(GetDB()).Update(project)
 }
 
 func AddStrategyCount(strategyCount int) error {
@@ -99,7 +93,7 @@ func SetProjectStrategyCategory(strategyCategory string) error {
 }
 
 func GetProjectById(id string) (*Project, error) {
-	list := NewProjectRepository(GetOrmInstance()).GetListByFilter("project_id", id)
+	list := NewProjectRepository(GetDB()).GetListByFilter(map[string]interface{}{"project_id": id})
 	if len(list) == 0 {
 		return nil, errors.New("project not found")
 	}

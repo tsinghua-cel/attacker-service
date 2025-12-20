@@ -5,4 +5,4 @@ beacon_rpc = "13.41.176.56:14000"
 honest_beacon_rpc = "13.41.176.56:14001"
 reward_file = "/root/reward.csv"
 swag_host = "13.41.176.56:12100"
-dbconnect = "eth:12345678@tcp(127.0.0.1:3306)/eth" # host:port@tcp(user:password)/dbname
+dbconnect = "postgres://eth:12345678@127.0.0.1:5432/eth" # postgres://user:password@host:port/dbname

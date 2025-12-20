@@ -2,21 +2,21 @@ package dbmodel
 
 import (
 	"fmt"
-	"github.com/astaxie/beego/orm"
+	"gorm.io/gorm"
 	"github.com/tsinghua-cel/attacker-service/types"
 )
 
 type ChainReorg struct {
 	BaseModel
-	Epoch                 int64  `orm:"column(epoch)" db:"epoch" json:"epoch" form:"epoch"`                                                                             // epoch
-	Slot                  int64  `orm:"column(slot)" db:"slot" json:"slot" form:"slot"`                                                                                 // slot
-	Depth                 int    `orm:"column(depth)" db:"depth" json:"depth" form:"depth"`                                                                             // depth
-	OldBlockSlot          int64  `orm:"column(old_block_slot)" db:"old_block_slot" json:"old_block_slot" form:"old_block_slot"`                                         // old_block_slot
-	NewBlockSlot          int64  `orm:"column(new_block_slot)" db:"new_block_slot" json:"new_block_slot" form:"new_block_slot"`                                         // new_block_slot
-	OldBlockProposerIndex int64  `orm:"column(old_block_proposer_index)" db:"old_block_proposer_index" json:"old_block_proposer_index" form:"old_block_proposer_index"` // old_block_proposer_index
-	NewBlockProposerIndex int64  `orm:"column(new_block_proposer_index)" db:"new_block_proposer_index" json:"new_block_proposer_index" form:"new_block_proposer_index"` // new_block_proposer_index
-	OldHeadState          string `orm:"column(old_head_state)" db:"old_head_state" json:"old_head_state" form:"old_head_state"`                                         // old_head_state
-	NewHeadState          string `orm:"column(new_head_state)" db:"new_head_state" json:"new_head_state" form:"new_head_state"`                                         // new_head_state
+	Epoch                 int64  `gorm:"column:epoch;index" json:"epoch"`
+	Slot                  int64  `gorm:"column:slot;index" json:"slot"`
+	Depth                 int    `gorm:"column:depth" json:"depth"`
+	OldBlockSlot          int64  `gorm:"column:old_block_slot" json:"old_block_slot"`
+	NewBlockSlot          int64  `gorm:"column:new_block_slot" json:"new_block_slot"`
+	OldBlockProposerIndex int64  `gorm:"column:old_block_proposer_index" json:"old_block_proposer_index"`
+	NewBlockProposerIndex int64  `gorm:"column:new_block_proposer_index" json:"new_block_proposer_index"`
+	OldHeadState          string `gorm:"column:old_head_state" json:"old_head_state"`
+	NewHeadState          string `gorm:"column:new_head_state" json:"new_head_state"`
 }
 
 func (ChainReorg) TableName() string {
@@ -25,39 +25,35 @@ func (ChainReorg) TableName() string {
 
 type ChainReorgRepository interface {
 	Create(reorg *ChainReorg) error
-	GetListByFilter(filters ...interface{}) []*ChainReorg
+	GetListByFilter(filters map[string]interface{}) []*ChainReorg
 }
 
 type chainReorgRepositoryImpl struct {
-	o orm.Ormer
+	db *gorm.DB
 }
 
-func NewChainReorgRepository(o orm.Ormer) ChainReorgRepository {
-	return &chainReorgRepositoryImpl{o}
+func NewChainReorgRepository(db *gorm.DB) ChainReorgRepository {
+	return &chainReorgRepositoryImpl{db}
 }
 
 func (repo *chainReorgRepositoryImpl) Create(reorg *ChainReorg) error {
-	reorg.BeforeInsert()
-	_, err := repo.o.Insert(reorg)
-	return err
+	return repo.db.Create(reorg).Error
 }
 
-func (repo *chainReorgRepositoryImpl) GetListByFilter(filters ...interface{}) []*ChainReorg {
+func (repo *chainReorgRepositoryImpl) GetListByFilter(filters map[string]interface{}) []*ChainReorg {
 	list := make([]*ChainReorg, 0)
-	query := repo.o.QueryTable(new(ChainReorg).TableName())
-	query = ProjectFilter(query)
-	if len(filters) > 0 {
-		l := len(filters)
-		for k := 0; k < l; k += 2 {
-			query = query.Filter(filters[k].(string), filters[k+1])
-		}
+	query := ProjectFilter(repo.db)
+	
+	for k, v := range filters {
+		query = query.Where(k+" = ?", v)
 	}
-	query.OrderBy("-slot").All(&list)
+	
+	query.Order("slot DESC").Find(&list)
 	return list
 }
 
 func InsertNewReorg(ev types.ReorgEvent) {
-	NewChainReorgRepository(GetOrmInstance()).Create(&ChainReorg{
+	NewChainReorgRepository(GetDB()).Create(&ChainReorg{
 		Epoch:                 int64(ev.Epoch),
 		Slot:                  int64(ev.Slot),
 		Depth:                 int(ev.Depth),
@@ -71,17 +67,16 @@ func InsertNewReorg(ev types.ReorgEvent) {
 }
 
 func GetAllReorgList() []*ChainReorg {
-	return NewChainReorgRepository(GetOrmInstance()).GetListByFilter()
+	return NewChainReorgRepository(GetDB()).GetListByFilter(map[string]interface{}{})
 }
 
 func GetReorgListByEpoch(epoch int64) []*ChainReorg {
-	return NewChainReorgRepository(GetOrmInstance()).GetListByFilter("epoch", epoch)
+	return NewChainReorgRepository(GetDB()).GetListByFilter(map[string]interface{}{"epoch": epoch})
 }
 
 func GetReorgCountByEpoch(epoch int64) int {
-	// select count(1) from t_chain_reorg where epoch = epoch;
-	var count int
-	sql := fmt.Sprintf("select count(1) from %s where epoch = ? and %s ", new(ChainReorg).TableName(), ProjectFilterString())
-	GetOrmInstance().Raw(sql, epoch).QueryRow(&count)
-	return count
+	var count int64
+	sql := fmt.Sprintf("SELECT count(1) FROM %s WHERE epoch = ? AND %s", new(ChainReorg).TableName(), ProjectFilterString())
+	GetDB().Raw(sql, epoch).Scan(&count)
+	return int(count)
 }

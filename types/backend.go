@@ -1,9 +1,9 @@
 package types
 
 import (
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	"github.com/attestantio/go-eth2-client/spec"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	"math/big"
 )
 

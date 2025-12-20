@@ -1,14 +1,13 @@
 package types
 
 import (
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/config/params"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation"
+	"github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1/attestation/aggregation"
 	"github.com/pkg/errors"
-	"github.com/prysmaticlabs/go-bitfield"
-	"github.com/prysmaticlabs/prysm/v5/config/features"
-	"github.com/prysmaticlabs/prysm/v5/config/params"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
-	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation"
-	"github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1/attestation/aggregation"
 	log "github.com/sirupsen/logrus"
 	"sort"
 )
@@ -103,9 +102,6 @@ func (a ProposerAtts) Sort() (ProposerAtts, error) {
 		return a, nil
 	}
 
-	if features.Get().DisableCommitteeAwarePacking {
-		return a.sortByProfitabilityUsingMaxCover()
-	}
 	return a.sortBySlotAndCommittee()
 }
 

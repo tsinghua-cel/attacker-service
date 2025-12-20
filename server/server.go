@@ -4,14 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/OffchainLabs/go-bitfield"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	apiv1 "github.com/attestantio/go-eth2-client/api/v1"
 	"github.com/attestantio/go-eth2-client/spec"
 	common2 "github.com/ethereum/go-ethereum/common"
 	ethtype "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/golang/groupcache/lru"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/common"
@@ -770,7 +771,7 @@ func (s *Server) FetchHonestBlocksAttestations(slots []int64) ([]*ethpb.Attestat
 				BeaconBlockRoot: att.Data.BeaconBlockRoot[:],
 				CommitteeIndex:  primitives.CommitteeIndex(att.Data.Index),
 			},
-			AggregationBits: att.AggregationBits,
+			AggregationBits: bitfield.Bitlist(att.AggregationBits),
 			Signature:       att.Signature[:],
 		}
 		results = append(results, r)

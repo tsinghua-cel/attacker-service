@@ -2,7 +2,7 @@ package apis
 
 import (
 	"errors"
-	"github.com/prysmaticlabs/prysm/v5/cache/lru"
+	"github.com/OffchainLabs/prysm/v7/cache/lru"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/types"

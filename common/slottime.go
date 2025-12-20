@@ -1,7 +1,7 @@
 package common
 
 import (
-	"github.com/prysmaticlabs/prysm/v5/config/params"
+	"github.com/OffchainLabs/prysm/v7/config/params"
 	"github.com/tsinghua-cel/attacker-service/types"
 	"time"
 )

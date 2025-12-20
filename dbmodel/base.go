@@ -2,58 +2,41 @@ package dbmodel
 
 import (
 	"fmt"
-	"github.com/astaxie/beego/orm"
+	"gorm.io/gorm"
 	"time"
 )
 
 type BaseModel struct {
-	ID        int64     `orm:"column(id)" db:"id" json:"id" form:"id"`                                 // uniq id
-	ProjectId string    `orm:"column(project_id)" db:"project_id" json:"project_id" form:"project_id"` // project id
-	CreatedAt time.Time `orm:"auto_now_add;type(datetime);column(created_at)" json:"created_at"`
-	UpdatedAt time.Time `orm:"auto_now;type(datetime);column(updated_at)" json:"updated_at"`
+	ID        int64     `gorm:"column:id;primaryKey;autoIncrement" json:"id"`
+	ProjectId string    `gorm:"column:project_id;index" json:"project_id"`
+	CreatedAt time.Time `gorm:"column:created_at;autoCreateTime" json:"created_at"`
+	UpdatedAt time.Time `gorm:"column:updated_at;autoUpdateTime" json:"updated_at"`
 }
 
-func (m *BaseModel) BeforeInsert() {
+func (m *BaseModel) BeforeCreate(tx *gorm.DB) error {
 	m.ProjectId = projectID
-	m.CreatedAt = time.Now()
-	m.UpdatedAt = time.Now()
+	if m.CreatedAt.IsZero() {
+		m.CreatedAt = time.Now()
+	}
+	if m.UpdatedAt.IsZero() {
+		m.UpdatedAt = time.Now()
+	}
+	return nil
 }
 
-func (m *BaseModel) BeforeUpdate() {
+func (m *BaseModel) BeforeUpdate(tx *gorm.DB) error {
 	m.UpdatedAt = time.Now()
+	return nil
 }
 
-func ProjectFilter(query orm.QuerySeter) orm.QuerySeter {
-	return query.Filter("project_id", projectID)
+func ProjectFilter(db *gorm.DB) *gorm.DB {
+	return db.Where("project_id = ?", projectID)
 }
 
 func ProjectFilterString() string {
-	return fmt.Sprintf("project_id = \"%s\"", projectID)
+	return fmt.Sprintf("project_id = '%s'", projectID)
 }
 
-func DoWithTransaction(o orm.Ormer, f func(o orm.Ormer) error) error {
-	if err := o.Begin(); err != nil {
-		return fmt.Errorf("failed to begin transaction: %w", err)
-	}
-
-	defer func() {
-		if p := recover(); p != nil {
-			_ = o.Rollback()
-			panic(p)
-		} else if err := recover(); err != nil {
-			_ = o.Rollback()
-		}
-	}()
-
-	err := f(o)
-	if err != nil {
-		_ = o.Rollback()
-		return err
-	}
-
-	if err := o.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
-
-	return nil
+func DoWithTransaction(f func(tx *gorm.DB) error) error {
+	return GetDB().Transaction(f)
 }

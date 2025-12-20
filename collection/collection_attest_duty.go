@@ -1,7 +1,7 @@
 package collection
 
 import (
-	"github.com/astaxie/beego/orm"
+
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/beaconapi"
 	"github.com/tsinghua-cel/attacker-service/common"
@@ -16,21 +16,21 @@ var (
 
 func ScheduleAttestDuty(interval time.Duration, url string) {
 	client := beaconapi.NewBeaconGwClient(url)
-	orm := orm.NewOrm()
+	
 	tc := time.NewTicker(interval)
 	defer tc.Stop()
 	for {
 		select {
 		case <-tc.C:
 			log.Info("ScheduleAttestDuty")
-			if err := GetAttestDutyToMysql(orm, client); err != nil {
+			if err := GetAttestDutyToDB(client); err != nil {
 				log.WithError(err).Error("ScheduleAttestDuty failed")
 			}
 		}
 	}
 }
 
-func GetAttestDutyToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error {
+func GetAttestDutyToDB(client *beaconapi.BeaconGwClient) error {
 	latestHeader, err := client.GetLatestBeaconHeader()
 	if err != nil {
 		return err
@@ -56,12 +56,12 @@ func GetAttestDutyToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error {
 	for epoch := latestAttestDutyEpoch + 1; epoch <= curEpoch; epoch++ {
 		duties, err := client.GetAttesterDuties(int(epoch), []int{})
 		if err != nil {
-			log.WithField("epoch", epoch).WithError(err).Error("GetAttestDutyToMysql get attester duties failed")
+			log.WithField("epoch", epoch).WithError(err).Error("GetAttestDutyToDB get attester duties failed")
 			return err
 		}
 
-		if err := dbmodel.InsertNewAttestDuties(o, epoch, duties); err != nil {
-			log.WithField("epoch", epoch).WithError(err).Error("GetAttestDutyToMysql insert attester duties failed")
+		if err := dbmodel.InsertNewAttestDuties(nil, epoch, duties); err != nil {
+			log.WithField("epoch", epoch).WithError(err).Error("GetAttestDutyToDB insert attester duties failed")
 			return err
 		}
 		latestAttestDutyEpoch = epoch

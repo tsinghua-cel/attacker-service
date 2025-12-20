@@ -3,12 +3,12 @@ package beaconapi
 import (
 	"context"
 	"encoding/hex"
+	grpcutil "github.com/OffchainLabs/prysm/v7/api/grpc"
+	ethpb "github.com/OffchainLabs/prysm/v7/proto/prysm/v1alpha1"
 	middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcretry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	grpcopentracing "github.com/grpc-ecosystem/go-grpc-middleware/tracing/opentracing"
 	grpcprometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
-	grpcutil "github.com/prysmaticlabs/prysm/v5/api/grpc"
-	ethpb "github.com/prysmaticlabs/prysm/v5/proto/prysm/v1alpha1"
 
 	log "github.com/sirupsen/logrus"
 	"go.opencensus.io/plugin/ocgrpc"

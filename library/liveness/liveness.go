@@ -3,10 +3,10 @@ package liveness
 import (
 	"context"
 	"encoding/hex"
+	"github.com/OffchainLabs/prysm/v7/cache/lru"
+	"github.com/OffchainLabs/prysm/v7/consensus-types/primitives"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/google/uuid"
-	"github.com/prysmaticlabs/prysm/v5/cache/lru"
-	"github.com/prysmaticlabs/prysm/v5/consensus-types/primitives"
 	log "github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/disguisedRandao"
