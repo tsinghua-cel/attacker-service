@@ -256,7 +256,7 @@ func (s *Server) monitorDuties() {
 }
 
 func (s *Server) Start() {
-	s.initTools()
+	s.initTools(s.strategyGenerator.IsSimulate())
 	// start RPC endpoints
 	err := s.startRPC()
 	if err != nil {
@@ -274,12 +274,12 @@ func (s *Server) Start() {
 	}
 }
 
-func (s *Server) initTools() {
+func (s *Server) initTools(simulation bool) {
 	init := false
-	//{
-	//	init = true
-	//	common.InitSlotTool(3, int64(32), time.Now().Unix())
-	//}
+	if simulation {
+		init = true
+		common.InitSlotTool(12, int64(32), time.Now().Unix())
+	}
 	for !init {
 		slotPerEpoch, _ := s.honestBeacon.GetIntConfig(beaconapi.SLOTS_PER_EPOCH)
 		interval, _ := s.honestBeacon.GetIntConfig(beaconapi.SECONDS_PER_SLOT)

@@ -50,6 +50,15 @@ func (g *Generator) Start() error {
 	return nil
 }
 
+func (g *Generator) IsSimulate() bool {
+	for _, s := range g.todoStrategies {
+		if s.Name() == "simulate" {
+			return true
+		}
+	}
+	return false
+}
+
 func (g *Generator) runGenerator() {
 	g.logger.Info("generator start")
 	defer g.logger.Info("generator exit")
