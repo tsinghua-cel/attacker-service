@@ -152,23 +152,30 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 		maskedDutyMap[duty.Slot] = true
 	}
 
-	for _, duty := range attackerDuties {
+	for i, duty := range attackerDuties {
 		s := types.SlotStrategy{
 			Slot:    duty.Slot,
 			Level:   2,
 			Actions: make(map[string]string),
 		}
-		if _, exist := maskedDutyMap[duty.Slot]; exist {
-			// don't proposer block.
-			s.Actions["BlockBeforeSign"] = "return"
+		if i == 0 {
+			// delay first slot for 4 seconds.
+			s.Actions["BlockBeforeBroadCast"] = "delayWithSecond:4"
 			s.Actions["AttestBeforePropose"] = "return"
+			s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
 		} else {
-			targetTime := calcTargetTime(toInt(duty.Slot), releaseSlot)
-			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayToMilliTime:%d", targetTime)
-			s.Actions["AttestBeforePropose"] = "return"
+			if _, exist := maskedDutyMap[duty.Slot]; exist {
+				// don't proposer block.
+				s.Actions["BlockBeforeSign"] = "return"
+				s.Actions["AttestBeforePropose"] = "return"
+			} else {
+				targetTime := calcTargetTime(toInt(duty.Slot), releaseSlot)
+				// set delay for broadcast block.
+				s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayToMilliTime:%d", targetTime)
+				s.Actions["AttestBeforePropose"] = "return"
 
-			lastDuty = duty
+				lastDuty = duty
+			}
 		}
 
 		strategys = append(strategys, s)
