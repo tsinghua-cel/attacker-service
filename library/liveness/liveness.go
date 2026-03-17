@@ -253,7 +253,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 				{
 					// go to calc best mask duty for next epoch.
 					go func() {
-						masked, err := o.ComputeBestMaskDuty(uint64(slot), nextDuty)
+						masked, err := o.ComputeBestMaskDutyV1(uint64(slot), nextDuty)
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 						} else {
