@@ -87,13 +87,18 @@ func genSimpleStrategy(epoch int, attackerDuties []types.ProposerDuty) []types.S
 	return strategys
 }
 
-func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
+func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty, masked []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
 		return strategys
 	}
 	releaseSlot := common.EpochEnd(int64(epoch + 2))
 	var lastDuty types.ProposerDuty
+	var maskedDutyMap = make(map[string]bool)
+	for _, duty := range masked {
+		maskedDutyMap[duty.Slot] = true
+	}
+
 	for i, duty := range attackerDuties {
 		s := types.SlotStrategy{
 			Slot:    duty.Slot,
@@ -105,19 +110,24 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []ty
 			s.Actions["BlockBeforeBroadCast"] = "delayWithSecond:4"
 			s.Actions["AttestBeforePropose"] = "return"
 			s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
-		} else {
-			targetTime := calcTargetTime(toInt(duty.Slot), releaseSlot)
-			// set delay for broadcast block.
-			s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayToMilliTime:%d", targetTime)
-			// don't broadcast attest.
-			s.Actions["AttestBeforePropose"] = "return"
-			// add attest to pool.
-			s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
-		}
-		if i == len(attackerDuties)-1 {
+		} else if i == len(attackerDuties)-1 {
 			// pack pooled attestations.
 			s.Actions["BlockBeforeSign"] = "packCurrentEpochAttest"
 			s.Actions["AttestBeforePropose"] = "null"
+		} else {
+			if _, exist := maskedDutyMap[duty.Slot]; exist {
+				// don't proposer block.
+				s.Actions["BlockBeforeSign"] = "return"
+				s.Actions["AttestBeforePropose"] = "return"
+			} else {
+				targetTime := calcTargetTime(toInt(duty.Slot), releaseSlot)
+				// set delay for broadcast block.
+				s.Actions["BlockBeforeBroadCast"] = fmt.Sprintf("delayToMilliTime:%d", targetTime)
+				// don't broadcast attest.
+				s.Actions["AttestBeforePropose"] = "return"
+				// add attest to pool.
+				s.Actions["AttestAfterSign"] = fmt.Sprintf("addAttestToPool")
+			}
 		}
 
 		lastDuty = duty
@@ -130,7 +140,7 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty) []ty
 }
 
 // before genStrategy, need preCompute best maskDuty.
-func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, maskDuty types.ProposerDuty) []types.SlotStrategy {
+func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, maskDuty []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
 		return strategys
@@ -138,13 +148,18 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 	releaseSlot := common.EpochEnd(int64(epoch + 1))
 	var lastDuty = epochLatestDuty[epoch-1]
 
+	var maskedDutyMap = make(map[string]bool)
+	for _, duty := range maskDuty {
+		maskedDutyMap[duty.Slot] = true
+	}
+
 	for _, duty := range attackerDuties {
 		s := types.SlotStrategy{
 			Slot:    duty.Slot,
 			Level:   2,
 			Actions: make(map[string]string),
 		}
-		if duty.Slot == maskDuty.Slot {
+		if _, exist := maskedDutyMap[duty.Slot]; exist {
 			// don't proposer block.
 			s.Actions["BlockBeforeSign"] = "return"
 			s.Actions["AttestBeforePropose"] = "return"
@@ -166,13 +181,17 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 }
 
 // before genStrategy, need preCompute best maskDuty.
-func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, maskDuty types.ProposerDuty) []types.SlotStrategy {
+func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, maskDuty []types.ProposerDuty) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
 		return strategys
 	}
 	releaseSlot := common.EpochEnd(int64(epoch))
 	var lastDuty = epochLatestDuty[epoch-1]
+	var maskedDutyMap = make(map[string]bool)
+	for _, duty := range maskDuty {
+		maskedDutyMap[duty.Slot] = true
+	}
 
 	for _, duty := range attackerDuties {
 		s := types.SlotStrategy{
@@ -180,7 +199,7 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 			Level:   2,
 			Actions: make(map[string]string),
 		}
-		if duty.Slot == maskDuty.Slot {
+		if _, exist := maskedDutyMap[duty.Slot]; exist {
 			// don't proposer block.
 			s.Actions["BlockBeforeSign"] = "return"
 			s.Actions["AttestBeforePropose"] = "return"
@@ -199,30 +218,4 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 	// set last duty to epoch latest duty.
 	epochLatestDuty[epoch] = lastDuty
 	return fillDefaultStrategy(epoch, strategys)
-}
-
-// before genStrategy, need preCompute best maskDuty.
-func generateSimpleStrategy(epoch int, attackerDuties []types.ProposerDuty) []types.SlotStrategy {
-	strategys := make([]types.SlotStrategy, 0)
-	if len(attackerDuties) == 0 {
-		return strategys
-	}
-	var lastDuty types.ProposerDuty
-	for i, duty := range attackerDuties {
-		if i == 0 {
-			s := types.SlotStrategy{
-				Slot:    duty.Slot,
-				Level:   2,
-				Actions: make(map[string]string),
-			}
-			// broadcast delay 4s.
-			s.Actions["BlockBeforeBroadCast"] = "delayWithSecond:4"
-			strategys = append(strategys, s)
-		}
-		lastDuty = duty
-	}
-
-	// set last duty to epoch latest duty.
-	epochLatestDuty[epoch] = lastDuty
-	return strategys
 }
