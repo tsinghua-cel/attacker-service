@@ -142,7 +142,7 @@ func main() {
 	for _, setting := range testSet {
 		attackDutiesCount := setting.attackCount
 		testCount := setting.testCount
-		fullOrder := GetAllBinarySequences(attackDutiesCount)
+
 		targetEpoch := primitives.Epoch(epoch + 2)
 		attackDuties := RandomAttackerDuties(rand.New(rand.NewSource(time.Now().UnixNano())), proposerDuty, attackDutiesCount)
 
@@ -160,6 +160,7 @@ func main() {
 		switch *testCase {
 		case 1:
 			{
+				fullOrder := GetAllBinarySequences(attackDutiesCount)
 				// run ComputeBestMaskDutyOneOrderSync testCount times and record durations
 				durations := make([]time.Duration, 0, testCount)
 				successes := 0
@@ -192,6 +193,7 @@ func main() {
 			}
 		case 2:
 			{
+				fullOrder := GetAllBinarySequences(attackDutiesCount)
 				// run ComputeBestMaskDutyOneOrderMultiProcess testCount times and record durations
 				durations := make([]time.Duration, 0, testCount)
 				successes := 0
@@ -225,6 +227,7 @@ func main() {
 			}
 		case 3:
 			{
+				fullOrder := GetAllBinarySequences(attackDutiesCount)
 				// run ComputeBestMaskDutyFullTime testCount times and record durations
 				durations := make([]time.Duration, 0, testCount)
 				successes := 0
@@ -253,6 +256,39 @@ func main() {
 						"avg_cost":     avg.String(),
 						"attack_count": attackDutiesCount,
 					}).Info("ComputeBestMaskDutyFullTime average timing")
+				}
+			}
+		case 4:
+			{
+				fullOrder := GetAllBinarySequencesWithMaxOnes(attackDutiesCount, 5)
+				// run ComputeBestMaskDutyFullTime testCount times and record durations
+				durations := make([]time.Duration, 0, testCount)
+				successes := 0
+				for i := 0; i < testCount/20; i++ {
+					tStart := time.Now()
+					_, err := ComputeBestMaskDutyFullTime(seed, allRandaoReveal, cState.Reset(), uint64(curSlot), int64(epoch), attackDuties, validatorSortedIndex, fullOrder)
+					elapsed := time.Since(tStart)
+					if err != nil {
+						log.WithFields(log.Fields{"err": err, "iteration": i}).Error("ComputeBestMaskDutyFullTime failed")
+						// continue to next iteration, don't include failed run in averages
+						continue
+					}
+					durations = append(durations, elapsed)
+					successes++
+				}
+				if successes == 0 {
+					log.Error("ComputeBestMaskDutyFullTime: all runs failed")
+				} else {
+					var total time.Duration
+					for _, d := range durations {
+						total += d
+					}
+					avg := time.Duration(int64(total) / int64(successes))
+					log.WithFields(log.Fields{
+						"runs":         successes,
+						"avg_cost":     avg.String(),
+						"attack_count": attackDutiesCount,
+					}).Info("ComputeBestMaskDutyFullTime with max skip average timing")
 				}
 			}
 		}
