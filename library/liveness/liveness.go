@@ -46,18 +46,6 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	defer t.Stop()
 
 	history := make(map[int]bool)
-	epochMaskDutiesCache := lru.New(10)
-	var getCachedMaskDuties = func(epoch int64) (masked BestMaskDutyInfo) {
-		if d, exist := epochMaskDutiesCache.Get(epoch); exist {
-			return d.(BestMaskDutyInfo)
-		} else {
-			return BestMaskDutyInfo{}
-		}
-	}
-	var setCachedMaskDuties = func(epoch int64, masked BestMaskDutyInfo) {
-		epochMaskDutiesCache.Add(epoch, masked)
-	}
-
 	epochDutyCache := lru.New(10)
 	var getCacheDuty = func(epoch int64) (duties []types.ProposerDuty) {
 		return nil
@@ -113,185 +101,175 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 			}
 			o.dumpDuties(epoch, curDuty)
 			o.dumpDuties(nextEpoch, nextDuty)
-			offset := 0
-			// check trigger
-			if epoch > 3 && !triggerring && params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
-				o.attackerInTailN(params.FilterHackerDuties(curDuty), 9) {
-				triggerring = true
-				triggeredEpoch = int(epoch)
-			}
 
-			if triggerring {
-				offset = int(epoch) - triggeredEpoch + 1 // 1,2,or 3.
-			}
+			for {
+				if !triggerring {
+					// generate a simple strategy for nextDuty first.
+					slotsStrategies := genSimpleStrategy(int(nextEpoch), params.FilterHackerDuties(nextDuty))
+					strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
+					if err = attacker.UpdateStrategy(strategy); err != nil {
+						olog.WithField("error", err).Error("failed to update strategy simple")
+					} else {
+						olog.WithFields(log.Fields{
+							"epoch":    nextEpoch,
+							"strategy": strategy,
+						}).Debug("update strategy successfully")
+					}
 
-			switch offset {
-			case 0:
-				// check next epoch's first slot is attacker.
-				if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) {
-					// go to calc best mask duty for next epoch.
-					go func() {
-						masked, err := o.ComputeBestMask(uint64(slot), nextDuty, AttackerCountCmper{})
-						if err != nil {
-							olog.WithField("error", err).Error("failed to compute best mask duty")
-						} else {
-							setCachedMaskDuties(nextEpoch, masked)
-						}
-					}()
-				}
+					if params.IsHackValidator(toInt(nextDuty[0].ValidatorIndex)) && params.IsHackValidator(toInt(curDuty[0].ValidatorIndex)) &&
+						o.attackerInTailN(params.FilterHackerDuties(curDuty), 9) && epoch > 3 {
+						triggerring = true
+						triggeredEpoch = int(epoch)
+						olog.WithFields(log.Fields{
+							"current epoch": epoch,
+							"next epoch":    epoch + 1,
+						}).Debug("strategy trigger")
+						continue
+					}
 
-				// generate a simple strategy for nextDuty.
-				slotsStrategies := genSimpleStrategy(int(nextEpoch), params.FilterHackerDuties(nextDuty))
-				strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
-				if err = attacker.UpdateStrategy(strategy); err != nil {
-					olog.WithField("error", err).Error("failed to update strategy simple")
+					history[int(epoch)] = true
+					break
+
 				} else {
-					olog.WithFields(log.Fields{
-						"epoch":    nextEpoch,
-						"strategy": strategy,
-					}).Debug("update strategy successfully")
-				}
-				history[int(epoch)] = true
+					offset := epoch - int64(triggeredEpoch) + 1
+					if offset == 1 {
+						{
+							// update current epoch strategy.
+							olog.WithFields(log.Fields{
+								"epoch":        epoch,
+								"len(curduty)": len(curDuty),
+							}).Debug("before ComputeBestMaskDuty")
+							// compute bestMaskDuty and update current epoch strategy.
+							bestMask, err := o.ComputeBestMask(uint64(slot), curDuty, AttackerCountCmper{})
+							if err != nil {
+								olog.WithField("error", err).WithField("offset", offset).Error("failed to compute best mask duty")
+							}
 
-			case 1:
-				{
-					// go to calc best mask duty for next epoch.
-					go func() {
-						masked, err := o.ComputeBestMask(uint64(slot), nextDuty, AttackerCountAndFirstAttackerCmper{})
+							slotsStrategies := genStrategyForTrigger1(int(epoch), params.FilterHackerDuties(curDuty), bestMask)
+							strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    epoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   1,
+								}).Debug("update triggering strategy successfully")
+							}
+						}
+						{
+							// generate next epoch strategy without bestMaskDuty.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FilterHackerDuties(nextDuty), BestMaskDutyInfo{})
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   2,
+								}).Debug("pre update triggering strategy successfully")
+							}
+						}
+						history[int(epoch)] = true
+						break
+					} else if offset == 2 {
+						olog.WithFields(log.Fields{
+							"epoch":        epoch,
+							"len(curduty)": len(curDuty),
+						}).Debug("before ComputeBestMaskDuty")
+						// compute bestMaskDuty and update current epoch strategy.
+						bestMask, err := o.ComputeBestMask(uint64(slot), curDuty, AttackerCountAndFirstAttackerCmper{})
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
-						} else {
-							setCachedMaskDuties(nextEpoch, masked)
+							break
 						}
-					}()
-					{
-						curEpochMasked := getCachedMaskDuties(epoch)
-						// update current epoch strategy.
-						slotsStrategies := genStrategyForTrigger1(int(epoch), params.FilterHackerDuties(curDuty), curEpochMasked)
-						strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
-						if err = attacker.UpdateStrategy(strategy); err != nil {
-							olog.WithField("error", err).Error("failed to update triggering strategy")
-						} else {
-							olog.WithFields(log.Fields{
-								"epoch":    epoch,
-								"strategy": strategy,
-								"trigger":  triggerring,
-								"offset":   1,
-							}).Debug("update triggering strategy successfully")
+						{
+							// update current epoch strategy.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger2(int(epoch), params.FilterHackerDuties(curDuty), bestMask)
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   2,
+								}).Debug("update triggering strategy successfully")
+							}
 						}
-					}
-					{
-						// generate next epoch strategy without bestMaskDuty.
-						strategy := types.Strategy{}
-						strategy.Uid = uuid.NewString()
-						strategy.Slots = genStrategyForTrigger2(int(nextEpoch), params.FilterHackerDuties(nextDuty), BestMaskDutyInfo{})
-						strategy.Category = o.Name()
-						if err = attacker.UpdateStrategy(strategy); err != nil {
-							olog.WithField("error", err).Error("failed to update triggering strategy")
-						} else {
-							olog.WithFields(log.Fields{
-								"epoch":    nextEpoch,
-								"strategy": strategy,
-								"trigger":  triggerring,
-								"offset":   2,
-							}).Debug("pre update triggering strategy successfully")
+						{
+							// generate next epoch strategy without bestMaskDuty.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger3(int(nextEpoch), params.FilterHackerDuties(nextDuty), BestMaskDutyInfo{})
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   3,
+								}).Debug("pre update triggering strategy successfully")
+							}
 						}
-					}
-					history[int(epoch)] = true
-				}
-			case 2:
-
-				// go to calc best mask duty for next epoch.
-				go func() {
-					masked, err := o.ComputeBestMask(uint64(slot), nextDuty, AttackerCountAndFirstAttackerCmper{})
-					if err != nil {
-						olog.WithField("error", err).Error("failed to compute best mask duty")
-					} else {
-						setCachedMaskDuties(nextEpoch, masked)
-					}
-				}()
-				{
-					curEpochMasked := getCachedMaskDuties(epoch)
-					// update current epoch strategy.
-					strategy := types.Strategy{}
-					strategy.Uid = uuid.NewString()
-					strategy.Slots = genStrategyForTrigger2(int(epoch), params.FilterHackerDuties(curDuty), curEpochMasked)
-					strategy.Category = o.Name()
-					if err = attacker.UpdateStrategy(strategy); err != nil {
-						olog.WithField("error", err).Error("failed to update triggering strategy")
-					} else {
+						history[int(epoch)] = true
+						break
+					} else if offset == 3 {
 						olog.WithFields(log.Fields{
-							"epoch":    nextEpoch,
-							"strategy": strategy,
-							"trigger":  triggerring,
-							"offset":   2,
-						}).Debug("update triggering strategy successfully")
-					}
-				}
-				{
-					// generate next epoch strategy without bestMaskDuty.
-					strategy := types.Strategy{}
-					strategy.Uid = uuid.NewString()
-					strategy.Slots = genStrategyForTrigger3(int(nextEpoch), params.FilterHackerDuties(nextDuty), BestMaskDutyInfo{})
-					strategy.Category = o.Name()
-					if err = attacker.UpdateStrategy(strategy); err != nil {
-						olog.WithField("error", err).Error("failed to update triggering strategy")
-					} else {
-						olog.WithFields(log.Fields{
-							"epoch":    nextEpoch,
-							"strategy": strategy,
-							"trigger":  triggerring,
-							"offset":   3,
-						}).Debug("pre update triggering strategy successfully")
-					}
-				}
-				history[int(epoch)] = true
-			case 3:
-				{
-					// go to calc best mask duty for next epoch.
-					go func() {
-						masked, err := o.ComputeBestMask(uint64(slot), nextDuty, AttackerCountCmper{})
+							"epoch":        epoch,
+							"len(curduty)": len(curDuty),
+						}).Debug("before ComputeBestMaskDuty")
+						// compute bestMaskDuty and update current epoch strategy.
+						bestMask, err := o.ComputeBestMask(uint64(slot), curDuty, AttackerCountAndFirstAttackerCmper{})
 						if err != nil {
 							olog.WithField("error", err).Error("failed to compute best mask duty")
-						} else {
-							setCachedMaskDuties(nextEpoch, masked)
+							break
 						}
-					}()
-					{
-						curEpochMasked := getCachedMaskDuties(epoch)
-						// update current epoch strategy.
-						strategy := types.Strategy{}
-						strategy.Uid = uuid.NewString()
-						strategy.Slots = genStrategyForTrigger3(int(epoch), params.FilterHackerDuties(curDuty), curEpochMasked)
-						strategy.Category = o.Name()
-						if err = attacker.UpdateStrategy(strategy); err != nil {
-							olog.WithField("error", err).Error("failed to update triggering strategy")
-						} else {
-							olog.WithFields(log.Fields{
-								"epoch":    epoch,
-								"strategy": strategy,
-								"trigger":  triggerring,
-								"offset":   3,
-							}).Debug("update triggering strategy successfully")
+						{
+							// update current epoch strategy.
+							strategy := types.Strategy{}
+							strategy.Uid = uuid.NewString()
+							strategy.Slots = genStrategyForTrigger3(int(epoch), params.FilterHackerDuties(curDuty), bestMask)
+							strategy.Category = o.Name()
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update triggering strategy")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    epoch,
+									"strategy": strategy,
+									"trigger":  triggerring,
+									"offset":   3,
+								}).Debug("update triggering strategy successfully")
+							}
 						}
+						{
+							// set triggering to false
+							triggerring = false
+							// generate a simple strategy for nextDuty first.
+							slotsStrategies := genSimpleStrategy(int(nextEpoch), params.FilterHackerDuties(nextDuty))
+							strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
+							if err = attacker.UpdateStrategy(strategy); err != nil {
+								olog.WithField("error", err).Error("failed to update strategy simple")
+							} else {
+								olog.WithFields(log.Fields{
+									"epoch":    nextEpoch,
+									"strategy": strategy,
+								}).Debug("update strategy successfully")
+							}
+						}
+						history[int(epoch)] = true
+						break
 					}
-					{
-						// set triggering to false
-						triggerring = false
-						// generate a simple strategy for nextDuty first.
-						slotsStrategies := genSimpleStrategy(int(nextEpoch), params.FilterHackerDuties(nextDuty))
-						strategy := types.NewStrategy(o.Name(), slotsStrategies, []types.ValidatorStrategy{})
-						if err = attacker.UpdateStrategy(strategy); err != nil {
-							olog.WithField("error", err).Error("failed to update strategy simple")
-						} else {
-							olog.WithFields(log.Fields{
-								"epoch":    nextEpoch,
-								"strategy": strategy,
-							}).Debug("update strategy successfully")
-						}
-
-					}
-					history[int(epoch)] = true
 				}
 			}
 		}
@@ -301,7 +279,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 type BestMaskDutyInfo struct {
 	FirstIsAttack  bool
 	AttackersCount int
-	maskedDuties   []types.ProposerDuty // the masked maskedDuties.
+	maskedDuties   []types.ProposerDuty
 	order          []int
 	proposers      []primitives.ValidatorIndex
 	seed           []byte

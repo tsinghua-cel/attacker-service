@@ -71,6 +71,9 @@ func (o *Instance) ComputeBestMask(slot uint64, currentFullDuty []types.Proposer
 
 	attackDutiesCount := len(attackDuties)
 	t1 := time.Now()
+	// attacker duty : slot-32, slot-35, slot-48 .... slot-63
+	// order:             0         1       0     ..     0
+
 	// 1 is mask, 0 is not mask, only consider the case that mask 5 slots.
 	fullOrder := common.GetAllBinarySequencesWithMaxOnes(attackDutiesCount, 5)
 	targetEpoch := primitives.Epoch(epoch + 2)
@@ -203,12 +206,13 @@ func ComputeBestMaskDutyOneOrderMultiProcess(seed [32]byte, allRandao map[string
 	next2Epoch := currentEpoch + 2
 
 	t1 := time.Now()
-	// first compute a maskInfo when don't mask any slot.
+	// order [0:31]
 	for idx, skip := range order {
-		if skip == 1 {
+		duty := currentDuty[idx]
+		if skip == 1 || toInt(duty.Slot) <= int(slot) {
 			continue
 		}
-		duty := currentDuty[idx]
+
 		keyInfo := validatorList[toInt(duty.ValidatorIndex)]
 		randaoReveal := allRandao[keyInfo.Pubkey]
 
