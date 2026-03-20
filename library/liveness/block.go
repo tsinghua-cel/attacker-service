@@ -87,7 +87,7 @@ func genSimpleStrategy(epoch int, attackerDuties []types.ProposerDuty) []types.S
 	return strategys
 }
 
-func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty, masked []types.ProposerDuty) []types.SlotStrategy {
+func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty, masked BestMaskDutyInfo) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
 		return strategys
@@ -95,7 +95,7 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty, mask
 	releaseSlot := common.EpochEnd(int64(epoch + 2))
 	var lastDuty types.ProposerDuty
 	var maskedDutyMap = make(map[string]bool)
-	for _, duty := range masked {
+	for _, duty := range masked.maskedDuties {
 		maskedDutyMap[duty.Slot] = true
 	}
 
@@ -140,7 +140,7 @@ func genStrategyForTrigger1(epoch int, attackerDuties []types.ProposerDuty, mask
 }
 
 // before genStrategy, need preCompute best maskDuty.
-func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, maskDuty []types.ProposerDuty) []types.SlotStrategy {
+func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, masked BestMaskDutyInfo) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
 		return strategys
@@ -149,7 +149,7 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 	var lastDuty = epochLatestDuty[epoch-1]
 
 	var maskedDutyMap = make(map[string]bool)
-	for _, duty := range maskDuty {
+	for _, duty := range masked.maskedDuties {
 		maskedDutyMap[duty.Slot] = true
 	}
 
@@ -188,7 +188,7 @@ func genStrategyForTrigger2(epoch int, attackerDuties []types.ProposerDuty, mask
 }
 
 // before genStrategy, need preCompute best maskDuty.
-func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, maskDuty []types.ProposerDuty) []types.SlotStrategy {
+func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, masked BestMaskDutyInfo) []types.SlotStrategy {
 	strategys := make([]types.SlotStrategy, 0)
 	if len(attackerDuties) == 0 {
 		return strategys
@@ -196,7 +196,7 @@ func genStrategyForTrigger3(epoch int, attackerDuties []types.ProposerDuty, mask
 	releaseSlot := common.EpochEnd(int64(epoch))
 	var lastDuty = epochLatestDuty[epoch-1]
 	var maskedDutyMap = make(map[string]bool)
-	for _, duty := range maskDuty {
+	for _, duty := range masked.maskedDuties {
 		maskedDutyMap[duty.Slot] = true
 	}
 

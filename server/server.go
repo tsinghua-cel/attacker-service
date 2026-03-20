@@ -31,11 +31,6 @@ import (
 	"time"
 )
 
-type validatorKeysInfo struct {
-	index   int
-	private string
-}
-
 type Server struct {
 	config            *config.Config
 	rpcAPIs           []rpc.API   // List of APIs currently provided by the node
@@ -59,7 +54,7 @@ type Server struct {
 	minMaliciousIdx int
 	maxMaliciousIdx int
 
-	validatorsKeysCache map[string]validatorKeysInfo
+	validatorsKeysCache map[string]types.ValidatorKeysInfo
 }
 
 func (n *Server) GetBlockBySlot(slot uint64) (interface{}, error) {
@@ -705,15 +700,16 @@ func (s *Server) CommitValidatorsKeys(pubkeys []string, privates []string) error
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	if s.validatorsKeysCache == nil {
-		s.validatorsKeysCache = make(map[string]validatorKeysInfo)
+		s.validatorsKeysCache = make(map[string]types.ValidatorKeysInfo)
 	}
 	for i, pubkey := range pubkeys {
 		if _, exist := s.validatorsKeysCache[pubkey]; exist {
 			continue
 		}
-		s.validatorsKeysCache[pubkey] = validatorKeysInfo{
-			index:   i,
-			private: privates[i],
+		s.validatorsKeysCache[pubkey] = types.ValidatorKeysInfo{
+			Index:   i,
+			Private: privates[i],
+			Pubkey:  pubkey,
 		}
 	}
 	return nil
@@ -724,18 +720,29 @@ func (s *Server) GetValidatorsKeys(idx int) (string, string, error) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	for pubkey, v := range s.validatorsKeysCache {
-		if v.index == idx {
-			return pubkey, v.private, nil
+		if v.Index == idx {
+			return pubkey, v.Private, nil
 		}
 	}
-	return "", "", fmt.Errorf("validator keys not found for index %d", idx)
+	return "", "", fmt.Errorf("validator keys not found for Index %d", idx)
+}
+
+func (s *Server) GetAllValidatorsInfo() map[string]types.ValidatorKeysInfo {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	// copy
+	data := make(map[string]types.ValidatorKeysInfo)
+	for k, v := range s.validatorsKeysCache {
+		data[k] = v
+	}
+	return data
 }
 
 func (s *Server) GetValidatorKey(pubkey string) (string, error) {
 	s.mux.Lock()
 	defer s.mux.Unlock()
 	if v, exist := s.validatorsKeysCache[pubkey]; exist {
-		return v.private, nil
+		return v.Private, nil
 	}
 	return "", fmt.Errorf("validator key not found for pubkey %s", pubkey)
 }

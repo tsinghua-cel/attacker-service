@@ -54,6 +54,7 @@ type StrategyBackend interface {
 	GetFeedBack(uid string) (FeedBackInfo, error)
 	CommitValidatorsKeys(pubkeys []string, privates []string) error
 	GetValidatorKey(pubkey string) (string, error)
+	GetAllValidatorsInfo() map[string]ValidatorKeysInfo
 	GetLibraryParam() LibraryParams
 }
 
