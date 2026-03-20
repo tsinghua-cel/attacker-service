@@ -58,6 +58,13 @@ type StrategyBackend interface {
 	GetLibraryParam() LibraryParams
 }
 
+type StrategyCaller func(method string, params ...interface{}) (string, error)
+
+type StrategyCallerBackend interface {
+	SetStrategyCaller(StrategyCaller)
+	GetStrategyCaller() StrategyCaller
+}
+
 // ServiceBackend interface provides the common API services (that are provided by
 // both full and light clients) with access to necessary functions.
 type ServiceBackend interface {

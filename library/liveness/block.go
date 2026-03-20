@@ -50,20 +50,20 @@ func fillDefaultStrategy(epoch int, strategies []types.SlotStrategy) []types.Slo
 //}
 
 var (
-	offset      = int(0)
-	offsetCache = make(map[int64]map[int64]int) // targetSlot - > (slot -> offset)
+	offsetForSlot = int(0)
+	offsetCache   = make(map[int64]map[int64]int) // targetSlot - > (slot -> offset)
 )
 
 func calcTargetTime(slot int, targetSlot int64) int64 {
 	slotOffset := 0
 	if _, ok := offsetCache[targetSlot]; !ok {
 		offsetCache[targetSlot] = make(map[int64]int)
-		offset = 0
-		offsetCache[targetSlot][int64(slot)] = offset
+		offsetForSlot = 0
+		offsetCache[targetSlot][int64(slot)] = offsetForSlot
 	} else {
 		if _, ok := offsetCache[targetSlot][int64(slot)]; !ok {
-			offset += 1
-			offsetCache[targetSlot][int64(slot)] = offset
+			offsetForSlot += 1
+			offsetCache[targetSlot][int64(slot)] = offsetForSlot
 		}
 	}
 	slotOffset = offsetCache[targetSlot][int64(slot)]

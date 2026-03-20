@@ -17,6 +17,7 @@ type Backend interface {
 	types.BeaconBackend
 	types.StrategyBackend
 	types.CacheBackend
+	types.StrategyCallerBackend
 }
 
 func GetAPIs(apiBackend Backend) []rpc.API {

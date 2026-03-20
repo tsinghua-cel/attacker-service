@@ -3,6 +3,7 @@ package apis
 import (
 	"fmt"
 	"github.com/tsinghua-cel/attacker-service/common"
+	"github.com/tsinghua-cel/attacker-service/types"
 )
 
 // RoleAPI offers and API for role operations.
@@ -38,4 +39,24 @@ func (s *AdminAPI) CommitReceivedAttestation(signedAttestDataBase64 string) erro
 	}
 	s.b.AddAttestToPool(0, "", signedAttestData)
 	return nil
+}
+
+func (s *AdminAPI) ModifyBlockWeight() (types.AttackerResponse, error) {
+	// modify the block weight.
+	result := types.AttackerResponse{
+		Cmd:    types.CMD_NULL,
+		Result: "",
+	}
+	caller := s.b.GetStrategyCaller()
+	if caller != nil {
+		response, err := caller("ModifyBlockWeight")
+		if err != nil {
+			return result, fmt.Errorf("failed to call strategy caller: %w", err)
+		} else {
+			result.Result = response
+			return result, nil
+		}
+	}
+
+	return result, nil
 }

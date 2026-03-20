@@ -284,6 +284,7 @@ func (o *Instance) ComputeBestMaskDutyFullTime(seed [32]byte, allRandao map[stri
 		}
 	}
 	bestMask.maskedDuties = maskedDuties
+	bestMask.attackerDuties = attackDuties
 
 	return bestMask, nil
 }

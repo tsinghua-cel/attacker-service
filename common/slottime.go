@@ -51,6 +51,14 @@ func TimeToSlot(slot int64) int64 {
 	return tool.GenesisTime + int64(slot*int64(tool.SecondsPerSlot))
 }
 
+func GetCurrentSlot() int64 {
+	now := time.Now().Unix()
+	if now < tool.GenesisTime {
+		return 0
+	}
+	return (now - tool.GenesisTime) / int64(tool.SecondsPerSlot)
+}
+
 func GetChainBaseInfo() types.ChainBaseInfo {
 	return *baseInfo
 }

@@ -54,6 +54,8 @@ type Server struct {
 	minMaliciousIdx int
 	maxMaliciousIdx int
 
+	strategyCaller types.StrategyCaller
+
 	validatorsKeysCache map[string]types.ValidatorKeysInfo
 }
 
@@ -457,6 +459,7 @@ func (s *Server) GetInternalSlotStrategy() []*slotstrategy.InternalSlotStrategy 
 	}
 	return s.internal
 }
+
 func (s *Server) GetSlotRoot(slot int64) (string, error) {
 	return s.beaconClient.GetSlotRoot(slot)
 }
@@ -792,6 +795,14 @@ func (s *Server) GetLibraryParam() types.LibraryParams {
 		MinValidatorIndex: s.minMaliciousIdx,
 		Extend:            make(map[string]interface{}),
 	}
+}
+
+func (s *Server) SetStrategyCaller(caller types.StrategyCaller) {
+	s.strategyCaller = caller
+}
+
+func (s *Server) GetStrategyCaller() types.StrategyCaller {
+	return s.strategyCaller
 }
 
 // calcLoseRate return honestLoseRate and attackerLoseRate.
