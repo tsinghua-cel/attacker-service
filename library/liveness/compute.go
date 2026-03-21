@@ -226,7 +226,7 @@ func ComputeBestMaskDutyOneOrderMultiProcess(seed [32]byte, allRandao map[string
 	t2 := time.Now()
 	log.WithFields(log.Fields{
 		"process all randao": t2.Sub(t1).String(),
-	}).Debug("liveness attack strategy processed all randao reveals")
+	}).Trace("liveness attack strategy processed all randao reveals")
 
 	// epoch process.
 	_, proposers, err := PrecomputeProposerIndicesMultiProcess(seed, cState.ValidatorList(), allIndices, primitives.Epoch(next2Epoch))
@@ -240,7 +240,7 @@ func ComputeBestMaskDutyOneOrderMultiProcess(seed [32]byte, allRandao map[string
 	log.WithFields(log.Fields{
 		"PrecomputeProposerIndicesMulti": t3.Sub(t2).String(),
 		"Total Cost":                     t3.Sub(t1).String(),
-	}).Debug("liveness attack precompute proposer indices timing")
+	}).Trace("liveness attack precompute proposer indices timing")
 
 	return proposers, nil
 }

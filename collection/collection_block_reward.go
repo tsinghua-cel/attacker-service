@@ -58,7 +58,7 @@ func GetBlockRewardsToMysql(o orm.Ormer, client *beaconapi.BeaconGwClient) error
 	for slot := latestBlockRewardSlot + 1; slot <= latestSlot; slot++ {
 		blockReward, err := client.GetBlockReward(int(slot))
 		if err != nil {
-			log.WithField("slot", slot).WithError(err).Error("GetBlockRewardsToMysql get block rewards failed, ignore")
+			//log.WithField("slot", slot).WithError(err).Error("GetBlockRewardsToMysql get block rewards failed, ignore")
 			continue
 		}
 		proposerIdx := blockReward.ProposerIndex

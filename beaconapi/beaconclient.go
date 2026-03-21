@@ -426,7 +426,7 @@ func (b *BeaconGwClient) getBlockReward(slot int) (*apiv1.BlockRewards, error) {
 		Block: fmt.Sprintf("%d", slot),
 	})
 	if err != nil {
-		log.WithField("slot", slot).WithError(err).Error("get block reward failed")
+		//log.WithField("slot", slot).WithError(err).Error("get block reward failed")
 		return nil, err
 	}
 	return res.Data, nil
