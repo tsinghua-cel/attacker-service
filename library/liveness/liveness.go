@@ -153,6 +153,9 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							if err != nil {
 								olog.WithField("error", err).WithField("offset", o.triggerOffset).Error("failed to compute best mask duty")
 							} else {
+								olog.WithFields(log.Fields{
+									"masked": bestMask.maskedDuties,
+								}).Debug("after ComputeBestMaskDuty")
 								o.setEpochBestMaskDuty(epoch, bestMask)
 							}
 
@@ -199,6 +202,9 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
 						} else {
+							olog.WithFields(log.Fields{
+								"masked": bestMask.maskedDuties,
+							}).Debug("after ComputeBestMaskDuty")
 							o.setEpochBestMaskDuty(epoch, bestMask)
 						}
 						{
@@ -248,6 +254,9 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 							olog.WithField("error", err).Error("failed to compute best mask duty")
 							break
 						} else {
+							olog.WithFields(log.Fields{
+								"masked": bestMask.maskedDuties,
+							}).Debug("after ComputeBestMaskDuty")
 							o.setEpochBestMaskDuty(epoch, bestMask)
 						}
 						{
