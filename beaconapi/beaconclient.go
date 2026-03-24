@@ -21,6 +21,7 @@ import (
 const (
 	SLOTS_PER_EPOCH  = "SLOTS_PER_EPOCH"
 	SECONDS_PER_SLOT = "SECONDS_PER_SLOT"
+	BEACON_TIMEOUT   = time.Second * 30
 )
 
 var (
@@ -99,7 +100,7 @@ func (b *BeaconGwClient) getLatestBeaconHeader() (*apiv1.BeaconBlockHeader, erro
 	}
 	res, err := service.(eth2client.BeaconBlockHeadersProvider).BeaconBlockHeader(context.Background(), &api.BeaconBlockHeaderOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		Block: "head",
 	})
@@ -121,7 +122,7 @@ func (b *BeaconGwClient) GetValidatorsList() ([]*phase0.Validator, error) {
 	}
 	res, err := service.(eth2client.BeaconStateProvider).BeaconState(context.Background(), &api.BeaconStateOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		State: "head",
 	})
@@ -147,7 +148,7 @@ func (b *BeaconGwClient) GetLatestValidators() (*spec.VersionedBeaconState, erro
 	}
 	res, err := service.(eth2client.BeaconStateProvider).BeaconState(context.Background(), &api.BeaconStateOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		State: "head",
 	})
@@ -169,7 +170,7 @@ func (b *BeaconGwClient) GetBeaconState(slot string) (*spec.VersionedBeaconState
 	}
 	res, err := service.(eth2client.BeaconStateProvider).BeaconState(context.Background(), &api.BeaconStateOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		State: slot,
 	})
@@ -207,7 +208,7 @@ func (b *BeaconGwClient) getAllValReward(epoch int) (*apiv1.AttestationRewards, 
 	}
 	res, err := service.(eth2client.AttestationRewardsProvider).AttestationRewards(context.Background(), &api.AttestationRewardsOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		Epoch: phase0.Epoch(epoch),
 	})
@@ -236,7 +237,7 @@ func (b *BeaconGwClient) getProposerDuties(epoch int) ([]*apiv1.ProposerDuty, er
 	}
 	res, err := service.(eth2client.ProposerDutiesProvider).ProposerDuties(context.Background(), &api.ProposerDutiesOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		Epoch: phase0.Epoch(epoch),
 	})
@@ -290,7 +291,7 @@ func (b *BeaconGwClient) getAttesterDuties(epoch int, vals []int) ([]*apiv1.Atte
 	}
 	res, err := service.(eth2client.AttesterDutiesProvider).AttesterDuties(context.Background(), &api.AttesterDutiesOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		Epoch:   phase0.Epoch(epoch),
 		Indices: indices,
@@ -311,7 +312,7 @@ func (b *BeaconGwClient) FetchBlockAttestation(slot int64) ([]*phase0.Attestatio
 	}
 	res, err := service.(eth2client.SignedBeaconBlockProvider).SignedBeaconBlock(context.Background(), &api.SignedBeaconBlockOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		Block: fmt.Sprintf("%d", slot),
 	})
@@ -421,7 +422,7 @@ func (b *BeaconGwClient) getBlockReward(slot int) (*apiv1.BlockRewards, error) {
 	}
 	res, err := service.(eth2client.BlockRewardsProvider).BlockRewards(context.Background(), &api.BlockRewardsOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		Block: fmt.Sprintf("%d", slot),
 	})
@@ -460,7 +461,7 @@ func (b *BeaconGwClient) getSlotRoot(slot int64) (*phase0.Root, error) {
 	}
 	res, err := service.(eth2client.BeaconBlockRootProvider).BeaconBlockRoot(context.Background(), &api.BeaconBlockRootOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 		Block: fmt.Sprintf("%d", slot),
 	})
@@ -573,7 +574,7 @@ func (b *BeaconGwClient) GetSpec() (map[string]any, error) {
 	}
 	res, err := service.(eth2client.SpecProvider).Spec(context.Background(), &api.SpecOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 	})
 	if err != nil {
@@ -591,7 +592,7 @@ func (b *BeaconGwClient) GetGenesis() (*apiv1.Genesis, error) {
 	}
 	res, err := service.(eth2client.GenesisProvider).Genesis(context.Background(), &api.GenesisOpts{
 		Common: api.CommonOpts{
-			Timeout: time.Second * 10,
+			Timeout: BEACON_TIMEOUT,
 		},
 	})
 	if err != nil {
