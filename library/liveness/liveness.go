@@ -329,6 +329,9 @@ func (o *Instance) ModifyBlockWeightCaller(method string, params ...interface{})
 			if targetSlot == "" {
 				return "", errors.New("not found valid target slot for attack")
 			}
+			if int(curSlot) < toInt(targetSlot) {
+				return "", nil
+			}
 			root, err := o.b.GetSlotRoot(int64(toInt(targetSlot)))
 			if err != nil {
 				olog.WithError(err).WithField("target_slot", targetSlot).Debug("get slot block root failed.")
