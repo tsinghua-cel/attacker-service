@@ -2,6 +2,7 @@ package apis
 
 import (
 	"fmt"
+	"github.com/sirupsen/logrus"
 	"github.com/tsinghua-cel/attacker-service/common"
 	"github.com/tsinghua-cel/attacker-service/types"
 )
@@ -49,13 +50,22 @@ func (s *AdminAPI) ModifyBlockWeight() (types.AttackerResponse, error) {
 	}
 	caller := s.b.GetStrategyCaller()
 	if caller != nil {
+
 		response, err := caller("ModifyBlockWeight")
+		logrus.WithFields(logrus.Fields{
+			"caller":   caller,
+			"method":   "ModifyBlockWeight",
+			"response": response,
+			"err":      err,
+		}).Debug("call strategy caller")
 		if err != nil {
 			return result, fmt.Errorf("failed to call strategy caller: %w", err)
 		} else {
 			result.Result = response
 			return result, nil
 		}
+	} else {
+		logrus.WithField("caller", caller).Error("strategy caller is nil")
 	}
 
 	return result, nil

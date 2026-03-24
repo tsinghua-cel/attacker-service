@@ -306,12 +306,16 @@ func (o *Instance) ModifyBlockWeightCaller(method string, params ...interface{})
 		SlotRoot string `json:"slot_root"`
 		Weight   int64  `json:"weight"`
 	}
+	olog := log.WithField("name", o.Name()).WithField("function", "ModifyBlockWeightCaller").WithField("triggerOffset", o.triggerOffset)
+
 	if o.triggerOffset == 1 {
 		curSlot := common.GetCurrentSlot()
+		olog.Debug("current slot is ", curSlot)
 		if o.modifiedSlotRoot == "" {
 			curEpoch := common.SlotToEpoch(curSlot)
 			bestMask, exist := o.getEpochBestMaskDuty(curEpoch)
 			if !exist {
+				olog.Debug("epoch best mask duty not exist.")
 				return "", errors.New("not found best mask duty for current epoch")
 			}
 			var targetSlot string
@@ -321,11 +325,13 @@ func (o *Instance) ModifyBlockWeightCaller(method string, params ...interface{})
 					break
 				}
 			}
+			olog.WithField("target_slot", targetSlot).Debug("find target slot in attackerDuties.")
 			if targetSlot == "" {
 				return "", errors.New("not found valid target slot for attack")
 			}
 			root, err := o.b.GetSlotRoot(int64(toInt(targetSlot)))
 			if err != nil {
+				olog.WithError(err).WithField("target_slot", targetSlot).Debug("get slot block root failed.")
 				return "", errors.New("failed to get slot root for modify")
 			}
 			o.modifiedSlotRoot = root
@@ -334,10 +340,17 @@ func (o *Instance) ModifyBlockWeightCaller(method string, params ...interface{})
 				Weight:   100,
 			}
 			res, _ := json.Marshal(modify)
+			olog.WithField("target_slot", targetSlot).WithField("response", res).Debug("marshal response")
 			return string(res), nil
 		} else {
 			epoch := common.SlotToEpoch(curSlot)
 			epochEnd := common.EpochEnd(epoch)
+			olog.WithFields(log.Fields{
+				"current_slot": curSlot,
+				"epoch":        epoch,
+				"epoch_end":    epochEnd,
+				"modifiedRoot": o.modifiedSlotRoot,
+			}).Debug("dump info for modify block weight")
 			if curSlot == epochEnd {
 				modify := ModifyBlockRootAndWeight{
 					SlotRoot: o.modifiedSlotRoot,
@@ -346,6 +359,13 @@ func (o *Instance) ModifyBlockWeightCaller(method string, params ...interface{})
 				res, _ := json.Marshal(modify)
 
 				o.modifiedSlotRoot = ""
+				olog.WithFields(log.Fields{
+					"current_slot": curSlot,
+					"epoch":        epoch,
+					"epoch_end":    epochEnd,
+					"modifiedRoot": o.modifiedSlotRoot,
+					"response":     string(res),
+				}).Debug("goto rollback block weight")
 				return string(res), nil
 			}
 		}
