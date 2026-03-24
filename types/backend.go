@@ -72,4 +72,5 @@ type ServiceBackend interface {
 	BeaconBackend
 	CacheBackend
 	StrategyBackend
+	StrategyCallerBackend
 }

@@ -50,6 +50,7 @@ func (o *Instance) Run(ctx context.Context, params types.LibraryParams, feedback
 	o.param = params
 	o.epochDutyCache = lru.New(10)
 	o.bestMaskDutyCache = lru.New(10)
+	o.b.SetStrategyCaller(o.ModifyBlockWeightCaller)
 
 	t := time.NewTicker(time.Second)
 	defer t.Stop()
