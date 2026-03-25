@@ -45,6 +45,8 @@ type CacheBackend interface {
 	SetSlotStartTime(slot int, time int64)
 	GetCurSlot() int64
 	SetCurSlot(slot int64)
+	CacheSlotRoot(slot int64, root string)
+	GetCacheSlotRoot(slot int64) (string, bool)
 }
 
 type StrategyBackend interface {

@@ -132,6 +132,19 @@ func (s *BlockAPI) todoActionsWithSignedBlock(slot uint64, pubkey string, signed
 			Result: signedBlockDataBase64,
 		}
 	}
+	root, err := signedDenebBlock.HashTreeRoot()
+	if err != nil {
+		log.WithError(err).WithFields(log.Fields{
+			"slot": slot,
+		}).Error("get block root failed")
+	} else {
+		// save slot root to s.b for strategy use.
+		s.b.CacheSlotRoot(int64(slot), common.ToHex(root[:]))
+		log.WithFields(log.Fields{
+			"slot": slot,
+			"root": common.ToHex(root[:]),
+		}).Debug("cached block root")
+	}
 	result := types.AttackerResponse{
 		Cmd:    types.CMD_NULL,
 		Result: signedBlockDataBase64,

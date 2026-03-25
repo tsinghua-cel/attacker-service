@@ -14,3 +14,8 @@ func FromHex(str string) []byte {
 		return s
 	}
 }
+
+func ToHex(data []byte) string {
+	hexstr := hex.EncodeToString(data)
+	return "0x" + hexstr
+}

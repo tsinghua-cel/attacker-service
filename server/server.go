@@ -602,6 +602,25 @@ func (s *Server) SetCurSlot(slot int64) {
 	}
 }
 
+func (s *Server) CacheSlotRoot(slot int64, root string) {
+	key := fmt.Sprintf("slot_root_%d", slot)
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if _, ok := s.hotdata[key]; !ok {
+		s.hotdata[key] = root
+	}
+}
+
+func (s *Server) GetCacheSlotRoot(slot int64) (string, bool) {
+	key := fmt.Sprintf("slot_root_%d", slot)
+	s.mux.Lock()
+	defer s.mux.Unlock()
+	if v, ok := s.hotdata[key]; ok {
+		return v.(string), true
+	}
+	return "", false
+}
+
 func (s *Server) HandleEndStrategy() {
 	if !s.config.EnableFeedback {
 		log.Info("feed back disabled")

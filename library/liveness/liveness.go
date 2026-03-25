@@ -306,6 +306,7 @@ func (o *Instance) ModifyBlockWeightCaller(method string, params ...interface{})
 		SlotRoot string `json:"slot_root"`
 		Weight   int64  `json:"weight"`
 	}
+	var err error
 	olog := log.WithField("name", o.Name()).WithField("function", "ModifyBlockWeightCaller").WithField("triggerOffset", o.triggerOffset)
 
 	if o.triggerOffset == 1 {
@@ -332,11 +333,14 @@ func (o *Instance) ModifyBlockWeightCaller(method string, params ...interface{})
 			if int(curSlot) < toInt(targetSlot) {
 				return "", nil
 			}
-			root, err := o.b.GetSlotRoot(int64(toInt(targetSlot)))
-			if err != nil {
-				olog.WithError(err).WithField("target_slot", targetSlot).Debug("get slot block root failed.")
-				return "", errors.New("failed to get slot root for modify")
+			root, exist := o.b.GetCacheSlotRoot(curSlot)
+			if !exist {
+				root, err = o.b.GetSlotRoot(int64(toInt(targetSlot)))
+				if err != nil {
+					olog.WithError(err).WithField("target_slot", targetSlot).Debug("get slot block root failed.")
+				}
 			}
+
 			o.modifiedSlotRoot = root
 			modify := ModifyBlockRootAndWeight{
 				SlotRoot: root,
